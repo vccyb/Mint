@@ -532,7 +532,7 @@ export function SessionSidebar({
   };
 
   return (
-    <div className="flex h-full w-60 flex-col border-r border-border bg-bg">
+    <div className="flex h-full w-64 flex-col border-r border-border/80 bg-[#f8f3ea]/90 backdrop-blur">
       {/* Fixed top: Mode toggle */}
       <ModeToggle mode={mode} onModeChange={onModeChange} />
 
@@ -566,10 +566,10 @@ export function SessionSidebar({
       </ScrollArea>
 
       {/* Fixed bottom: Settings */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border/80 p-3">
         <button
           onClick={onOpenSettings}
-          className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-[13px] text-text-secondary hover:bg-bg-warm transition-colors cursor-pointer"
+          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] text-text-secondary transition-colors cursor-pointer hover:bg-white/70"
         >
           <Settings className="h-3.5 w-3.5 shrink-0" />
           Settings

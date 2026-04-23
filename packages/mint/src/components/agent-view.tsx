@@ -11,6 +11,7 @@ import type { ChatMessage, Attachment, PermissionRequestData } from '@/types';
 
 interface AgentViewProps {
   messages: ChatMessage[];
+  sessionKey?: string | null;
   isStreaming: boolean;
   streamStartTime?: number | null;
   onSend: (message: string, attachments?: Attachment[]) => void;
@@ -22,10 +23,15 @@ interface AgentViewProps {
     updatedInput?: Record<string, unknown>,
   ) => void;
   concurrencyLimitReached?: boolean;
+  onApprovePlan?: (mode: 'auto' | 'manual') => void;
+  permissionMode?: 'bypassPermissions' | 'default' | 'plan';
+  onPermissionModeChange?: (mode: 'bypassPermissions' | 'default' | 'plan') => void;
+  onTogglePlanMode?: () => void;
 }
 
 export function AgentView({
   messages,
+  sessionKey,
   isStreaming,
   streamStartTime,
   onSend,
@@ -33,6 +39,10 @@ export function AgentView({
   pendingPermission,
   onPermissionDecision,
   concurrencyLimitReached,
+  onApprovePlan,
+  permissionMode = 'default',
+  onPermissionModeChange,
+  onTogglePlanMode,
 }: AgentViewProps) {
   const [showFiles, setShowFiles] = useState(false);
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
@@ -85,10 +95,10 @@ export function AgentView({
   return (
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border bg-bg-warm px-6 py-2 shrink-0">
+      <div className="flex items-center gap-2 border-b border-border/80 bg-white/55 px-6 py-3 shrink-0 backdrop-blur">
         <div className="pill bg-primary-light text-primary-text">Agent</div>
         <span className="text-xs text-text-tertiary">
-          Autonomous agent — reads files, runs commands, writes code
+          具备读写文件与执行命令能力
         </span>
         <div className="flex-1" />
         <button
@@ -128,7 +138,7 @@ export function AgentView({
         <div className="flex flex-1 min-h-0">
           {/* Chat — flex-1 so it takes remaining space */}
           <div className="flex flex-col flex-1 min-h-0 min-w-0">
-            <MessageList messages={messages} isStreaming={isStreaming} streamStartTime={streamStartTime} onEditMessage={(_id, content) => setEditingContent(content)} />
+            <MessageList messages={messages} isStreaming={isStreaming} streamStartTime={streamStartTime} onEditMessage={(_id, content) => setEditingContent(content)} onApprovePlan={onApprovePlan} />
             {pendingPermission && onPermissionDecision && (
               <div className="px-6 py-2">
                 <AskQuestionBanner
@@ -139,12 +149,16 @@ export function AgentView({
             )}
             <MessageInput
               ref={inputRef}
+              sessionKey={sessionKey}
               onSend={onSend}
               onStop={onStop}
               isStreaming={isStreaming}
               placeholder="Describe a task for the agent..."
               externalValue={editingContent}
               concurrencyLimitReached={concurrencyLimitReached}
+              permissionMode={permissionMode}
+              onPermissionModeChange={onPermissionModeChange}
+              onTogglePlanMode={onTogglePlanMode}
             />
           </div>
 
@@ -175,7 +189,7 @@ export function AgentView({
       ) : (
         /* Chat only */
         <div className="flex flex-col flex-1 min-h-0">
-          <MessageList messages={messages} isStreaming={isStreaming} onEditMessage={(_id, content) => setEditingContent(content)} />
+          <MessageList messages={messages} isStreaming={isStreaming} onEditMessage={(_id, content) => setEditingContent(content)} onApprovePlan={onApprovePlan} />
           {pendingPermission && onPermissionDecision && (
             <div className="px-6 py-2">
               <AskQuestionBanner
@@ -186,12 +200,16 @@ export function AgentView({
           )}
           <MessageInput
             ref={inputRef}
+            sessionKey={sessionKey}
             onSend={onSend}
             onStop={onStop}
             isStreaming={isStreaming}
             placeholder="Describe a task for the agent..."
             externalValue={editingContent}
             concurrencyLimitReached={concurrencyLimitReached}
+            permissionMode={permissionMode}
+            onPermissionModeChange={onPermissionModeChange}
+            onTogglePlanMode={onTogglePlanMode}
           />
         </div>
       )}

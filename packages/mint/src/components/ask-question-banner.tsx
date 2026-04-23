@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircleQuestion, ChevronRight, ChevronDown, Minimize2, ChevronLeft } from 'lucide-react';
+import { MessageCircleQuestion, ChevronRight, ChevronDown, Minimize2, ChevronLeft, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PermissionRequestData, AskQuestionItem } from '@/types';
 
@@ -109,19 +109,40 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
     }
   };
 
-  // Empty questions fallback
-  if (questions.length === 0) {
+  // Non-AskUserQuestion tool permission request — simple Allow/Deny UI
+  if (request.toolName !== 'AskUserQuestion' || questions.length === 0) {
+    const toolInput = request.input;
+    // Build a short summary of what the tool wants to do
+    const inputSummary = (() => {
+      if (toolInput.command) return `$ ${toolInput.command}`;
+      if (toolInput.file_path || toolInput.filePath) return `${toolInput.file_path ?? toolInput.filePath}`;
+      if (toolInput.content) return String(toolInput.content).slice(0, 100);
+      return '';
+    })();
+
     return (
-      <div className="mx-auto max-w-3xl rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs font-medium text-text">
-          <MessageCircleQuestion className="h-3.5 w-3.5 text-primary" />
-          <span className="truncate">{String(request.input.question || 'Agent is asking a question')}</span>
+      <div className="mx-auto max-w-3xl rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 shadow-whisper-sm">
+        <div className="flex items-center gap-2 text-xs font-medium text-amber-800">
+          <Shield className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+          <span className="font-semibold">{request.toolName}</span>
+          {inputSummary && (
+            <span className="text-amber-700 font-normal truncate max-w-[400px]">{inputSummary}</span>
+          )}
+          {request.decisionReason && (
+            <span className="text-amber-600 font-normal text-[10px] truncate">{request.decisionReason}</span>
+          )}
           <div className="flex-1" />
           <button
             onClick={() => onDecision(request.requestId, 'deny')}
-            className="rounded border border-border px-2 py-0.5 text-xs text-text-secondary hover:bg-bg-hover"
+            className="rounded border border-amber-300 bg-white px-2.5 py-0.5 text-xs text-amber-700 hover:bg-amber-100 transition-colors"
           >
-            Dismiss
+            Deny
+          </button>
+          <button
+            onClick={() => onDecision(request.requestId, 'allow', request.input)}
+            className="rounded bg-amber-600 px-2.5 py-0.5 text-xs text-white hover:bg-amber-700 transition-colors"
+          >
+            Allow
           </button>
         </div>
       </div>

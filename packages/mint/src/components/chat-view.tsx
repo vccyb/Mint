@@ -7,13 +7,21 @@ import type { ChatMessage, Attachment } from '@/types';
 
 interface ChatViewProps {
   messages: ChatMessage[];
+  sessionKey?: string | null;
   isStreaming: boolean;
   streamStartTime?: number | null;
   onSend: (message: string, attachments?: Attachment[]) => void;
   onStop?: () => void;
 }
 
-export function ChatView({ messages, isStreaming, streamStartTime, onSend, onStop }: ChatViewProps) {
+export function ChatView({
+  messages,
+  sessionKey,
+  isStreaming,
+  streamStartTime,
+  onSend,
+  onStop,
+}: ChatViewProps) {
   const inputRef = useRef<MessageInputHandle>(null);
   const [editingContent, setEditingContent] = useState<string>('');
 
@@ -27,6 +35,7 @@ export function ChatView({ messages, isStreaming, streamStartTime, onSend, onSto
       <MessageList messages={messages} isStreaming={isStreaming} streamStartTime={streamStartTime} onEditMessage={(_id, content) => setEditingContent(content)} />
       <MessageInput
         ref={inputRef}
+        sessionKey={sessionKey}
         onSend={onSend}
         onStop={onStop}
         isStreaming={isStreaming}

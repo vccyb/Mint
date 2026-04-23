@@ -116,9 +116,9 @@ function MintAppInner() {
       />
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col min-h-0 min-w-0">
+      <div className="flex flex-1 flex-col min-h-0 min-w-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.4))]">
         {/* Header */}
-        <div className="flex items-center border-b border-border px-6 py-2.5">
+        <div className="flex items-center border-b border-border/80 bg-white/65 px-6 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
             <svg
               width="16"
@@ -137,7 +137,7 @@ function MintAppInner() {
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="text-xs font-semibold text-text tracking-tight">Mint</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text">Mint</span>
           </div>
           {activeHook.sessionId && sessionTitle && (
             <>
@@ -157,6 +157,7 @@ function MintAppInner() {
         ) : mode === 'chat' ? (
           <ChatView
             messages={chatHook.messages}
+            sessionKey={chatHook.sessionKey}
             isStreaming={chatHook.isStreaming}
             streamStartTime={chatHook.streamStartTime}
             onSend={chatHook.sendMessage}
@@ -165,6 +166,7 @@ function MintAppInner() {
         ) : (
           <AgentView
             messages={agentHook.messages}
+            sessionKey={agentHook.sessionKey}
             isStreaming={agentHook.isStreaming}
             streamStartTime={agentHook.streamStartTime}
             onSend={agentHook.sendMessage}
@@ -172,6 +174,10 @@ function MintAppInner() {
             pendingPermission={agentHook.pendingPermission}
             onPermissionDecision={agentHook.submitPermissionDecision}
             concurrencyLimitReached={!registry.canStartNew()}
+            onApprovePlan={agentHook.approvePlan}
+            permissionMode={agentHook.permissionMode}
+            onPermissionModeChange={agentHook.setPermissionMode}
+            onTogglePlanMode={agentHook.togglePlanMode}
           />
         )}
       </div>

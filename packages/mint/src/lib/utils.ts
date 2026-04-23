@@ -1,10 +1,9 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
+/**
+ * Re-export barrel for backward compatibility.
+ *
+ * Prefer importing from the specific module when writing new code:
+ *   import { cn } from '@/lib/cn';
+ *   import { generateId } from '@/lib/id';
+ */
+export { cn } from './cn';
+export { generateId } from './id';

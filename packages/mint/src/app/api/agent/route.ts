@@ -4,6 +4,8 @@ import path from 'path';
 import { getStorage } from '@/lib/storage';
 import { encodeSSE, createSSEResponse } from '@/lib/sse';
 import { generateId } from '@/lib/utils';
+import { createRequestLogger } from '@/lib/logger';
+import { classifyError } from '@/lib/classify-error';
 import { listSkills } from '@/lib/storage/skills';
 import { addPending, resolvePending } from '@/lib/permission-store';
 import type { ChatMessage, StreamEventData, ToolCallInfo, SkillLoadInfo, Attachment, TodoItem } from '@/types';
@@ -70,13 +72,26 @@ function isSkillRead(
 }
 
 export async function POST(request: Request) {
+  const reqId = generateId();
+  const log = createRequestLogger('agent-route', reqId);
+
   try {
-    const { message, sessionId, attachments, mentionedTools } = (await request.json()) as {
+    const { message, sessionId, attachments, mentionedTools, permissionMode, planApproval } = (await request.json()) as {
       message: string;
       sessionId?: string;
       attachments?: Attachment[];
       mentionedTools?: Array<{ type: string; label: string; value: string }>;
+      permissionMode?: 'bypassPermissions' | 'default' | 'plan';
+      planApproval?: boolean;
     };
+
+    log.info('Agent request received', {
+      messageLength: message.length,
+      sessionId: sessionId ?? 'new',
+      attachmentCount: attachments?.length ?? 0,
+      permissionMode: permissionMode ?? 'default',
+      planApproval: planApproval ?? false,
+    });
 
     const storage = getStorage();
     await storage.initialize();
@@ -93,6 +108,7 @@ export async function POST(request: Request) {
     const model = config?.model ?? 'glm-5.1';
 
     if (!apiKey) {
+      log.warn('API key not configured');
       return new Response(
         JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } },
@@ -127,21 +143,23 @@ export async function POST(request: Request) {
       });
     }
 
-    // Save user message
-    const userMsg: ChatMessage = {
-      id: generateId(),
-      role: 'user',
-      content: message,
-      timestamp: Date.now(),
-      attachments: attachments && attachments.length > 0 ? attachments : undefined,
-    };
-    await storage.appendMessage(sid, userMsg);
+    // Save user message (skip if this is a plan approval re-execution)
+    if (!planApproval) {
+      const userMsg: ChatMessage = {
+        id: generateId(),
+        role: 'user',
+        content: message,
+        timestamp: Date.now(),
+        attachments: attachments && attachments.length > 0 ? attachments : undefined,
+      };
+      await storage.appendMessage(sid, userMsg);
+    }
 
-    // Build messages array — reload session (now includes userMsg)
+    // Build messages array — reload session
     const session = await storage.readSession(sid);
     const historyMessages = session.messages
       .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .slice(0, -1) // exclude the userMsg we just appended (it's the last one)
+      .slice(0, planApproval ? undefined : -1) // exclude newly appended userMsg unless plan approval
       .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n\n');
 
@@ -183,10 +201,22 @@ export async function POST(request: Request) {
 
     const fullSystemPrompt = [skillIndexPrompt, mentionedToolsPrompt].filter(Boolean).join('\n\n');
 
+    const permMode = (permissionMode ?? config?.permissionMode ?? 'default') as 'bypassPermissions' | 'default' | 'plan';
+    const isPlanMode = permMode === 'plan';
+
+    log.info('Provider configured', {
+      model,
+      hasApiKey: !!apiKey,
+      baseUrl: baseUrl.replace(/\/\/[^/]+/, '//***'),
+      permissionMode: permMode,
+      planApproval: planApproval ?? false,
+    });
+
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         let assistantContent = '';
+        let thinkingContent = '';
         const toolCalls: ToolCallInfo[] = [];
         const skillLoads: SkillLoadInfo[] = [];
 
@@ -201,6 +231,7 @@ export async function POST(request: Request) {
           type: 'content',
           data: '',
           sessionId: sid,
+          isPlanMode,
         };
         controller.enqueue(encoder.encode(encodeSSE(initEvent)));
 
@@ -230,8 +261,6 @@ export async function POST(request: Request) {
             }
           }
 
-          const permMode = (config?.permissionMode ?? 'default') as 'bypassPermissions' | 'default' | 'plan';
-
           const queryOptions: Parameters<typeof query>[0]['options'] = {
             model: model,
             permissionMode: permMode,
@@ -240,12 +269,54 @@ export async function POST(request: Request) {
             cwd: process.env.MINT_CWD || process.cwd(),
             ...(fullSystemPrompt ? { systemPrompt: fullSystemPrompt } : {}),
             canUseTool: (async (toolName: string, input: Record<string, unknown>, options: Parameters<CanUseTool>[2]) => {
-              if (toolName !== 'AskUserQuestion') {
+              // bypassPermissions: auto-approve everything
+              if (permMode === 'bypassPermissions') {
                 return { behavior: 'allow' as const, updatedInput: input };
               }
 
-              const requestId = `perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+              // plan mode: deny all tool execution (SDK should handle this internally,
+              // but deny as safety net)
+              if (permMode === 'plan') {
+                return { behavior: 'deny' as const };
+              }
 
+              // default mode: AskUserQuestion goes through permission flow
+              if (toolName === 'AskUserQuestion') {
+                const requestId = `perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+                const permEvent: StreamEventData = {
+                  type: 'permission_request',
+                  data: '',
+                  sessionId: sid,
+                  requestId,
+                  toolName,
+                  toolArgs: input,
+                  decisionReason: options.decisionReason,
+                };
+                controller.enqueue(encoder.encode(encodeSSE(permEvent)));
+
+                const pending = addPending(requestId, toolName, options.toolUseID);
+
+                if (options.signal) {
+                  options.signal.addEventListener('abort', () => {
+                    resolvePending(requestId, {
+                      behavior: 'deny' as const,
+                      message: 'Request aborted',
+                    });
+                  }, { once: true });
+                }
+
+                return pending;
+              }
+
+              // default mode: read-only tools auto-approve, write tools need confirmation
+              const READ_ONLY_TOOLS = ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'TaskOutput', 'Agent', 'mcp__pencil__get_editor_state', 'mcp__pencil__batch_get'];
+              if (READ_ONLY_TOOLS.includes(toolName)) {
+                return { behavior: 'allow' as const, updatedInput: input };
+              }
+
+              // Write tools in default mode: send permission request
+              const requestId = `perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
               const permEvent: StreamEventData = {
                 type: 'permission_request',
                 data: '',
@@ -285,6 +356,7 @@ export async function POST(request: Request) {
                 delta?: {
                   type: string;
                   text?: string;
+                  thinking?: string;
                   partial_json?: string;
                 };
                 content_block?: {
@@ -308,6 +380,22 @@ export async function POST(request: Request) {
                   sessionId: sid,
                 };
                 controller.enqueue(encoder.encode(encodeSSE(contentEvent)));
+              }
+
+              // Extended Thinking streaming
+              if (
+                event.type === 'content_block_delta' &&
+                event.delta?.type === 'thinking_delta'
+              ) {
+                const text = event.delta.thinking ?? '';
+                thinkingContent += text;
+                const thinkingEvent: StreamEventData = {
+                  type: 'thinking',
+                  data: '',
+                  sessionId: sid,
+                  thinkingDelta: text,
+                };
+                controller.enqueue(encoder.encode(encodeSSE(thinkingEvent)));
               }
 
               // Tool use start
@@ -451,10 +539,13 @@ export async function POST(request: Request) {
               };
 
               if (resultMsg.subtype === 'error' || resultMsg.is_error) {
+                const rawError = resultMsg.result ?? 'Agent error';
+                const classified = classifyError(rawError);
                 const errorEvent: StreamEventData = {
                   type: 'error',
-                  data: resultMsg.result ?? 'Agent error',
+                  data: classified.userMessage,
                   sessionId: sid,
+                  errorCode: classified.code,
                 };
                 controller.enqueue(encoder.encode(encodeSSE(errorEvent)));
               }
@@ -462,7 +553,7 @@ export async function POST(request: Request) {
           }
 
           // Save assistant message with tool calls
-          if (assistantContent || toolCalls.length > 0) {
+          if (assistantContent || toolCalls.length > 0 || thinkingContent) {
             const assistantMsg: ChatMessage = {
               id: generateId(),
               role: 'assistant',
@@ -471,6 +562,8 @@ export async function POST(request: Request) {
               toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
               skillLoads: skillLoads.length > 0 ? skillLoads : undefined,
               todos: latestTodos.length > 0 ? latestTodos : undefined,
+              thinkingContent: thinkingContent || undefined,
+              isPlanMode: isPlanMode || undefined,
             };
             await storage.appendMessage(sid, assistantMsg);
 
@@ -487,6 +580,12 @@ export async function POST(request: Request) {
           }
 
           // Send result
+          log.info('Agent stream completed', {
+            contentLength: assistantContent.length,
+            hasThinking: !!thinkingContent,
+            toolCallCount: toolCalls.length,
+            skillLoadCount: skillLoads.length,
+          });
           const resultEvent: StreamEventData = {
             type: 'result',
             data: JSON.stringify({
@@ -494,15 +593,19 @@ export async function POST(request: Request) {
               content: assistantContent,
             }),
             sessionId: sid,
+            isPlanMode: isPlanMode || undefined,
           };
           controller.enqueue(encoder.encode(encodeSSE(resultEvent)));
         } catch (error) {
           const errMsg =
             error instanceof Error ? error.message : 'Agent error';
+          log.error('Agent stream error', { error: errMsg });
+          const classified = classifyError(errMsg);
           const errorEvent: StreamEventData = {
             type: 'error',
-            data: errMsg,
+            data: classified.userMessage,
             sessionId: sid,
+            errorCode: classified.code,
           };
           controller.enqueue(encoder.encode(encodeSSE(errorEvent)));
         }
@@ -514,6 +617,7 @@ export async function POST(request: Request) {
     return createSSEResponse(stream);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal error';
+    log.error('Unhandled agent error', { error: message });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

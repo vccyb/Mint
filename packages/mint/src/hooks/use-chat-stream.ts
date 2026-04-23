@@ -2,50 +2,128 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { ChatMessage, Mode, StreamEventData, ToolCallInfo, SkillLoadInfo, Attachment, PermissionRequestData, AskQuestionItem, MentionChip, TodoItem } from '@/types';
+import { createDraftSessionKey, createInitialDraftSessionKey, isDraftSessionKey } from '@/lib/session-key';
 import { generateId } from '@/lib/utils';
 import type { StreamingRegistry } from '@/lib/streaming-registry';
+
+type PermissionMode = 'bypassPermissions' | 'default' | 'plan';
+
+interface SessionPermissionState {
+  mode: PermissionMode;
+  lastNonPlanMode: Exclude<PermissionMode, 'plan'>;
+}
 
 interface UseChatStreamReturn {
   messages: ChatMessage[];
   isStreaming: boolean;
+  sessionKey: string;
   sessionId: string | null;
   streamStartTime: number | null;
   pendingPermission: PermissionRequestData | null;
+  permissionMode: PermissionMode;
   sendMessage: (message: string, attachments?: Attachment[], mentionedTools?: MentionChip[]) => Promise<void>;
   loadSession: (id: string) => Promise<void>;
   clearSession: () => void;
   stopStreaming: () => void;
+  setPermissionMode: (mode: PermissionMode) => void;
+  togglePlanMode: () => void;
   submitPermissionDecision: (
     requestId: string,
     behavior: 'allow' | 'deny',
     updatedInput?: Record<string, unknown>,
   ) => Promise<void>;
+  approvePlan: (mode: 'auto' | 'manual') => Promise<void>;
 }
 
 export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatStreamReturn {
   const [messagesMap, setMessagesMap] = useState<Map<string, ChatMessage[]>>(new Map());
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [pendingPermission, setPendingPermission] = useState<PermissionRequestData | null>(null);
-  const permissionSessionRef = useRef<string | null>(null);
-
-  // Chat mode uses local streaming state (not registry)
-  const [localStreamingSessionId, setLocalStreamingSessionId] = useState<string | null>(null);
-
-  // Track stream start time per session for the "正在思考..." timer
+  const [activeSessionKey, setActiveSessionKey] = useState<string>(() => createInitialDraftSessionKey(mode));
+  const [pendingPermissions, setPendingPermissions] = useState<Map<string, PermissionRequestData>>(
+    new Map(),
+  );
+  const [permissionStates, setPermissionStates] = useState<Map<string, SessionPermissionState>>(
+    new Map(),
+  );
+  const [localStreamingSessionIds, setLocalStreamingSessionIds] = useState<Set<string>>(new Set());
   const [streamStartTimes, setStreamStartTimes] = useState<Map<string, number>>(new Map());
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
-  // Ref to avoid stale closure on activeSessionId in SSE handlers
-  const activeSessionIdRef = useRef<string | null>(null);
-  activeSessionIdRef.current = activeSessionId;
+  const activeSessionKeyRef = useRef<string>(activeSessionKey);
+  activeSessionKeyRef.current = activeSessionKey;
+  const messagesMapRef = useRef(messagesMap);
+  messagesMapRef.current = messagesMap;
+  const permissionStatesRef = useRef(permissionStates);
+  permissionStatesRef.current = permissionStates;
+
+  const migrateSessionState = useCallback((fromKey: string, toKey: string) => {
+    if (fromKey === toKey) return;
+
+    setMessagesMap((prev) => {
+      const source = prev.get(fromKey);
+      if (!source) return prev;
+      const next = new Map(prev);
+      next.delete(fromKey);
+      next.set(toKey, source);
+      return next;
+    });
+
+    setStreamStartTimes((prev) => {
+      const startTime = prev.get(fromKey);
+      if (startTime === undefined) return prev;
+      const next = new Map(prev);
+      next.delete(fromKey);
+      next.set(toKey, startTime);
+      return next;
+    });
+
+    setPendingPermissions((prev) => {
+      const pending = prev.get(fromKey);
+      if (!pending) return prev;
+      const next = new Map(prev);
+      next.delete(fromKey);
+      next.set(toKey, pending);
+      return next;
+    });
+
+    setPermissionStates((prev) => {
+      const state = prev.get(fromKey);
+      if (!state) return prev;
+      const next = new Map(prev);
+      next.delete(fromKey);
+      next.set(toKey, state);
+      return next;
+    });
+
+    setLocalStreamingSessionIds((prev) => {
+      if (!prev.has(fromKey)) return prev;
+      const next = new Set(prev);
+      next.delete(fromKey);
+      next.add(toKey);
+      return next;
+    });
+
+    const controller = abortControllersRef.current.get(fromKey);
+    if (controller) {
+      abortControllersRef.current.delete(fromKey);
+      abortControllersRef.current.set(toKey, controller);
+    }
+
+    setActiveSessionKey((prev) => (prev === fromKey ? toKey : prev));
+  }, []);
 
   // Derived values
-  const messages = activeSessionId ? messagesMap.get(activeSessionId) ?? [] : [];
-  const streamStartTime = activeSessionId ? streamStartTimes.get(activeSessionId) ?? null : null;
-  const isStreaming = (() => {
-    if (!activeSessionId) return false;
-    if (mode === 'agent') return registry.getStatus(activeSessionId)?.isStreaming ?? false;
-    return localStreamingSessionId === activeSessionId;
-  })();
+  const sessionId = isDraftSessionKey(activeSessionKey) ? null : activeSessionKey;
+  const messages = messagesMap.get(activeSessionKey) ?? [];
+  const streamStartTime = streamStartTimes.get(activeSessionKey) ?? null;
+  const permissionState = permissionStates.get(activeSessionKey) ?? {
+    mode: 'default' as PermissionMode,
+    lastNonPlanMode: 'default' as const,
+  };
+  const permissionMode = permissionState.mode;
+  const pendingPermission = pendingPermissions.get(activeSessionKey) ?? null;
+  const isStreaming =
+    localStreamingSessionIds.has(activeSessionKey) ||
+    (mode === 'agent' ? (registry.getStatus(activeSessionKey)?.isStreaming ?? false) : false);
 
   const updateMessagesForSession = useCallback(
     (sessionId: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => {
@@ -57,6 +135,32 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
     },
     [],
   );
+
+  const setPermissionMode = useCallback((nextMode: PermissionMode) => {
+    const sid = activeSessionKeyRef.current;
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      const current = next.get(sid) ?? { mode: 'default' as PermissionMode, lastNonPlanMode: 'default' as const };
+      next.set(sid, {
+        mode: nextMode,
+        lastNonPlanMode: nextMode === 'plan' ? current.lastNonPlanMode : nextMode,
+      });
+      return next;
+    });
+  }, []);
+
+  const togglePlanMode = useCallback(() => {
+    const sid = activeSessionKeyRef.current;
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      const current = next.get(sid) ?? { mode: 'default' as PermissionMode, lastNonPlanMode: 'default' as const };
+      next.set(sid, {
+        mode: current.mode === 'plan' ? current.lastNonPlanMode : 'plan',
+        lastNonPlanMode: current.mode === 'plan' ? current.lastNonPlanMode : current.mode,
+      });
+      return next;
+    });
+  }, []);
 
   const sendMessage = useCallback(
     async (message: string, attachments?: Attachment[], mentionedTools?: MentionChip[]) => {
@@ -81,65 +185,56 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         toolCalls: [],
       };
 
-      // Read current activeSessionId from ref (avoids stale closure)
-      const targetSessionId = activeSessionIdRef.current;
+      const targetSessionKey = activeSessionKeyRef.current;
+      updateMessagesForSession(targetSessionKey, (prev) => [...prev, userMsg, assistantMsg]);
 
-      if (targetSessionId) {
-        updateMessagesForSession(targetSessionId, (prev) => [...prev, userMsg, assistantMsg]);
-      } else {
-        // No session yet — use a temporary key, will be updated when sessionId arrives
-        const tempKey = `__pending_${assistantId}`;
-        setMessagesMap((prev) => {
-          const next = new Map(prev);
-          next.set(tempKey, [userMsg, assistantMsg]);
-          return next;
-        });
-      }
-
-      // Track stream start time (use targetSessionId or temp key)
       const startTime = Date.now();
-      const timeKey = targetSessionId ?? `__pending_${assistantId}`;
-      setStreamStartTimes((prev) => new Map(prev).set(timeKey, startTime));
+      setStreamStartTimes((prev) => new Map(prev).set(targetSessionKey, startTime));
 
       const endpoint = mode === 'chat' ? '/api/chat' : '/api/agent';
       const abortController = new AbortController();
+      abortControllersRef.current.set(targetSessionKey, abortController);
+      setLocalStreamingSessionIds((prev) => new Set(prev).add(targetSessionKey));
 
-      // Track the current assistant message's session for SSE updates
-      let resolvedSessionId = targetSessionId;
-
-      // Register with registry only for agent mode
-      if (mode === 'agent' && targetSessionId) {
-        registry.register(targetSessionId, mode, abortController);
-      }
-
-      // For chat mode, set local streaming state
-      if (mode === 'chat' && targetSessionId) {
-        setLocalStreamingSessionId(targetSessionId);
-      }
+      const requestSessionId = isDraftSessionKey(targetSessionKey) ? undefined : targetSessionKey;
+      const requestPermissionMode =
+        permissionStatesRef.current.get(targetSessionKey)?.mode ?? 'default';
+      let resolvedSessionId = requestSessionId ?? null;
 
       try {
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, sessionId: targetSessionId, attachments, mentionedTools }),
+          body: JSON.stringify({
+            message,
+            sessionId: requestSessionId,
+            attachments,
+            mentionedTools,
+            ...(mode === 'agent' ? { permissionMode: requestPermissionMode } : {}),
+          }),
           signal: abortController.signal,
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
-          const sid = resolvedSessionId ?? `__pending_${assistantId}`;
+          const sid = resolvedSessionId ?? targetSessionKey;
           updateMessagesForSession(sid, (prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: `Error: ${errorData.error ?? 'Unknown error'}`, isStreaming: false }
+                ? { ...m, errorInfo: { code: 'INTERNAL_ERROR' as const, message: errorData.error ?? 'Unknown error' }, isStreaming: false }
                 : m,
             ),
           );
           if (resolvedSessionId && mode === 'agent') {
             registry.complete(resolvedSessionId);
           }
-          if (mode === 'chat') setLocalStreamingSessionId(null);
-          const cleanKey = resolvedSessionId ?? `__pending_${assistantId}`;
+          abortControllersRef.current.delete(sid);
+          setLocalStreamingSessionIds((prev) => {
+            const next = new Set(prev);
+            next.delete(sid);
+            return next;
+          });
+          const cleanKey = resolvedSessionId ?? targetSessionKey;
           setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(cleanKey); return n; });
           return;
         }
@@ -172,56 +267,44 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
               // Resolve sessionId from server
               if (event.sessionId && !resolvedSessionId) {
                 resolvedSessionId = event.sessionId;
-
-                // Only update activeSessionId if user hasn't switched away
-                setActiveSessionId((prev) => {
-                  if (prev === null || prev === targetSessionId) return event.sessionId!;
-                  return prev;
-                });
-
-                // Move messages from temp key to real sessionId
-                setMessagesMap((prev) => {
-                  const tempKey = `__pending_${assistantId}`;
-                  const msgs = prev.get(tempKey);
-                  if (msgs) {
-                    const next = new Map(prev);
-                    next.delete(tempKey);
-                    next.set(event.sessionId!, msgs);
-                    return next;
-                  }
-                  return prev;
-                });
-
-                // Migrate stream start time from temp key to real sessionId
-                setStreamStartTimes((prev) => {
-                  const tempKey = `__pending_${assistantId}`;
-                  const time = prev.get(tempKey);
-                  if (time) {
-                    const next = new Map(prev);
-                    next.delete(tempKey);
-                    next.set(event.sessionId!, time);
-                    return next;
-                  }
-                  return prev;
-                });
+                migrateSessionState(targetSessionKey, event.sessionId);
 
                 // Register with registry now that we have a sessionId
                 if (mode === 'agent') {
                   registry.register(event.sessionId, mode, abortController);
                 }
+              }
 
-                if (mode === 'chat') {
-                  setLocalStreamingSessionId(event.sessionId);
+              // Set isPlanMode on assistant message — must be outside the
+              // !resolvedSessionId gate so it works for existing sessions too.
+              if (event.isPlanMode && assistantId) {
+                const planSid = resolvedSessionId ?? event.sessionId ?? targetSessionKey;
+                if (planSid) {
+                  updateMessagesForSession(planSid, (prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, isPlanMode: true }
+                        : m,
+                    ),
+                  );
                 }
               }
 
-              const sid = resolvedSessionId ?? `__pending_${assistantId}`;
+              const sid = resolvedSessionId ?? targetSessionKey;
 
               if (event.type === 'content' && event.data) {
                 updateMessagesForSession(sid, (prev) =>
                   prev.map((m) =>
                     m.id === assistantId
                       ? { ...m, content: m.content + event.data }
+                      : m,
+                  ),
+                );
+              } else if (event.type === 'thinking' && event.thinkingDelta) {
+                updateMessagesForSession(sid, (prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, thinkingContent: (m.thinkingContent ?? '') + event.thinkingDelta }
                       : m,
                   ),
                 );
@@ -292,7 +375,12 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
                 if (resolvedSessionId && mode === 'agent') {
                   registry.complete(resolvedSessionId);
                 }
-                if (mode === 'chat') setLocalStreamingSessionId(null);
+                abortControllersRef.current.delete(sid);
+                setLocalStreamingSessionIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(sid);
+                  return next;
+                });
                 setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(sid); return n; });
               } else if (event.type === 'error') {
                 updateMessagesForSession(sid, (prev) =>
@@ -300,7 +388,10 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
                     m.id === assistantId
                       ? {
                           ...m,
-                          content: m.content + `\n\n**Error:** ${event.data}`,
+                          errorInfo: {
+                            code: event.errorCode ?? 'INTERNAL_ERROR',
+                            message: event.data ?? 'Unknown error',
+                          },
                           isStreaming: false,
                         }
                       : m,
@@ -309,7 +400,12 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
                 if (resolvedSessionId && mode === 'agent') {
                   registry.complete(resolvedSessionId);
                 }
-                if (mode === 'chat') setLocalStreamingSessionId(null);
+                abortControllersRef.current.delete(sid);
+                setLocalStreamingSessionIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(sid);
+                  return next;
+                });
                 setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(sid); return n; });
               } else if (event.type === 'permission_request') {
                 const permData: PermissionRequestData = {
@@ -319,11 +415,7 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
                   input: event.toolArgs ?? {},
                   decisionReason: event.decisionReason,
                 };
-                // Only set pending permission if this is the active session
-                if (sid === activeSessionIdRef.current || !activeSessionIdRef.current) {
-                  setPendingPermission(permData);
-                  permissionSessionRef.current = sid;
-                }
+                setPendingPermissions((prev) => new Map(prev).set(sid, permData));
 
                 const questions = (permData.input.questions ?? []) as AskQuestionItem[];
                 const questionContent = questions.length > 0
@@ -343,13 +435,16 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         }
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
-        const sid = resolvedSessionId ?? `__pending_${assistantId}`;
+        const sid = resolvedSessionId ?? targetSessionKey;
         updateMessagesForSession(sid, (prev) =>
           prev.map((m) =>
             m.id === assistantId
               ? {
                   ...m,
-                  content: `Error: ${error instanceof Error ? error.message : 'Connection failed'}`,
+                  errorInfo: {
+                    code: 'NETWORK_ERROR' as const,
+                    message: error instanceof Error ? error.message : 'Connection failed',
+                  },
                   isStreaming: false,
                 }
               : m,
@@ -358,12 +453,17 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         if (resolvedSessionId && mode === 'agent') {
           registry.complete(resolvedSessionId);
         }
-        if (mode === 'chat') setLocalStreamingSessionId(null);
-        const cleanKey = resolvedSessionId ?? `__pending_${assistantId}`;
+        abortControllersRef.current.delete(sid);
+        setLocalStreamingSessionIds((prev) => {
+          const next = new Set(prev);
+          next.delete(sid);
+          return next;
+        });
+        const cleanKey = resolvedSessionId ?? targetSessionKey;
         setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(cleanKey); return n; });
       }
     },
-    [mode, registry, updateMessagesForSession],
+    [mode, registry, updateMessagesForSession, migrateSessionState],
   );
 
   const loadSession = useCallback(async (id: string) => {
@@ -381,7 +481,7 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
           }
           return next;
         });
-        setActiveSessionId(id);
+        setActiveSessionKey(id);
       }
     } catch {
       // ignore
@@ -389,15 +489,22 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
   }, []);
 
   const stopStreaming = useCallback(() => {
-    if (!activeSessionId) return;
-    if (mode === 'agent') {
-      registry.abort(activeSessionId);
+    const targetSessionKey = activeSessionKeyRef.current;
+    const abortController = abortControllersRef.current.get(targetSessionKey);
+    if (abortController) {
+      abortController.abort();
+      abortControllersRef.current.delete(targetSessionKey);
     }
-    if (mode === 'chat') {
-      setLocalStreamingSessionId(null);
+    if (!isDraftSessionKey(targetSessionKey) && mode === 'agent') {
+      registry.abort(targetSessionKey);
     }
-    setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(activeSessionId); return n; });
-    updateMessagesForSession(activeSessionId, (prev) =>
+    setLocalStreamingSessionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(targetSessionKey);
+      return next;
+    });
+    setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(targetSessionKey); return n; });
+    updateMessagesForSession(targetSessionKey, (prev) =>
       prev.map((m) => {
         if (!m.isStreaming) return m;
         return {
@@ -411,32 +518,29 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         };
       }),
     );
-  }, [activeSessionId, mode, registry, updateMessagesForSession]);
+  }, [mode, registry, updateMessagesForSession]);
 
   const clearSession = useCallback(() => {
-    if (activeSessionId) {
-      if (mode === 'agent') {
-        registry.abort(activeSessionId);
-      }
-      if (mode === 'chat' && localStreamingSessionId === activeSessionId) {
-        setLocalStreamingSessionId(null);
-      }
+    const currentSessionKey = activeSessionKeyRef.current;
+    const nextDraftKey = createDraftSessionKey(mode);
+
+    if (isDraftSessionKey(currentSessionKey) && (messagesMap.get(currentSessionKey)?.length ?? 0) === 0) {
+      setPermissionStates((prev) => {
+        if (!prev.has(currentSessionKey)) return prev;
+        const next = new Map(prev);
+        next.delete(currentSessionKey);
+        return next;
+      });
+      setPendingPermissions((prev) => {
+        if (!prev.has(currentSessionKey)) return prev;
+        const next = new Map(prev);
+        next.delete(currentSessionKey);
+        return next;
+      });
     }
-    setMessagesMap((prev) => {
-      if (!activeSessionId) return prev;
-      const next = new Map(prev);
-      next.delete(activeSessionId);
-      return next;
-    });
-    setActiveSessionId(null);
-    setPendingPermission(null);
-    setStreamStartTimes((prev) => {
-      if (!activeSessionId) return prev;
-      const n = new Map(prev);
-      n.delete(activeSessionId);
-      return n;
-    });
-  }, [activeSessionId, mode, registry, localStreamingSessionId]);
+
+    setActiveSessionKey(nextDraftKey);
+  }, [messagesMap, mode]);
 
   const submitPermissionDecision = useCallback(
     async (
@@ -444,7 +548,7 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
       behavior: 'allow' | 'deny',
       updatedInput?: Record<string, unknown>,
     ) => {
-      const sid = permissionSessionRef.current ?? activeSessionId;
+      const sid = activeSessionKeyRef.current;
       const answers = (updatedInput?.answers ?? {}) as Record<string, string>;
       const answerContent = behavior === 'allow'
         ? Object.values(answers).join(', ') || 'Approved'
@@ -456,11 +560,12 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         timestamp: Date.now(),
         answerData: answers,
       };
-      if (sid) {
-        updateMessagesForSession(sid, (prev) => [...prev, answerMsg]);
-      }
-      setPendingPermission(null);
-      permissionSessionRef.current = null;
+      updateMessagesForSession(sid, (prev) => [...prev, answerMsg]);
+      setPendingPermissions((prev) => {
+        const next = new Map(prev);
+        next.delete(sid);
+        return next;
+      });
       try {
         await fetch('/api/agent/answer', {
           method: 'POST',
@@ -471,19 +576,246 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         // Connection error — permission may already be resolved
       }
     },
-    [activeSessionId, updateMessagesForSession],
+    [updateMessagesForSession],
+  );
+
+  const approvePlan = useCallback(
+    async (approvalMode: 'auto' | 'manual') => {
+      const activeKey = activeSessionKeyRef.current;
+      if (isDraftSessionKey(activeKey)) return;
+      const activeId = activeKey;
+      const currentMessages = messagesMapRef.current.get(activeId) ?? [];
+      // Find the last user message to re-send
+      const lastUserMsg = [...currentMessages].reverse().find((m) => m.role === 'user');
+      if (!lastUserMsg) return;
+
+      const permMode = approvalMode === 'auto' ? 'bypassPermissions' : 'default';
+
+      // Create a new assistant message placeholder
+      const newAssistantId = generateId();
+      const assistantMsg: ChatMessage = {
+        id: newAssistantId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        isStreaming: true,
+        toolCalls: [],
+      };
+
+      const startTime = Date.now();
+      setStreamStartTimes((prev) => new Map(prev).set(activeId, startTime));
+      updateMessagesForSession(activeId, (prev) => [...prev, assistantMsg]);
+
+      const abortController = new AbortController();
+      abortControllersRef.current.set(activeId, abortController);
+      setLocalStreamingSessionIds((prev) => new Set(prev).add(activeId));
+      registry.register(activeId, mode, abortController);
+
+      try {
+        const response = await fetch('/api/agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: lastUserMsg.content,
+            sessionId: activeId,
+            permissionMode: permMode,
+            planApproval: true,
+          }),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          updateMessagesForSession(activeId, (prev) =>
+            prev.map((m) =>
+              m.id === newAssistantId
+                ? { ...m, errorInfo: { code: 'INTERNAL_ERROR' as const, message: 'Failed to execute plan' }, isStreaming: false }
+                : m,
+            ),
+          );
+          abortControllersRef.current.delete(activeId);
+          setLocalStreamingSessionIds((prev) => {
+            const next = new Set(prev);
+            next.delete(activeId);
+            return next;
+          });
+          registry.complete(activeId);
+          return;
+        }
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() ?? '';
+
+          for (const part of parts) {
+            for (const line of part.split('\n')) {
+              if (!line.startsWith('data: ')) continue;
+              const raw = line.slice(6).trim();
+              if (!raw) continue;
+
+              let event: StreamEventData;
+              try {
+                event = JSON.parse(raw);
+              } catch {
+                continue;
+              }
+
+              if (event.type === 'content' && event.data) {
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId
+                      ? { ...m, content: m.content + event.data }
+                      : m,
+                  ),
+                );
+              } else if (event.type === 'thinking' && event.thinkingDelta) {
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId
+                      ? { ...m, thinkingContent: (m.thinkingContent ?? '') + event.thinkingDelta }
+                      : m,
+                  ),
+                );
+              } else if (event.type === 'tool_start') {
+                const toolInfo: ToolCallInfo = {
+                  id: event.toolId ?? generateId(),
+                  name: event.toolName ?? 'unknown',
+                  args: event.toolArgs ?? {},
+                  status: 'running',
+                  startedAt: Date.now(),
+                };
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId
+                      ? { ...m, toolCalls: [...(m.toolCalls ?? []), toolInfo] }
+                      : m,
+                  ),
+                );
+              } else if (event.type === 'todo_update') {
+                const todos = (event.todos ?? []) as TodoItem[];
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId
+                      ? { ...m, todos }
+                      : m,
+                  ),
+                );
+              } else if (event.type === 'tool_result') {
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId
+                      ? {
+                          ...m,
+                          toolCalls: (m.toolCalls ?? []).map((t) =>
+                            t.id === event.toolId
+                              ? { ...t, result: event.data, status: 'completed' as const, completedAt: Date.now() }
+                              : t,
+                          ),
+                        }
+                      : m,
+                  ),
+                );
+              } else if (event.type === 'result') {
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId ? { ...m, isStreaming: false } : m,
+                  ),
+                );
+                abortControllersRef.current.delete(activeId);
+                setLocalStreamingSessionIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(activeId);
+                  return next;
+                });
+                registry.complete(activeId);
+                setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(activeId); return n; });
+              } else if (event.type === 'error') {
+                updateMessagesForSession(activeId, (prev) =>
+                  prev.map((m) =>
+                    m.id === newAssistantId
+                      ? {
+                          ...m,
+                          errorInfo: {
+                            code: event.errorCode ?? 'INTERNAL_ERROR',
+                            message: event.data ?? 'Unknown error',
+                          },
+                          isStreaming: false,
+                        }
+                      : m,
+                  ),
+                );
+                abortControllersRef.current.delete(activeId);
+                setLocalStreamingSessionIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(activeId);
+                  return next;
+                });
+                registry.complete(activeId);
+                setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(activeId); return n; });
+              } else if (event.type === 'permission_request') {
+                const permData: PermissionRequestData = {
+                  requestId: event.requestId ?? '',
+                  toolName: event.toolName ?? 'AskUserQuestion',
+                  toolUseId: event.toolId ?? '',
+                  input: event.toolArgs ?? {},
+                  decisionReason: event.decisionReason,
+                };
+                setPendingPermissions((prev) => new Map(prev).set(activeId, permData));
+              }
+            }
+          }
+        }
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        updateMessagesForSession(activeId, (prev) =>
+          prev.map((m) =>
+            m.id === newAssistantId
+              ? {
+                  ...m,
+                  errorInfo: {
+                    code: 'NETWORK_ERROR' as const,
+                    message: error instanceof Error ? error.message : 'Execution failed',
+                  },
+                  isStreaming: false,
+                }
+              : m,
+          ),
+        );
+        abortControllersRef.current.delete(activeId);
+        setLocalStreamingSessionIds((prev) => {
+          const next = new Set(prev);
+          next.delete(activeId);
+          return next;
+        });
+        registry.complete(activeId);
+        setStreamStartTimes((prev) => { const n = new Map(prev); n.delete(activeId); return n; });
+      }
+    },
+    [mode, registry, updateMessagesForSession],
   );
 
   return {
     messages,
     isStreaming,
-    sessionId: activeSessionId,
+    sessionKey: activeSessionKey,
+    sessionId,
     streamStartTime,
     pendingPermission,
+    permissionMode,
     sendMessage,
     loadSession,
     clearSession,
     stopStreaming,
+    setPermissionMode,
+    togglePlanMode,
     submitPermissionDecision,
+    approvePlan,
   };
 }

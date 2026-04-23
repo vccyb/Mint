@@ -12,6 +12,7 @@ interface MessageListProps {
   isStreaming?: boolean;
   streamStartTime?: number | null;
   onEditMessage?: (id: string, content: string) => void;
+  onApprovePlan?: (mode: 'auto' | 'manual') => void;
 }
 
 function StreamingIndicator({ startTime }: { startTime: number | null }) {
@@ -45,7 +46,7 @@ function StreamingIndicator({ startTime }: { startTime: number | null }) {
   );
 }
 
-export function MessageList({ messages, isStreaming, streamStartTime, onEditMessage }: MessageListProps) {
+export function MessageList({ messages, isStreaming, streamStartTime, onEditMessage, onApprovePlan }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -63,8 +64,15 @@ export function MessageList({ messages, isStreaming, streamStartTime, onEditMess
     <div className="flex flex-1 flex-col min-h-0 relative" data-message-list>
       <AutoScrollArea className="flex-1" trigger={messages}>
         <div>
-          {messages.map((message) => (
-            <MessageItem key={message.id} message={message} onEditMessage={onEditMessage} />
+          {messages.map((message, index) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              onEditMessage={onEditMessage}
+              streamStartTime={message.isStreaming ? streamStartTime : undefined}
+              isLastMessage={index === messages.length - 1}
+              onApprovePlan={onApprovePlan}
+            />
           ))}
           {isStreaming && <StreamingIndicator startTime={streamStartTime ?? null} />}
         </div>

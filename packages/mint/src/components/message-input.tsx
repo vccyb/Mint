@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import type { Attachment, MentionType, MentionChip } from '@/types';
 import { MENTION_TRIGGERS, MENTION_TOKEN, extractMentions } from '@/types';
 import { MentionPopup } from './mention-popup';
+import { PermissionModeSelector } from './permission-mode-selector';
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
@@ -27,7 +28,11 @@ interface MessageInputProps {
   disabled?: boolean;
   placeholder?: string;
   externalValue?: string;
+  sessionKey?: string | null;
   concurrencyLimitReached?: boolean;
+  permissionMode?: 'bypassPermissions' | 'default' | 'plan';
+  onPermissionModeChange?: (mode: 'bypassPermissions' | 'default' | 'plan') => void;
+  onTogglePlanMode?: () => void;
 }
 
 export interface MessageInputHandle {
@@ -89,7 +94,11 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   disabled,
   placeholder,
   externalValue,
+  sessionKey,
   concurrencyLimitReached,
+  permissionMode,
+  onPermissionModeChange,
+  onTogglePlanMode,
 }, ref) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -104,7 +113,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const baseTextRef = useRef('');
   const interimTextRef = useRef('');
-
+  const sessionDraftsRef = useRef<Map<string, { input: string; attachments: Attachment[] }>>(new Map());
   const inputContainerRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -116,10 +125,33 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     textareaRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    const key = sessionKey ?? '__default__';
+    const draft = sessionDraftsRef.current.get(key);
+    setInput(draft?.input ?? '');
+    setAttachments(draft?.attachments ?? []);
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    });
+  }, [sessionKey]);
+
+  useEffect(() => {
+    const key = sessionKey ?? '__default__';
+    sessionDraftsRef.current.set(key, { input, attachments });
+  }, [attachments, input, sessionKey]);
+
   // Handle externalValue (for edit message feature)
   useEffect(() => {
     if (externalValue !== undefined && externalValue !== '') {
       setInput(externalValue);
+      const key = sessionKey ?? '__default__';
+      const currentDraft = sessionDraftsRef.current.get(key);
+      sessionDraftsRef.current.set(key, {
+        input: externalValue,
+        attachments: currentDraft?.attachments ?? attachments,
+      });
       requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
@@ -129,7 +161,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
         }
       });
     }
-  }, [externalValue]);
+  }, [attachments, externalValue, sessionKey]);
 
   // Web Speech API availability
   const speechAvailable =
@@ -215,12 +247,14 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     }
 
     onSend(trimmed, finalAttachments, nonFileMentions.length > 0 ? nonFileMentions : undefined);
+    const key = sessionKey ?? '__default__';
+    sessionDraftsRef.current.set(key, { input: '', attachments: [] });
     setInput('');
     setAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [input, attachments, disabled, onSend, fetchMentionedFileContent]);
+  }, [input, attachments, disabled, onSend, fetchMentionedFileContent, sessionKey]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -230,12 +264,17 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
       if (mention.active && e.key === 'Enter') {
         return;
       }
+      if (e.key === 'Tab' && e.shiftKey && onTogglePlanMode) {
+        e.preventDefault();
+        onTogglePlanMode();
+        return;
+      }
       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend, mention.active],
+    [handleSend, mention.active, onTogglePlanMode],
   );
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -386,7 +425,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     };
   }, []);
 
-  const canSend = (input.trim() || attachments.length > 0) && !concurrencyLimitReached;
+  const canSend = Boolean(input.trim() || attachments.length > 0) && !concurrencyLimitReached;
 
   return (
     <div className="shrink-0 border-t border-border bg-bg px-6 py-3">
@@ -433,88 +472,105 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
       <div
         ref={inputContainerRef}
         className={cn(
-          'mx-auto flex max-w-3xl items-end gap-2 rounded-lg border bg-bg px-3 py-2 shadow-whisper-sm',
+          'mx-auto flex max-w-3xl flex-col rounded-2xl border bg-bg px-3 py-3 shadow-whisper',
           dragOver ? 'border-primary bg-primary/5' : 'border-border',
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {/* Attach button */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-bg-hover hover:text-text transition-colors cursor-pointer"
-          aria-label="Attach file"
-          disabled={disabled}
-        >
-          <Paperclip className="h-4 w-4" />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              addFiles(e.target.files);
-            }
-            e.target.value = '';
-          }}
-        />
-
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={handleTextareaChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={placeholder ?? 'Send a message...'}
-          disabled={disabled}
-          rows={1}
-          className="max-h-32 min-h-[24px] flex-1 resize-none bg-transparent text-sm leading-relaxed placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
-        />
-
-        {/* Mic button */}
-        {speechAvailable && (
+        <div className="flex items-end gap-3">
           <button
-            onClick={toggleListening}
-            className={cn(
-              'flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors cursor-pointer',
-              isListening
-                ? 'text-red-500 animate-pulse'
-                : 'text-text-tertiary hover:bg-bg-hover hover:text-text',
-            )}
-            aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-transparent text-text-tertiary transition-colors cursor-pointer hover:border-border hover:bg-bg-hover hover:text-text"
+            aria-label="Attach file"
             disabled={disabled}
           >
-            <Mic className="h-4 w-4" />
+            <Paperclip className="h-4 w-4" />
           </button>
-        )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                addFiles(e.target.files);
+              }
+              e.target.value = '';
+            }}
+          />
 
-        {/* Send / Stop button */}
-        {isStreaming && onStop ? (
-          <button
-            onClick={onStop}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-bg-warm text-text-secondary hover:bg-bg-hover transition-colors cursor-pointer"
-            aria-label="Stop generating"
-          >
-            <Square className="h-3 w-3 fill-current" />
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={disabled || !canSend}
-            className={cn(
-              'flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors cursor-pointer',
-              canSend
-                ? 'bg-primary text-white hover:bg-primary-hover'
-                : 'bg-bg-warm text-text-tertiary',
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={placeholder ?? 'Send a message...'}
+            disabled={disabled}
+            rows={1}
+            className="max-h-40 min-h-[32px] flex-1 resize-none bg-transparent pt-1 text-[15px] leading-7 placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
+          />
+
+          {speechAvailable && (
+            <button
+              onClick={toggleListening}
+              className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-transparent transition-colors cursor-pointer',
+                isListening
+                  ? 'text-red-500 animate-pulse'
+                  : 'text-text-tertiary hover:border-border hover:bg-bg-hover hover:text-text',
+              )}
+              aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+              disabled={disabled}
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+          )}
+
+          {isStreaming && onStop ? (
+            <button
+              onClick={onStop}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-bg-warm text-text-secondary transition-colors cursor-pointer hover:bg-bg-hover"
+              aria-label="Stop generating"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={disabled || !canSend}
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors cursor-pointer',
+                canSend
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'bg-bg-warm text-text-tertiary',
+              )}
+              aria-label="Send message"
+            >
+              <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3 border-t border-border/80 pt-2">
+          <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
+            {permissionMode && onPermissionModeChange && (
+              <PermissionModeSelector
+                mode={permissionMode}
+                onModeChange={onPermissionModeChange}
+                onTogglePlanMode={onTogglePlanMode}
+                shortcutLabel="Shift+Tab"
+              />
             )}
-            aria-label="Send message"
-          >
-            <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
-          </button>
-        )}
+            <span>Enter 发送</span>
+            <span>Shift+Enter 换行</span>
+          </div>
+          <div className="text-[11px] text-text-tertiary">
+            {permissionMode === 'plan' ? '计划模式已开启，只规划不执行' : '直接执行当前会话任务'}
+          </div>
+        </div>
       </div>
 
       {/* Unified mention popup */}

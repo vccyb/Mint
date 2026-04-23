@@ -1,3 +1,11 @@
+/** Error codes sent from backend to frontend for classified error display */
+export type StreamErrorCode =
+  | 'RATE_LIMITED'
+  | 'AUTH_ERROR'
+  | 'PROVIDER_ERROR'
+  | 'NETWORK_ERROR'
+  | 'INTERNAL_ERROR';
+
 export interface Attachment {
   id: string;
   name: string;
@@ -16,10 +24,16 @@ export interface ChatMessage {
   skillLoads?: SkillLoadInfo[];
   todos?: TodoItem[];
   attachments?: Attachment[];
+  /** Extended Thinking content from model */
+  thinkingContent?: string;
+  /** Whether this message was generated in plan mode */
+  isPlanMode?: boolean;
   /** For role='question': the question data */
   questionData?: AskQuestionItem[];
   /** For role='answer': the selected answers */
   answerData?: Record<string, string>;
+  /** If message contains an error, the classified error info */
+  errorInfo?: { code: StreamErrorCode; message: string };
 }
 
 export interface ToolCallInfo {
@@ -47,11 +61,13 @@ export interface TodoItem {
 
 export type StreamEventType =
   | 'content'
+  | 'thinking'
   | 'tool_start'
   | 'tool_result'
   | 'skill_load'
   | 'todo_update'
   | 'permission_request'
+  | 'plan_result'
   | 'result'
   | 'error';
 
@@ -88,6 +104,12 @@ export interface StreamEventData {
   requestId?: string;
   decisionReason?: string;
   suggestions?: unknown[];
+  /** Incremental thinking content for Extended Thinking */
+  thinkingDelta?: string;
+  /** Whether the current session is running in plan mode */
+  isPlanMode?: boolean;
+  /** Classified error code for frontend display */
+  errorCode?: StreamErrorCode;
 }
 
 export interface StreamResult {

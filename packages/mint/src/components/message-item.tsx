@@ -3,7 +3,10 @@
 import { Sparkles, MessageCircleQuestion, CheckCircle2, FileText, Image as ImageIcon, File, Zap, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './markdown-renderer';
+import { ThinkingBlock } from './thinking-block';
+import { ErrorBlock } from './error-block';
 import { ActivityPanel } from './activity-panel';
+import { PlanCard } from './plan-card';
 import { TodoList } from './todo-list';
 import { MessageActions } from './message-actions';
 import { formatMessageTime } from '@/lib/format-time';
@@ -62,9 +65,12 @@ function renderUserContent(content: string) {
 interface MessageItemProps {
   message: ChatMessage;
   onEditMessage?: (id: string, content: string) => void;
+  streamStartTime?: number | null;
+  isLastMessage?: boolean;
+  onApprovePlan?: (mode: 'auto' | 'manual') => void;
 }
 
-export function MessageItem({ message, onEditMessage }: MessageItemProps) {
+export function MessageItem({ message, onEditMessage, streamStartTime, isLastMessage, onApprovePlan }: MessageItemProps) {
   // Question message (AskUserQuestion from agent)
   if (message.role === 'question') {
     return (
@@ -130,14 +136,31 @@ export function MessageItem({ message, onEditMessage }: MessageItemProps) {
               {renderUserContent(message.content)}
             </p>
           ) : (
-            <div
-              className={cn(
-                'text-sm leading-relaxed',
-                message.isStreaming && 'streaming-cursor',
+            <>
+              {/* Thinking block — Extended Thinking content */}
+              {message.thinkingContent && (
+                <ThinkingBlock
+                  content={message.thinkingContent}
+                  isStreaming={message.isStreaming ?? false}
+                  startTime={streamStartTime}
+                />
               )}
-            >
-              <MarkdownRenderer content={message.content} />
-            </div>
+              {/* Error block — classified error display */}
+              {message.errorInfo && (
+                <ErrorBlock code={message.errorInfo.code} message={message.errorInfo.message} />
+              )}
+              {/* Main content (hidden in plan mode or error state) */}
+              {!message.isPlanMode && !message.errorInfo && (
+                <div
+                  className={cn(
+                    'text-sm leading-relaxed',
+                    message.isStreaming && 'streaming-cursor',
+                  )}
+                >
+                  <MarkdownRenderer content={message.content} />
+                </div>
+              )}
+            </>
           )}
 
           {/* Attachments — user messages only */}
@@ -159,9 +182,20 @@ export function MessageItem({ message, onEditMessage }: MessageItemProps) {
             </div>
           )}
 
-          {/* Todo list — inline task tracking */}
-          {!isUser && message.todos && message.todos.length > 0 && (
+          {/* Todo list — inline task tracking (non-plan mode) */}
+          {!isUser && !message.isPlanMode && message.todos && message.todos.length > 0 && (
             <TodoList todos={message.todos} />
+          )}
+
+          {/* Plan card — plan mode messages */}
+          {!isUser && message.isPlanMode && (
+            <PlanCard
+              content={message.content}
+              todos={message.todos ?? []}
+              isLastMessage={isLastMessage ?? false}
+              isStreaming={message.isStreaming ?? false}
+              onApprove={onApprovePlan ?? (() => {})}
+            />
           )}
 
           {/* Activity panel — collapsible tool/skill activities */}

@@ -1,11 +1,16 @@
 import { getStorage } from '@/lib/storage';
 import { encodeSSE, createSSEResponse } from '@/lib/sse';
 import { generateId } from '@/lib/utils';
+import { createRequestLogger } from '@/lib/logger';
+import { classifyError } from '@/lib/classify-error';
 import type { ChatMessage, StreamEventData, Attachment } from '@/types';
 
 const MAX_ATTACHMENT_SIZE = 1024 * 1024; // 1MB
 
 export async function POST(request: Request) {
+  const reqId = generateId();
+  const log = createRequestLogger('chat-route', reqId);
+
   try {
     const { message, sessionId, attachments } = (await request.json()) as {
       message: string;
@@ -23,6 +28,12 @@ export async function POST(request: Request) {
 
     const sid = sessionId ?? generateId();
     let isNewSession = false;
+
+    log.info('Chat request received', {
+      messageLength: message.length,
+      sessionId: sessionId ?? 'new',
+      attachmentCount: attachments?.length ?? 0,
+    });
 
     // Load or create session
     if (!sessionId) {
@@ -79,6 +90,7 @@ export async function POST(request: Request) {
     }
 
     if (!apiKey) {
+      log.warn('API key not configured');
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
@@ -86,24 +98,63 @@ export async function POST(request: Request) {
     }
 
     // Stream from Anthropic-compatible API
-    const apiResponse = await fetch(`${baseUrl}/v1/messages`, {
+    log.info('Provider configured', {
+      model,
+      hasApiKey: !!apiKey,
+      baseUrl: baseUrl.replace(/\/\/[^/]+/, '//***'),
+    });
+
+    const buildRequestBody = (enableThinking: boolean) => ({
+      model: model,
+      max_tokens: 4096,
+      messages: apiMessages,
+      stream: true,
+      ...(enableThinking ? { thinking: { type: 'enabled' as const, budget_tokens: 10000 } } : {}),
+    });
+
+    let apiResponse = await fetch(`${baseUrl}/v1/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: 4096,
-        messages: apiMessages,
-        stream: true,
-      }),
+      body: JSON.stringify(buildRequestBody(true)),
     });
+
+    // Fallback: if thinking param is rejected, retry without it
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      log.warn('Provider API error', { status: apiResponse.status, snippet: errorText.slice(0, 200) });
+      const isThinkingError = errorText.includes('thinking') || errorText.includes('unsupported');
+      if (!isThinkingError) {
+        const classified = classifyError(errorText, apiResponse.status);
+        const errorEvent: StreamEventData = { type: 'error', data: classified.userMessage, sessionId: sid, errorCode: classified.code };
+        return createSSEResponse(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode(encodeSSE(errorEvent)));
+              controller.close();
+            },
+          }),
+        );
+      }
+      apiResponse = await fetch(`${baseUrl}/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(buildRequestBody(false)),
+      });
+    }
 
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text();
-      const errorEvent: StreamEventData = { type: 'error', data: errorText, sessionId: sid };
+      log.error('Provider API error after retry', { status: apiResponse.status, snippet: errorText.slice(0, 200) });
+      const classified = classifyError(errorText, apiResponse.status);
+      const errorEvent: StreamEventData = { type: 'error', data: classified.userMessage, sessionId: sid, errorCode: classified.code };
       return createSSEResponse(
         new ReadableStream({
           start(controller) {
@@ -116,6 +167,7 @@ export async function POST(request: Request) {
 
     const body = apiResponse.body!;
     const assistantContent: string[] = [];
+    const thinkingContent: string[] = [];
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -134,16 +186,42 @@ export async function POST(request: Request) {
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() ?? '';
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() ?? '';
 
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const raw = line.slice(6).trim();
+            for (const part of parts) {
+              let eventName = 'message';
+              const dataLines: string[] = [];
+
+              for (const line of part.split('\n')) {
+                if (line.startsWith('event: ')) {
+                  eventName = line.slice(7).trim();
+                } else if (line.startsWith('data: ')) {
+                  dataLines.push(line.slice(6).trim());
+                }
+              }
+
+              const raw = dataLines.join('\n').trim();
               if (raw === '[DONE]') continue;
+              if (!raw) continue;
 
               try {
                 const event = JSON.parse(raw);
+                if (eventName === 'error') {
+                  const message =
+                    event?.error?.message ??
+                    event?.message ??
+                    'Provider stream error';
+                  const classified = classifyError(message);
+                  const errorEvent: StreamEventData = {
+                    type: 'error',
+                    data: classified.userMessage,
+                    sessionId: sid,
+                    errorCode: classified.code,
+                  };
+                  controller.enqueue(encoder.encode(encodeSSE(errorEvent)));
+                  continue;
+                }
                 if (event.type === 'content_block_delta') {
                   const delta = event.delta;
                   if (delta?.type === 'text_delta' && delta.text) {
@@ -154,6 +232,15 @@ export async function POST(request: Request) {
                       sessionId: sid,
                     };
                     controller.enqueue(encoder.encode(encodeSSE(contentEvent)));
+                  } else if (delta?.type === 'thinking_delta' && delta.thinking) {
+                    thinkingContent.push(delta.thinking);
+                    const thinkingEvent: StreamEventData = {
+                      type: 'thinking',
+                      data: '',
+                      sessionId: sid,
+                      thinkingDelta: delta.thinking,
+                    };
+                    controller.enqueue(encoder.encode(encodeSSE(thinkingEvent)));
                   }
                 }
               } catch {
@@ -163,18 +250,22 @@ export async function POST(request: Request) {
           }
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : 'Stream error';
-          const errorEvent: StreamEventData = { type: 'error', data: errMsg, sessionId: sid };
+          log.error('Stream read error', { error: errMsg });
+          const classified = classifyError(errMsg);
+          const errorEvent: StreamEventData = { type: 'error', data: classified.userMessage, sessionId: sid, errorCode: classified.code };
           controller.enqueue(encoder.encode(encodeSSE(errorEvent)));
         }
 
         // Save assistant message
         const fullContent = assistantContent.join('');
-        if (fullContent) {
+        const fullThinking = thinkingContent.join('');
+        if (fullContent || fullThinking) {
           const assistantMsg: ChatMessage = {
             id: generateId(),
             role: 'assistant',
             content: fullContent,
             timestamp: Date.now(),
+            thinkingContent: fullThinking || undefined,
           };
           await storage.appendMessage(sid, assistantMsg);
 
@@ -191,6 +282,7 @@ export async function POST(request: Request) {
         }
 
         // Send result
+        log.info('Chat stream completed', { contentLength: fullContent.length, hasThinking: !!fullThinking });
         const resultEvent: StreamEventData = {
           type: 'result',
           data: JSON.stringify({ role: 'assistant', content: fullContent }),
@@ -204,6 +296,7 @@ export async function POST(request: Request) {
     return createSSEResponse(stream);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal error';
+    log.error('Unhandled chat error', { error: message });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

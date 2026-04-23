@@ -2,18 +2,18 @@
 @import 'highlight.js/styles/github.css';
 
 @theme inline {
-  --color-primary: #0075de;
-  --color-primary-hover: #005bab;
-  --color-primary-light: #f2f9ff;
-  --color-primary-text: #097fe8;
-  --color-bg: #ffffff;
-  --color-bg-warm: #f6f5f4;
-  --color-bg-hover: #f1f0ef;
-  --color-text: rgba(0, 0, 0, 0.95);
-  --color-text-secondary: #615d59;
-  --color-text-tertiary: #a39e98;
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-hover: rgba(0, 0, 0, 0.2);
+  --color-primary: #0c6ece;
+  --color-primary-hover: #0957a3;
+  --color-primary-light: #eef6ff;
+  --color-primary-text: #0d63b7;
+  --color-bg: #fcfaf5;
+  --color-bg-warm: #f3ede2;
+  --color-bg-hover: #ece4d6;
+  --color-text: #1d1a16;
+  --color-text-secondary: #5f564a;
+  --color-text-tertiary: #9b907f;
+  --color-border: rgba(95, 86, 74, 0.16);
+  --color-border-hover: rgba(95, 86, 74, 0.28);
   --color-success: #1aae39;
   --color-error: #dd5b00;
   --color-card-shadow-1: rgba(0, 0, 0, 0.01);
@@ -30,7 +30,9 @@
   }
 
   body {
-    background-color: var(--color-bg);
+    background:
+      radial-gradient(circle at top left, rgba(12, 110, 206, 0.08), transparent 28%),
+      linear-gradient(180deg, #fffdf8 0%, var(--color-bg) 100%);
     color: var(--color-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;

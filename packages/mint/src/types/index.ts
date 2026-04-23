@@ -1,4 +1,4 @@
-export type { ChatMessage, ToolCallInfo, SkillLoadInfo, StreamEventData, StreamEventType, StreamResult, AgentEvent, Attachment, AskQuestionOption, AskQuestionItem, PermissionRequestData, TodoItem } from './message';
+export type { ChatMessage, ToolCallInfo, SkillLoadInfo, StreamEventData, StreamEventType, StreamResult, AgentEvent, Attachment, AskQuestionOption, AskQuestionItem, PermissionRequestData, TodoItem, StreamErrorCode } from './message';
 export type { Mode, SessionConfig, SessionState, SessionResult } from './session';
 export type { SessionMetadata, SessionRecord, StorageAdapter } from './storage';
 export type { SessionGroup } from './group';
