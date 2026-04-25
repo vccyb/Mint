@@ -118,37 +118,36 @@ function MintAppInner() {
       {/* Main content */}
       <div className="flex flex-1 flex-col min-h-0 min-w-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.4))]">
         {/* Header */}
-        <div className="flex items-center border-b border-border/80 bg-white/65 px-6 py-3 backdrop-blur">
-          <div className="flex items-center gap-2">
+        <div className="glass-header flex items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-1.5">
             <svg
-              width="16"
-              height="16"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               className="text-primary"
               aria-hidden="true"
             >
-              <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" fillOpacity="0.15" />
               <path
-                d="M2 17l10 5 10-5M2 12l10 5 10-5"
+                d="m12 3-1.9 5.7a2 2 0 0 1-1.3 1.3L3 12l5.7 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.7a2 2 0 0 1 1.3-1.3L21 12l-5.7-1.9a2 2 0 0 1-1.3-1.3Z"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text">Mint</span>
+            <span className="text-[13px] font-bold text-text">MINT</span>
+            {activeHook.sessionId && sessionTitle && (
+              <>
+                <span className="mx-1 text-text-tertiary">/</span>
+                <InlineEdit
+                  value={sessionTitle}
+                  onSave={handleTitleSave}
+                  className="text-[13px] text-text-secondary"
+                />
+              </>
+            )}
           </div>
-          {activeHook.sessionId && sessionTitle && (
-            <>
-              <span className="mx-3 text-text-tertiary text-xs">/</span>
-              <InlineEdit
-                value={sessionTitle}
-                onSave={handleTitleSave}
-                className="text-xs text-text-secondary"
-              />
-            </>
-          )}
         </div>
 
         {/* View */}

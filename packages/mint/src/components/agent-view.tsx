@@ -1,13 +1,25 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { FolderOpen } from 'lucide-react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
+import { PanelRight } from 'lucide-react';
 import { MessageList } from './message-list';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { FilePanel } from './file-panel';
-import { PreviewPanel, type OpenFile } from './preview-panel';
+import { TeamPanel } from './team/team-panel';
 import { AskQuestionBanner } from './ask-question-banner';
-import type { ChatMessage, Attachment, PermissionRequestData } from '@/types';
+import {
+  RightPanel,
+  RightPanelContext,
+  type PanelState,
+  type PanelTab,
+} from './right-panel';
+import { TodoList } from './todo-list';
+import type { ChatMessage, Attachment, PermissionRequestData, Team, TodoItem } from '@/types';
 
 interface AgentViewProps {
   messages: ChatMessage[];
@@ -25,8 +37,11 @@ interface AgentViewProps {
   concurrencyLimitReached?: boolean;
   onApprovePlan?: (mode: 'auto' | 'manual') => void;
   permissionMode?: 'bypassPermissions' | 'default' | 'plan';
-  onPermissionModeChange?: (mode: 'bypassPermissions' | 'default' | 'plan') => void;
+  onPermissionModeChange?: (
+    mode: 'bypassPermissions' | 'default' | 'plan',
+  ) => void;
   onTogglePlanMode?: () => void;
+  team?: Team | null;
 }
 
 export function AgentView({
@@ -43,176 +58,135 @@ export function AgentView({
   permissionMode = 'default',
   onPermissionModeChange,
   onTogglePlanMode,
+  team,
 }: AgentViewProps) {
-  const [showFiles, setShowFiles] = useState(false);
-  const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
-  const [activeFile, setActiveFile] = useState('');
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [panelState, setPanelState] = useState<PanelState>('visible');
+  const [activeTab, setActiveTab] = useState<PanelTab>('files');
   const [editingContent, setEditingContent] = useState<string>('');
   const inputRef = useRef<MessageInputHandle>(null);
 
-  // Auto-focus input when messages change (new/cleared session)
+  const ctxValue = useMemo(
+    () => ({
+      panelState,
+      setPanelState,
+      activeTab,
+      setActiveTab,
+    }),
+    [panelState, activeTab],
+  );
+
+  // Auto-focus input when messages change
   useEffect(() => {
     inputRef.current?.focus();
   }, [messages.length]);
 
-  const fetchFileContent = useCallback(async (filePath: string, _fileName: string) => {
-    try {
-      const res = await fetch(`/api/files/content?path=${encodeURIComponent(filePath)}`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to load file');
-      }
-      const data = await res.json();
+  const isFullscreen = panelState === 'fullscreen';
 
-      setOpenFiles((prev) => {
-        if (prev.some((f) => f.path === data.path)) return prev;
-        return [...prev, data];
-      });
-      setActiveFile(data.path);
+  // Count running agents for the badge
+  const activeAgentCount = team?.agents.filter(
+    (a) => a.status === 'running',
+  ).length ?? 0;
 
-      // Auto-show files panel when previewing
-      setShowFiles(true);
-    } catch (err) {
-      console.error('Failed to fetch file:', err);
+  const togglePanel = () => {
+    if (panelState === 'hidden') {
+      setPanelState('visible');
+    } else {
+      setPanelState('hidden');
     }
-  }, []);
+  };
 
-  const handleFileClose = useCallback((path: string) => {
-    setOpenFiles((prev) => {
-      const next = prev.filter((f) => f.path !== path);
-      if (next.length === 0) {
-        setActiveFile('');
-      } else {
-        const idx = prev.findIndex((f) => f.path === path);
-        const nextIdx = Math.min(idx, next.length - 1);
-        setActiveFile(next[nextIdx].path);
-      }
-      return next;
-    });
-  }, []);
+  // Compute latest todos for pinned TodoList above input (Codex style)
+  const latestTodoMsg = [...messages].reverse().find(
+    (m) => m.role === 'assistant' && !m.isPlanMode && m.todos && m.todos.length > 0,
+  );
+  const latestTodos = latestTodoMsg?.todos;
+  const hasActiveTodos = !!latestTodos && latestTodos.some((t: TodoItem) => t.status === 'in_progress');
 
   return (
-    <div className="flex flex-1 flex-col min-h-0">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border/80 bg-white/55 px-6 py-3 shrink-0 backdrop-blur">
-        <div className="pill bg-primary-light text-primary-text">Agent</div>
-        <span className="text-xs text-text-tertiary">
-          具备读写文件与执行命令能力
-        </span>
-        <div className="flex-1" />
-        <button
-          onClick={() => setShowFiles(!showFiles)}
-          className={`flex h-7 w-7 items-center justify-center rounded transition-colors cursor-pointer ${
-            showFiles
-              ? 'bg-primary-light text-primary-text'
-              : 'text-text-tertiary hover:bg-bg-warm hover:text-text'
-          }`}
-          aria-label="Toggle file panel"
-        >
-          <FolderOpen className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Body */}
-      {isFullscreen && showFiles ? (
-        /* Fullscreen = files panel takes entire width */
-        <div className="flex flex-1 min-h-0">
-          <div className="w-60 shrink-0 border-r border-border overflow-hidden">
-            <FilePanel
-              onClose={() => setShowFiles(false)}
-              onFileClick={fetchFileContent}
-            />
-          </div>
-          <PreviewPanel
-            files={openFiles}
-            activeFile={activeFile}
-            onActiveChange={setActiveFile}
-            onFileClose={handleFileClose}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={() => setIsFullscreen((v) => !v)}
-          />
+    <RightPanelContext.Provider value={ctxValue}>
+      <div className="flex flex-1 flex-col min-h-0">
+        {/* Header */}
+        <div className="flex items-center gap-2 border-b border-border/80 bg-white/55 px-6 py-3 shrink-0 backdrop-blur">
+          <div className="pill bg-primary-light text-primary-text">Agent</div>
+          <span className="text-xs text-text-tertiary">
+            具备读写文件与执行命令能力
+          </span>
+          <div className="flex-1" />
+          {/* Panel toggle */}
+          <button
+            onClick={togglePanel}
+            className={`flex items-center justify-center w-[28px] h-[28px] rounded-[6px] transition-colors cursor-pointer ${
+              panelState !== 'hidden'
+                ? 'bg-[#E8F2FF] text-[#007AFF]'
+                : 'text-[#AEAEB2] hover:text-[#6E6E73] hover:bg-bg-warm'
+            }`}
+            title={panelState === 'hidden' ? '打开侧栏' : '关闭侧栏'}
+          >
+            <PanelRight className="h-4 w-4" />
+          </button>
         </div>
-      ) : showFiles ? (
-        /* Split = chat | files */
+
+        {/* Body: Chat + Right Panel */}
         <div className="flex flex-1 min-h-0">
-          {/* Chat — flex-1 so it takes remaining space */}
-          <div className="flex flex-col flex-1 min-h-0 min-w-0">
-            <MessageList messages={messages} isStreaming={isStreaming} streamStartTime={streamStartTime} onEditMessage={(_id, content) => setEditingContent(content)} onApprovePlan={onApprovePlan} />
-            {pendingPermission && onPermissionDecision && (
-              <div className="px-6 py-2">
-                <AskQuestionBanner
-                  request={pendingPermission}
-                  onDecision={onPermissionDecision}
-                />
+          {/* Chat area — hidden when panel is fullscreen */}
+          {!isFullscreen && (
+            <div className="flex flex-col flex-1 min-h-0 min-w-0">
+              <MessageList
+                messages={messages}
+                isStreaming={isStreaming}
+                streamStartTime={streamStartTime}
+                onEditMessage={(_id, content) =>
+                  setEditingContent(content)
+                }
+                onApprovePlan={onApprovePlan}
+                hideLastTodoAndPlan={hasActiveTodos}
+              />
+              {hasActiveTodos && !pendingPermission && (
+                <div className="px-6 py-2">
+                  <div className="mx-auto max-w-[640px]">
+                    <TodoList todos={latestTodos!} pinned />
+                  </div>
+                </div>
+              )}
+              {pendingPermission && onPermissionDecision && (
+                <div className="px-6 py-2">
+                  <div className="mx-auto max-w-[640px]">
+                    <AskQuestionBanner
+                      request={pendingPermission}
+                      onDecision={onPermissionDecision}
+                      pinned
+                    />
+                  </div>
+                </div>
+              )}
+              <div className={hasActiveTodos && !pendingPermission ? 'opacity-50 pointer-events-none' : ''}>
+              <MessageInput
+                ref={inputRef}
+                sessionKey={sessionKey}
+                onSend={onSend}
+                onStop={onStop}
+                isStreaming={isStreaming}
+                placeholder="Describe a task for the agent..."
+                externalValue={editingContent}
+                concurrencyLimitReached={concurrencyLimitReached}
+                permissionMode={permissionMode}
+                onPermissionModeChange={onPermissionModeChange}
+                onTogglePlanMode={onTogglePlanMode}
+              />
               </div>
-            )}
-            <MessageInput
-              ref={inputRef}
-              sessionKey={sessionKey}
-              onSend={onSend}
-              onStop={onStop}
-              isStreaming={isStreaming}
-              placeholder="Describe a task for the agent..."
-              externalValue={editingContent}
-              concurrencyLimitReached={concurrencyLimitReached}
-              permissionMode={permissionMode}
-              onPermissionModeChange={onPermissionModeChange}
-              onTogglePlanMode={onTogglePlanMode}
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="w-px shrink-0 bg-border" />
-
-          {/* Files panel: fixed-width sidebar containing file tree + preview */}
-          <div className="flex w-[420px] shrink-0 min-h-0">
-            {/* File tree */}
-            <div className="w-48 shrink-0 border-r border-border overflow-hidden">
-              <FilePanel
-                onClose={() => setShowFiles(false)}
-                onFileClick={fetchFileContent}
-              />
-            </div>
-
-            {/* Preview */}
-            <PreviewPanel
-              files={openFiles}
-              activeFile={activeFile}
-              onActiveChange={setActiveFile}
-              onFileClose={handleFileClose}
-              isFullscreen={isFullscreen}
-              onToggleFullscreen={() => setIsFullscreen((v) => !v)}
-            />
-          </div>
-        </div>
-      ) : (
-        /* Chat only */
-        <div className="flex flex-col flex-1 min-h-0">
-          <MessageList messages={messages} isStreaming={isStreaming} onEditMessage={(_id, content) => setEditingContent(content)} onApprovePlan={onApprovePlan} />
-          {pendingPermission && onPermissionDecision && (
-            <div className="px-6 py-2">
-              <AskQuestionBanner
-                request={pendingPermission}
-                onDecision={onPermissionDecision}
-              />
             </div>
           )}
-          <MessageInput
-            ref={inputRef}
-            sessionKey={sessionKey}
-            onSend={onSend}
-            onStop={onStop}
-            isStreaming={isStreaming}
-            placeholder="Describe a task for the agent..."
-            externalValue={editingContent}
-            concurrencyLimitReached={concurrencyLimitReached}
-            permissionMode={permissionMode}
-            onPermissionModeChange={onPermissionModeChange}
-            onTogglePlanMode={onTogglePlanMode}
-          />
+
+          {/* Right Panel */}
+          <RightPanel activeAgentCount={activeAgentCount}>
+            {activeTab === 'team' ? (
+              <TeamPanel team={team ?? null} fullscreen={isFullscreen} />
+            ) : (
+              <FilePanel fullscreen={isFullscreen} />
+            )}
+          </RightPanel>
         </div>
-      )}
-    </div>
+      </div>
+    </RightPanelContext.Provider>
   );
 }

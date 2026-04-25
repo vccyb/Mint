@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
 
 const AUTO_CLOSE_DELAY = 1000;
@@ -10,6 +10,23 @@ interface ThinkingBlockProps {
   content: string;
   isStreaming: boolean;
   startTime?: number | null;
+}
+
+/** Sparkle icon for Mint-branded thinking indicator */
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className={className}
+    >
+      <path d="m12 3-1.9 5.7a2 2 0 0 1-1.3 1.3L3 12l5.7 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.7a2 2 0 0 1 1.3-1.3L21 12l-5.7-1.9a2 2 0 0 1-1.3-1.3Z" />
+    </svg>
+  );
 }
 
 export function ThinkingBlock({ content, isStreaming, startTime }: ThinkingBlockProps) {
@@ -45,16 +62,16 @@ export function ThinkingBlock({ content, isStreaming, startTime }: ThinkingBlock
     };
   }, [isStreaming, content]);
 
-  // Track duration
+  // Track duration with 100ms resolution for live timer
   useEffect(() => {
     if (isStreaming && startTime) {
       durationTimerRef.current = setInterval(() => {
-        setDuration(Math.round((Date.now() - startTime) / 1000));
-      }, 1000);
+        setDuration(Math.round((Date.now() - startTime) / 100) / 10);
+      }, 100);
     }
 
     if (!isStreaming && startTime) {
-      setDuration(Math.round((Date.now() - startTime) / 1000));
+      setDuration(Math.round((Date.now() - startTime) / 100) / 10);
     }
 
     return () => {
@@ -71,41 +88,46 @@ export function ThinkingBlock({ content, isStreaming, startTime }: ThinkingBlock
   const durationText = isStreaming
     ? '思考中...'
     : duration > 0
-      ? `思考了 ${duration} 秒`
+      ? `思考了 ${duration}s`
       : '思考完毕';
 
   return (
-    <div className={`mb-2 rounded-lg border-l-2 px-3 py-2 transition-colors duration-200 ${
-      effectivelyOpen ? 'border-l-primary/30 bg-bg-warm/40' : 'border-l-transparent bg-transparent'
-    }`}>
+    <div className="mb-2 rounded-xl border border-[rgba(0,0,0,0.08)] overflow-hidden bg-white transition-all duration-200">
       {/* Header */}
       <button
-        className="flex w-full items-center gap-2 text-xs"
+        className="flex w-full items-center gap-2.5 px-4 py-3 text-xs cursor-pointer hover:bg-[#EDEDF0] transition-colors"
         onClick={() => {
           if (!isStreaming) setIsOpen(!isOpen);
         }}
       >
-        <Brain
-          className={`h-3.5 w-3.5 shrink-0 ${
-            isStreaming ? 'animate-pulse text-primary' : 'text-text-tertiary'
-          }`}
-        />
-        <span className={`font-medium ${
-          isStreaming ? 'text-primary' : effectivelyOpen ? 'text-text-secondary' : 'text-text-tertiary'
+        {isStreaming ? (
+          <SparkleIcon className="h-4 w-4 shrink-0 text-[#007AFF] animate-pulse" />
+        ) : (
+          <SparkleIcon className="h-4 w-4 shrink-0 text-[#AEAEB2]" />
+        )}
+        <span className={`font-medium text-[13px] ${
+          isStreaming ? 'text-[#1D1D1F]' : 'text-[#6E6E73]'
         }`}>
           {durationText}
         </span>
-        <span className="flex-1" />
-        {effectivelyOpen ? (
-          <ChevronUp className="h-3 w-3 shrink-0 text-text-tertiary" />
-        ) : (
-          <ChevronDown className="h-3 w-3 shrink-0 text-text-tertiary" />
+        {isStreaming && duration > 0 && (
+          <span className="font-mono text-[11px] text-[#007AFF] tabular-nums ml-auto">
+            {duration.toFixed(1)}s
+          </span>
         )}
+        {!isStreaming && <span className="flex-1" />}
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 text-[#AEAEB2] transition-transform duration-200 ${
+            effectivelyOpen ? '' : '-rotate-90'
+          }`}
+        />
       </button>
 
-      {/* Expanded content only */}
+      {/* Expanded content */}
       {effectivelyOpen && (
-        <div className={`mt-1.5 text-xs leading-relaxed text-text-secondary ${isStreaming ? 'streaming-cursor' : ''}`}>
+        <div className={`border-t border-[rgba(0,0,0,0.08)] bg-[#F5F5F7] px-4 py-3 pl-12 text-[13px] leading-relaxed text-[#6E6E73] ${
+          isStreaming ? 'streaming-cursor' : ''
+        }`}>
           <MarkdownRenderer content={content} />
         </div>
       )}

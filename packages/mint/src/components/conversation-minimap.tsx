@@ -62,7 +62,7 @@ export function ConversationMinimap({ messages }: ConversationMinimapProps) {
       ref={panelRef}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
-      className={`absolute right-3 top-3 z-10 rounded-md border border-border/60 bg-bg/90 backdrop-blur-sm shadow-sm transition-all duration-150 overflow-hidden ${
+      className={`absolute right-3 top-3 z-10 rounded-md border border-border/60 bg-bg/90 backdrop-blur-sm shadow-elevation-1 transition-all duration-150 overflow-hidden ${
         expanded ? 'w-44 py-1.5 px-1' : 'w-7 py-2 px-1.5 flex flex-col items-center gap-[3px]'
       }`}
     >

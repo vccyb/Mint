@@ -41,7 +41,7 @@ export function AcceptPlanDropdown({ onApprove }: AcceptPlanDropdownProps) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-md border border-border bg-bg shadow-whisper z-50 overflow-hidden">
+        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-md border border-border bg-bg shadow-elevation-2 z-[60] overflow-hidden">
           <button
             onClick={() => { onApprove('auto'); setOpen(false); }}
             className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-bg-warm transition-colors"

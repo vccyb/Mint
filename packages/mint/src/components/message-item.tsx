@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, MessageCircleQuestion, CheckCircle2, FileText, Image as ImageIcon, File, Zap, Wrench } from 'lucide-react';
+import { MessageCircleQuestion, CheckCircle2, FileText, Image as ImageIcon, File, Zap, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './markdown-renderer';
 import { ThinkingBlock } from './thinking-block';
@@ -9,17 +9,22 @@ import { ActivityPanel } from './activity-panel';
 import { PlanCard } from './plan-card';
 import { TodoList } from './todo-list';
 import { MessageActions } from './message-actions';
+import { AgentMessageItem } from './team/agent-message-item';
 import { formatMessageTime } from '@/lib/format-time';
-import { MENTION_COLORS } from '@/types';
-import type { ChatMessage, MentionType } from '@/types';
+import type { ChatMessage } from '@/types';
 
-const MENTION_ICONS: Record<MentionType, typeof File> = {
-  file: File,
-  skill: Zap,
-  mcp: Wrench,
-};
+/** Mint sparkle SVG avatar icon */
+function MintAvatar() {
+  return (
+    <div className="w-6 h-6 rounded-md bg-[#F5F5F7] text-[#6E6E73] flex items-center justify-center shrink-0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="m12 3-1.9 5.7a2 2 0 0 1-1.3 1.3L3 12l5.7 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.7a2 2 0 0 1 1.3-1.3L21 12l-5.7-1.9a2 2 0 0 1-1.3-1.3Z" />
+      </svg>
+    </div>
+  );
+}
 
-/** Parse @{path}, /{skill}, #{tool} mentions in user messages and render as styled chips. */
+/** Parse mentions and render as styled chips (light mode for dark bg) */
 function renderUserContent(content: string) {
   const parts = content.split(/(@\{[^}]+\}|\/\{[^}]+\}|#\{[^}]+\})/g);
   return parts.map((part, i) => {
@@ -27,34 +32,28 @@ function renderUserContent(content: string) {
     if (fileMatch) {
       const filePath = fileMatch[1];
       const fileName = filePath.split('/').pop() ?? filePath;
-      const colors = MENTION_COLORS.file;
-      const Icon = MENTION_ICONS.file;
       return (
-        <span key={i} className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${colors.bg} ${colors.border} ${colors.text}`}>
-          <Icon className="h-3 w-3" />
-          {fileName}
+        <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded px-1.5 text-[11px] font-mono">
+          <File className="h-3 w-3" />
+          @{fileName}
         </span>
       );
     }
     const skillMatch = part.match(/^\/\{(.+)\}$/);
     if (skillMatch) {
-      const colors = MENTION_COLORS.skill;
-      const Icon = MENTION_ICONS.skill;
       return (
-        <span key={i} className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${colors.bg} ${colors.border} ${colors.text}`}>
-          <Icon className="h-3 w-3" />
-          {skillMatch[1]}
+        <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded px-1.5 text-[11px] font-mono">
+          <Zap className="h-3 w-3" />
+          /{skillMatch[1]}
         </span>
       );
     }
     const mcpMatch = part.match(/^#\{(.+)\}$/);
     if (mcpMatch) {
-      const colors = MENTION_COLORS.mcp;
-      const Icon = MENTION_ICONS.mcp;
       return (
-        <span key={i} className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${colors.bg} ${colors.border} ${colors.text}`}>
-          <Icon className="h-3 w-3" />
-          {mcpMatch[1]}
+        <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded px-1.5 text-[11px] font-mono">
+          <Wrench className="h-3 w-3" />
+          #{mcpMatch[1]}
         </span>
       );
     }
@@ -68,61 +67,107 @@ interface MessageItemProps {
   streamStartTime?: number | null;
   isLastMessage?: boolean;
   onApprovePlan?: (mode: 'auto' | 'manual') => void;
+  hideTodoAndPlan?: boolean;
 }
 
-export function MessageItem({ message, onEditMessage, streamStartTime, isLastMessage, onApprovePlan }: MessageItemProps) {
-  // Question message (AskUserQuestion from agent)
+export function MessageItem({ message, onEditMessage, streamStartTime, isLastMessage, onApprovePlan, hideTodoAndPlan }: MessageItemProps) {
   if (message.role === 'question') {
     return (
-      <div className="px-6 py-2">
-        <div className="mx-auto max-w-3xl rounded-lg border border-amber-300/50 bg-amber-50/50 px-3 py-2">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
-            <MessageCircleQuestion className="h-3.5 w-3.5" />
-            <span>Agent asked</span>
-            <span className="text-text-tertiary">&middot;</span>
-            <span className="text-text-tertiary font-normal">{formatMessageTime(message.timestamp)}</span>
+      <div className="px-6 py-3">
+        <div className="mx-auto max-w-3xl flex gap-3">
+          <MintAvatar />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xs font-semibold text-[#1D1D1F]">Mint</span>
+              <span className="text-xs text-text-tertiary">&middot;</span>
+              <span className="text-xs text-text-tertiary">{formatMessageTime(message.timestamp)}</span>
+            </div>
+            <div className="rounded-lg border border-warning/20 bg-warning/5 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                <MessageCircleQuestion className="h-3.5 w-3.5" />
+                <span>Agent asked</span>
+              </div>
+              <p className="mt-1 text-xs text-warning whitespace-pre-wrap">{message.content}</p>
+            </div>
           </div>
-          <p className="mt-1 text-xs text-amber-800 whitespace-pre-wrap">{message.content}</p>
         </div>
       </div>
     );
   }
 
-  // Answer message (user's reply to AskUserQuestion)
   if (message.role === 'answer') {
     return (
-      <div className="px-6 py-1">
-        <div className="mx-auto max-w-3xl flex items-center gap-1.5 text-xs">
-          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-          <span className="text-green-700 font-medium">You answered:</span>
-          <span className="text-text-secondary">{message.content}</span>
+      <div className="px-6 py-3">
+        <div className="mx-auto max-w-3xl flex gap-3">
+          <MintAvatar />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xs font-semibold text-[#1D1D1F]">Mint</span>
+              <span className="text-xs text-text-tertiary">&middot;</span>
+              <span className="text-xs text-text-tertiary">{formatMessageTime(message.timestamp)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+              <span className="text-success font-medium">You answered:</span>
+              <span className="text-text-secondary">{message.content}</span>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   const isUser = message.role === 'user';
+  const isAgentMessage = !isUser && !!message.agentId;
+
+  // Team agent messages use a distinct avatar wrapper
+  if (isAgentMessage) {
+    return (
+      <AgentMessageItem
+        agentId={message.agentId!}
+        agentName={message.agentName ?? 'Agent'}
+        agentAvatar={message.agentAvatar ?? '#007AFF'}
+        timestamp={message.timestamp}
+      >
+        <MarkdownRenderer content={message.content} />
+        {message.toolCalls && message.toolCalls.length > 0 && (
+          <ActivityPanel
+            toolCalls={message.toolCalls}
+            skillLoads={message.skillLoads}
+            isStreaming={message.isStreaming}
+          />
+        )}
+      </AgentMessageItem>
+    );
+  }
 
   return (
     <div id={isUser ? `msg-${message.id}` : undefined} className="px-6 py-3">
-      <div className="mx-auto max-w-3xl flex gap-3">
+      <div className={cn(
+        'mx-auto max-w-3xl flex gap-3',
+        isUser && 'flex-row-reverse',
+      )}>
         {/* Avatar */}
         {isUser ? (
-          <div className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-md bg-[#E8F2FF] text-[#007AFF] text-xs font-semibold flex items-center justify-center shrink-0">
             U
           </div>
         ) : (
-          <div className="w-6 h-6 rounded-full bg-bg-warm text-text-secondary flex items-center justify-center shrink-0">
-            <Sparkles size={12} />
-          </div>
+          <MintAvatar />
         )}
 
         {/* Content */}
-        <div className="flex-1 min-w-0 group relative">
+        <div className={cn('flex-1 min-w-0 group relative', isUser && 'flex flex-col items-end')}>
           {/* Header row: name + timestamp */}
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xs font-semibold text-primary-text">
-              {isUser ? 'You' : 'Assistant'}
+          <div className={cn(
+            'flex items-center gap-1.5 mb-1',
+            isUser && 'flex-row-reverse',
+          )}>
+            <span className={cn(
+              'text-xs font-semibold',
+              isUser ? 'text-[#0055B3]' : 'text-[#1D1D1F]',
+            )}>
+              {isUser ? 'You' : 'Mint'}
             </span>
             <span className="text-xs text-text-tertiary">&middot;</span>
             <span className="text-xs text-text-tertiary">
@@ -132,12 +177,13 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
 
           {/* Message body */}
           {isUser ? (
-            <p className="text-sm leading-relaxed text-text whitespace-pre-wrap">
-              {renderUserContent(message.content)}
-            </p>
+            <div className="max-w-[460px]">
+              <div className="bg-[#007AFF] text-white px-3.5 py-2.5 rounded-t-xl rounded-bl-xl rounded-br-sm text-sm leading-relaxed">
+                {renderUserContent(message.content)}
+              </div>
+            </div>
           ) : (
             <>
-              {/* Thinking block — Extended Thinking content */}
               {message.thinkingContent && (
                 <ThinkingBlock
                   content={message.thinkingContent}
@@ -145,15 +191,13 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
                   startTime={streamStartTime}
                 />
               )}
-              {/* Error block — classified error display */}
               {message.errorInfo && (
                 <ErrorBlock code={message.errorInfo.code} message={message.errorInfo.message} />
               )}
-              {/* Main content (hidden in plan mode or error state) */}
               {!message.isPlanMode && !message.errorInfo && (
                 <div
                   className={cn(
-                    'text-sm leading-relaxed',
+                    'text-sm leading-relaxed text-[#1D1D1F]',
                     message.isStreaming && 'streaming-cursor',
                   )}
                 >
@@ -163,7 +207,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
             </>
           )}
 
-          {/* Attachments — user messages only */}
+          {/* Attachments */}
           {isUser && message.attachments && message.attachments.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {message.attachments.map((att) => (
@@ -182,13 +226,13 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
             </div>
           )}
 
-          {/* Todo list — inline task tracking (non-plan mode) */}
-          {!isUser && !message.isPlanMode && message.todos && message.todos.length > 0 && (
+          {/* Todo list */}
+          {!isUser && !message.isPlanMode && message.todos && message.todos.length > 0 && !hideTodoAndPlan && (
             <TodoList todos={message.todos} />
           )}
 
-          {/* Plan card — plan mode messages */}
-          {!isUser && message.isPlanMode && (
+          {/* Plan card */}
+          {!isUser && message.isPlanMode && !hideTodoAndPlan && (
             <PlanCard
               content={message.content}
               todos={message.todos ?? []}
@@ -198,7 +242,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
             />
           )}
 
-          {/* Activity panel — collapsible tool/skill activities */}
+          {/* Activity panel */}
           {message.toolCalls && message.toolCalls.length > 0 && (
             <ActivityPanel
               toolCalls={message.toolCalls}
@@ -207,7 +251,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
             />
           )}
 
-          {/* Message actions — hover overlay */}
+          {/* Message actions */}
           <MessageActions
             content={message.content}
             isUser={isUser}

@@ -161,7 +161,7 @@ export function ProviderTab() {
         {message && (
           <div
             className={`flex items-center gap-2 text-sm ${
-              message.type === 'success' ? 'text-green-600' : 'text-error'
+              message.type === 'success' ? 'text-success' : 'text-error'
             }`}
           >
             {message.type === 'success' ? (

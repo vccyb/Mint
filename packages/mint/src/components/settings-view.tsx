@@ -91,8 +91,8 @@ export function SettingsView({ onBack }: SettingsViewProps) {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                     activeTab === tab.id
-                      ? 'bg-primary-light text-primary-text'
-                      : 'text-text-secondary hover:bg-bg-warm'
+                      ? 'border-l-2 border-l-primary bg-primary-light text-primary-text'
+                      : 'text-text-secondary hover:bg-bg-hover'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -131,13 +131,13 @@ export function SettingsView({ onBack }: SettingsViewProps) {
               {!loading && !error && (
                 <div className="space-y-6">
                   {nativeTools.length > 0 && (
-                    <ToolGroup title="Model-Native" tools={nativeTools} badgeClass="text-green-600 bg-green-50" />
+                    <ToolGroup title="Model-Native" tools={nativeTools} badgeClass="text-success bg-success/10" />
                   )}
                   {sdkTools.length > 0 && (
-                    <ToolGroup title="SDK Built-in Tools" tools={sdkTools} badgeClass="text-blue-600 bg-blue-50" />
+                    <ToolGroup title="SDK Built-in Tools" tools={sdkTools} badgeClass="text-primary bg-primary/10" />
                   )}
                   {mcpTools.length > 0 && (
-                    <ToolGroup title="MCP Tools" tools={mcpTools} badgeClass="text-purple-600 bg-purple-50" />
+                    <ToolGroup title="MCP Tools" tools={mcpTools} badgeClass="text-warning bg-warning/10" />
                   )}
                   {mcpTools.length === 0 && (
                     <p className="text-xs text-text-tertiary italic">

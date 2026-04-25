@@ -34,6 +34,12 @@ export interface ChatMessage {
   answerData?: Record<string, string>;
   /** If message contains an error, the classified error info */
   errorInfo?: { code: StreamErrorCode; message: string };
+  /** Agent ID if this message was produced by a team agent */
+  agentId?: string;
+  /** Agent display name for team agent messages */
+  agentName?: string;
+  /** Agent avatar color for team agent messages */
+  agentAvatar?: string;
 }
 
 export interface ToolCallInfo {
@@ -68,6 +74,10 @@ export type StreamEventType =
   | 'todo_update'
   | 'permission_request'
   | 'plan_result'
+  | 'team_created'
+  | 'agent_status'
+  | 'mailbox_message'
+  | 'task_update'
   | 'result'
   | 'error';
 
@@ -110,6 +120,16 @@ export interface StreamEventData {
   isPlanMode?: boolean;
   /** Classified error code for frontend display */
   errorCode?: StreamErrorCode;
+  /** Agent ID for team agent status updates */
+  agentId?: string;
+  /** Agent status for team events */
+  agentStatus?: import('./team').AgentStatus;
+  /** Team object for team_created events */
+  team?: import('./team').Team;
+  /** Mailbox message for mailbox_message events */
+  mailboxMessage?: import('./team').MailboxMessage;
+  /** Task object for task_update events */
+  task?: import('./team').TeamTask;
 }
 
 export interface StreamResult {

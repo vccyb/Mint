@@ -15,8 +15,8 @@ interface MentionPopupProps {
 
 const TYPE_CONFIG: Record<MentionType, { icon: typeof File; label: string; accent: string }> = {
   file: { icon: File, label: 'Files', accent: 'text-primary' },
-  skill: { icon: Zap, label: 'Skills', accent: 'text-purple-600' },
-  mcp: { icon: Wrench, label: 'MCP Tools', accent: 'text-green-600' },
+  skill: { icon: Zap, label: 'Skills', accent: 'text-warning' },
+  mcp: { icon: Wrench, label: 'MCP Tools', accent: 'text-success' },
 };
 
 const API_ENDPOINTS: Record<MentionType, string> = {
@@ -128,15 +128,15 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
     ? {
         position: 'fixed',
         bottom: window.innerHeight - anchorRect.top + 4,
-        left: anchorRect.left,
-        width: anchorRect.width,
+        left: anchorRect.left + (anchorRect.width - 260) / 2,
+        width: 260,
       }
     : { display: 'none' };
 
   return (
     <div
       ref={containerRef}
-      className="z-50 rounded-xl border border-border bg-bg shadow-lg overflow-hidden"
+      className="z-50 rounded-xl border border-border bg-bg shadow-elevation-2 overflow-hidden"
       style={style}
     >
       {/* Header */}
@@ -155,7 +155,7 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
       <div className="max-h-64 overflow-y-auto">
         {loading && results.length === 0 ? (
           <div className="flex items-center justify-center py-6 text-text-tertiary">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 spinner" />
           </div>
         ) : results.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-text-tertiary">
@@ -169,7 +169,7 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
                 className={cn(
                   'flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors',
                   i === selectedIndex
-                    ? 'bg-primary/8 text-text'
+                    ? 'bg-primary-light text-text'
                     : 'text-text-secondary hover:bg-bg-hover',
                 )}
                 onClick={() => onSelect(item)}
@@ -196,7 +196,7 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
       </div>
 
       {/* Footer hint */}
-      <div className="px-3 py-1.5 border-t border-border bg-bg-warm text-[10px] text-text-tertiary flex items-center gap-3">
+      <div className="px-3 py-1.5 border-t border-border bg-bg-warm text-[10px] text-text-tertiary font-mono flex items-center gap-3">
         <span>↑↓ navigate</span>
         <span>↵ select</span>
         <span>esc close</span>

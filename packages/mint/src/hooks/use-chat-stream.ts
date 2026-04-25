@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import type { ChatMessage, Mode, StreamEventData, ToolCallInfo, SkillLoadInfo, Attachment, PermissionRequestData, AskQuestionItem, MentionChip, TodoItem } from '@/types';
+import type { ChatMessage, Mode, StreamEventData, ToolCallInfo, SkillLoadInfo, Attachment, PermissionRequestData, AskQuestionItem, MentionChip, TodoItem, Team } from '@/types';
 import { createDraftSessionKey, createInitialDraftSessionKey, isDraftSessionKey } from '@/lib/session-key';
 import { generateId } from '@/lib/utils';
 import type { StreamingRegistry } from '@/lib/streaming-registry';
@@ -33,6 +33,7 @@ interface UseChatStreamReturn {
     updatedInput?: Record<string, unknown>,
   ) => Promise<void>;
   approvePlan: (mode: 'auto' | 'manual') => Promise<void>;
+  team: Team | null;
 }
 
 export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatStreamReturn {
@@ -46,6 +47,7 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
   );
   const [localStreamingSessionIds, setLocalStreamingSessionIds] = useState<Set<string>>(new Set());
   const [streamStartTimes, setStreamStartTimes] = useState<Map<string, number>>(new Map());
+  const [teamMap, setTeamMap] = useState<Map<string, Team | null>>(new Map());
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
   const activeSessionKeyRef = useRef<string>(activeSessionKey);
@@ -124,6 +126,7 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
   const isStreaming =
     localStreamingSessionIds.has(activeSessionKey) ||
     (mode === 'agent' ? (registry.getStatus(activeSessionKey)?.isStreaming ?? false) : false);
+  const team = teamMap.get(activeSessionKey) ?? null;
 
   const updateMessagesForSession = useCallback(
     (sessionId: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => {
@@ -200,6 +203,12 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
       const requestPermissionMode =
         permissionStatesRef.current.get(targetSessionKey)?.mode ?? 'default';
       let resolvedSessionId = requestSessionId ?? null;
+
+      // Register with streaming registry immediately for existing sessions
+      // (new sessions are registered when sessionId is resolved from server)
+      if (mode === 'agent' && resolvedSessionId) {
+        registry.register(resolvedSessionId, mode, abortController);
+      }
 
       try {
         const response = await fetch(endpoint, {
@@ -417,18 +426,57 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
                 };
                 setPendingPermissions((prev) => new Map(prev).set(sid, permData));
 
-                const questions = (permData.input.questions ?? []) as AskQuestionItem[];
-                const questionContent = questions.length > 0
-                  ? questions.map((q) => `${q.header ? `[${q.header}] ` : ''}${q.question}`).join('\n')
-                  : String(permData.input.question || 'Agent asked a question');
-                const questionMsg: ChatMessage = {
-                  id: generateId(),
-                  role: 'question',
-                  content: questionContent,
-                  timestamp: Date.now(),
-                  questionData: questions,
-                };
-                updateMessagesForSession(sid, (prev) => [...prev, questionMsg]);
+                // Only create inline question message for non-AskUserQuestion tools
+                if (permData.toolName !== 'AskUserQuestion') {
+                  const questions = (permData.input.questions ?? []) as AskQuestionItem[];
+                  const questionContent = questions.length > 0
+                    ? questions.map((q) => `${q.header ? `[${q.header}] ` : ''}${q.question}`).join('\n')
+                    : String(permData.input.question || 'Agent asked a question');
+                  const questionMsg: ChatMessage = {
+                    id: generateId(),
+                    role: 'question',
+                    content: questionContent,
+                    timestamp: Date.now(),
+                    questionData: questions,
+                  };
+                  updateMessagesForSession(sid, (prev) => [...prev, questionMsg]);
+                }
+              } else if (event.type === 'team_created' && event.team) {
+                setTeamMap((prev) => new Map(prev).set(sid, event.team ?? null));
+              } else if (event.type === 'agent_status' && event.agentId && event.agentStatus) {
+                setTeamMap((prev) => {
+                  const current = prev.get(sid);
+                  if (!current) return prev;
+                  const updated: Team = {
+                    ...current,
+                    agents: current.agents.map((a) =>
+                      a.id === event.agentId ? { ...a, status: event.agentStatus! } : a,
+                    ),
+                  };
+                  return new Map(prev).set(sid, updated);
+                });
+              } else if (event.type === 'mailbox_message' && event.mailboxMessage) {
+                setTeamMap((prev) => {
+                  const current = prev.get(sid);
+                  if (!current) return prev;
+                  const updated: Team = {
+                    ...current,
+                    mailbox: [...current.mailbox, event.mailboxMessage!],
+                  };
+                  return new Map(prev).set(sid, updated);
+                });
+              } else if (event.type === 'task_update' && event.task) {
+                setTeamMap((prev) => {
+                  const current = prev.get(sid);
+                  if (!current) return prev;
+                  const updated: Team = {
+                    ...current,
+                    tasks: current.tasks.map((t) =>
+                      t.id === event.task!.id ? event.task! : t,
+                    ),
+                  };
+                  return new Map(prev).set(sid, updated);
+                });
               }
             }
           }
@@ -549,23 +597,28 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
       updatedInput?: Record<string, unknown>,
     ) => {
       const sid = activeSessionKeyRef.current;
-      const answers = (updatedInput?.answers ?? {}) as Record<string, string>;
-      const answerContent = behavior === 'allow'
-        ? Object.values(answers).join(', ') || 'Approved'
-        : 'Cancelled';
-      const answerMsg: ChatMessage = {
-        id: generateId(),
-        role: 'answer',
-        content: answerContent,
-        timestamp: Date.now(),
-        answerData: answers,
-      };
-      updateMessagesForSession(sid, (prev) => [...prev, answerMsg]);
+      const pending = pendingPermissions.get(sid);
       setPendingPermissions((prev) => {
         const next = new Map(prev);
         next.delete(sid);
         return next;
       });
+
+      // Only create inline answer message for non-AskUserQuestion tools
+      if (!pending || pending.toolName !== 'AskUserQuestion') {
+        const answers = (updatedInput?.answers ?? {}) as Record<string, string>;
+        const answerContent = behavior === 'allow'
+          ? Object.values(answers).join(', ') || 'Approved'
+          : 'Cancelled';
+        const answerMsg: ChatMessage = {
+          id: generateId(),
+          role: 'answer',
+          content: answerContent,
+          timestamp: Date.now(),
+          answerData: answers,
+        };
+        updateMessagesForSession(sid, (prev) => [...prev, answerMsg]);
+      }
       try {
         await fetch('/api/agent/answer', {
           method: 'POST',
@@ -576,7 +629,7 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
         // Connection error — permission may already be resolved
       }
     },
-    [updateMessagesForSession],
+    [updateMessagesForSession, pendingPermissions],
   );
 
   const approvePlan = useCallback(
@@ -768,6 +821,42 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
                   decisionReason: event.decisionReason,
                 };
                 setPendingPermissions((prev) => new Map(prev).set(activeId, permData));
+              } else if (event.type === 'team_created' && event.team) {
+                setTeamMap((prev) => new Map(prev).set(activeId, event.team ?? null));
+              } else if (event.type === 'agent_status' && event.agentId && event.agentStatus) {
+                setTeamMap((prev) => {
+                  const current = prev.get(activeId);
+                  if (!current) return prev;
+                  const updated: Team = {
+                    ...current,
+                    agents: current.agents.map((a) =>
+                      a.id === event.agentId ? { ...a, status: event.agentStatus! } : a,
+                    ),
+                  };
+                  return new Map(prev).set(activeId, updated);
+                });
+              } else if (event.type === 'mailbox_message' && event.mailboxMessage) {
+                setTeamMap((prev) => {
+                  const current = prev.get(activeId);
+                  if (!current) return prev;
+                  const updated: Team = {
+                    ...current,
+                    mailbox: [...current.mailbox, event.mailboxMessage!],
+                  };
+                  return new Map(prev).set(activeId, updated);
+                });
+              } else if (event.type === 'task_update' && event.task) {
+                setTeamMap((prev) => {
+                  const current = prev.get(activeId);
+                  if (!current) return prev;
+                  const updated: Team = {
+                    ...current,
+                    tasks: current.tasks.map((t) =>
+                      t.id === event.task!.id ? event.task! : t,
+                    ),
+                  };
+                  return new Map(prev).set(activeId, updated);
+                });
               }
             }
           }
@@ -817,5 +906,6 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry): UseChatS
     togglePlanMode,
     submitPermissionDecision,
     approvePlan,
+    team,
   };
 }

@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircleQuestion, ChevronRight, ChevronDown, Minimize2, ChevronLeft, Shield } from 'lucide-react';
+import {
+  MessageCircleQuestion,
+  ChevronRight,
+  ChevronDown,
+  Minimize2,
+  Shield,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PermissionRequestData, AskQuestionItem } from '@/types';
 
@@ -12,9 +18,37 @@ interface AskQuestionBannerProps {
     behavior: 'allow' | 'deny',
     updatedInput?: Record<string, unknown>,
   ) => void;
+  /** When true, renders as a card pinned above input */
+  pinned?: boolean;
 }
 
-export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProps) {
+/* ─── Sparkle SVG Icon ─────────────────────────────── */
+
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width='11'
+      height='11'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      className={className}
+    >
+      <circle cx='12' cy='12' r='10' />
+      <path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' />
+      <path d='M12 17h.01' />
+    </svg>
+  );
+}
+
+/* ─── Main Component ───────────────────────────────── */
+
+export function AskQuestionBanner({
+  request,
+  onDecision,
+  pinned = false,
+}: AskQuestionBannerProps) {
   const questions = (request.input.questions ?? []) as AskQuestionItem[];
   const [activeTab, setActiveTab] = useState(0);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
@@ -32,17 +66,11 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
     return opts.length > 0 || !!custom;
   }, [selectedOptions, customAnswers]);
 
-  const allAnswered = questions.length === 0 || questions.every(isQuestionAnswered);
-
-  // Reset focused option when tab changes
-  useEffect(() => {
-    setFocusedOption(-1);
-  }, [activeTab]);
+  useEffect(() => { setFocusedOption(-1); }, [activeTab]);
 
   // Keyboard navigation
   useEffect(() => {
     if (collapsed || !currentQ) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' && activeTab > 0) {
         e.preventDefault();
@@ -60,14 +88,12 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (focusedOption >= 0 && focusedOption < currentQ.options.length) {
-          const opt = currentQ.options[focusedOption];
-          toggleOption(currentQ, opt.label);
+          toggleOption(currentQ, currentQ.options[focusedOption].label);
         } else if (focusedOption === currentQ.options.length) {
           customInputRef.current?.focus();
         }
       }
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [collapsed, activeTab, currentQ, focusedOption, questions.length]);
@@ -81,7 +107,6 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
           : [...current, label];
         return { ...prev, [q.question]: next };
       }
-      // Single select: toggle off if same, else set
       return { ...prev, [q.question]: current.includes(label) ? [] : [label] };
     });
   };
@@ -109,105 +134,120 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
     }
   };
 
-  // Non-AskUserQuestion tool permission request — simple Allow/Deny UI
+  // Non-AskUserQuestion permission — simple Allow/Deny bar
   if (request.toolName !== 'AskUserQuestion' || questions.length === 0) {
-    const toolInput = request.input;
-    // Build a short summary of what the tool wants to do
     const inputSummary = (() => {
-      if (toolInput.command) return `$ ${toolInput.command}`;
-      if (toolInput.file_path || toolInput.filePath) return `${toolInput.file_path ?? toolInput.filePath}`;
-      if (toolInput.content) return String(toolInput.content).slice(0, 100);
+      if (request.input.command) return `$ ${request.input.command}`;
+      if (request.input.file_path || request.input.filePath) {
+        return `${request.input.file_path ?? request.input.filePath}`;
+      }
+      if (request.input.content) return String(request.input.content).slice(0, 100);
       return '';
     })();
 
     return (
-      <div className="mx-auto max-w-3xl rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 shadow-whisper-sm">
-        <div className="flex items-center gap-2 text-xs font-medium text-amber-800">
-          <Shield className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-          <span className="font-semibold">{request.toolName}</span>
+      <div className={cn(
+        'rounded-xl border border-[rgba(0,0,0,0.08)] shadow-sm bg-white',
+        pinned && 'mx-auto max-w-[640px]',
+      )}>
+        <div className='flex items-center gap-2 px-3 py-2.5 text-xs'>
+          <Shield className='h-3.5 w-3.5 shrink-0 text-[#FF9500]' />
+          <span className='font-semibold text-[#FF9500]'>{request.toolName}</span>
           {inputSummary && (
-            <span className="text-amber-700 font-normal truncate max-w-[400px]">{inputSummary}</span>
+            <span className='text-text-secondary font-mono truncate max-w-[400px]'>
+              {inputSummary}
+            </span>
           )}
-          {request.decisionReason && (
-            <span className="text-amber-600 font-normal text-[10px] truncate">{request.decisionReason}</span>
-          )}
-          <div className="flex-1" />
+          <div className='flex-1' />
           <button
             onClick={() => onDecision(request.requestId, 'deny')}
-            className="rounded border border-amber-300 bg-white px-2.5 py-0.5 text-xs text-amber-700 hover:bg-amber-100 transition-colors"
+            className='rounded-md border border-border px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-hover transition-colors cursor-pointer'
           >
-            Deny
+            拒绝
           </button>
           <button
             onClick={() => onDecision(request.requestId, 'allow', request.input)}
-            className="rounded bg-amber-600 px-2.5 py-0.5 text-xs text-white hover:bg-amber-700 transition-colors"
+            className='rounded-md bg-[#007AFF] px-2.5 py-1 text-xs text-white hover:bg-[#0062CC] transition-colors cursor-pointer'
           >
-            Allow
+            允许
           </button>
         </div>
       </div>
     );
   }
 
-  // Collapsed: show a tiny bar with question summary
+  // Collapsed bar
   if (collapsed) {
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="mx-auto flex max-w-3xl w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-left shadow-whisper-sm hover:bg-primary/10 transition-colors"
+        className={cn(
+          'flex w-full items-center gap-2 rounded-xl border px-4 py-2 text-left',
+          'border-[rgba(0,0,0,0.08)] shadow-sm bg-white',
+          'hover:bg-[#E8F2FF]/30 transition-colors cursor-pointer',
+          pinned && 'mx-auto max-w-[640px]',
+        )}
       >
-        <MessageCircleQuestion className="h-3.5 w-3.5 shrink-0 text-primary" />
-        <span className="text-xs font-medium text-primary truncate">
+        <MessageCircleQuestion className='h-3.5 w-3.5 shrink-0 text-[#007AFF]' />
+        <span className='text-xs font-medium text-[#007AFF] truncate'>
           {questions.length} question{questions.length > 1 ? 's' : ''} pending...
         </span>
-        <span className="text-xs text-text-tertiary truncate">
+        <span className='text-xs text-text-tertiary truncate'>
           {questions[0]?.question}
         </span>
-        <ChevronDown className="h-3 w-3 shrink-0 text-text-tertiary ml-auto" />
+        <ChevronDown className='h-3 w-3 shrink-0 text-text-tertiary ml-auto' />
       </button>
     );
   }
 
-  // Tabbed interface
+  // Full card — pinned style
   return (
-    <div className="mx-auto max-w-3xl rounded-lg border border-primary/30 bg-primary/5 shadow-whisper-sm">
+    <div className={cn(
+      'rounded-xl border border-[rgba(0,0,0,0.08)] shadow-sm bg-white',
+      'overflow-hidden animate-slide-up',
+      pinned && 'mx-auto max-w-[640px]',
+    )}>
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-primary/20">
-        <MessageCircleQuestion className="h-3.5 w-3.5 text-primary shrink-0" />
-        <span className="text-xs font-medium text-text">
-          Agent has a question
+      <div className='flex items-center gap-2 px-3.5 py-2.5 border-b border-[rgba(0,0,0,0.08)] bg-[#F5F5F7]'>
+        <div className='flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-[#E8F2FF]'>
+          <SparkleIcon className='text-[#007AFF]' />
+        </div>
+        <span className='text-xs font-semibold text-text'>
+          Mint 有一个问题
         </span>
-        <span className="text-[10px] bg-primary/10 rounded px-1.5 py-0.5 text-primary font-medium">
-          {questions.length} question{questions.length > 1 ? 's' : ''}
-        </span>
-        <div className="flex-1" />
+        {questions.length > 1 && (
+          <span className='text-[10px] bg-[#E8F2FF] rounded px-1.5 py-0.5 text-[#007AFF] font-medium'>
+            {questions.length} 个问题
+          </span>
+        )}
+        <div className='flex-1' />
         <button
           onClick={() => setCollapsed(true)}
-          className="flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:bg-bg-hover hover:text-text transition-colors"
-          aria-label="Minimize question"
+          className='flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:bg-bg-hover hover:text-text transition-colors cursor-pointer'
+          aria-label='Minimize question'
         >
-          <Minimize2 className="h-3 w-3" />
+          <Minimize2 className='h-3 w-3' />
         </button>
       </div>
 
       {/* Tab bar */}
       {questions.length > 1 && (
-        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-primary/15 overflow-x-auto">
+        <div className='flex items-center gap-1 px-3.5 py-1.5 border-b border-[rgba(0,0,0,0.06)] overflow-x-auto'>
           {questions.map((q, i) => (
             <button
               key={i}
               onClick={() => setActiveTab(i)}
               className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
                 activeTab === i
-                  ? 'bg-primary text-white'
+                  ? 'bg-[#007AFF] text-white'
                   : isQuestionAnswered(q)
-                    ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                    : 'bg-bg-warm text-text-secondary hover:bg-bg-hover',
+                    ? 'bg-[rgba(52,199,89,0.1)] text-[#34C759] hover:bg-[rgba(52,199,89,0.15)]'
+                    : 'bg-[#F5F5F7] text-text-secondary hover:bg-[#EDEDF0]',
               )}
             >
               {isQuestionAnswered(q) && activeTab !== i && (
-                <span className="text-green-500">&#10003;</span>
+                <span className='text-[#34C759]'>&#10003;</span>
               )}
               {q.header || `Q${i + 1}`}
             </button>
@@ -217,13 +257,13 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
 
       {/* Question content */}
       {currentQ && (
-        <div className="px-3 py-2.5">
-          <p className="text-sm font-medium text-text mb-2">
+        <div className='px-3.5 py-3'>
+          <p className='text-[13px] font-medium text-text mb-2.5'>
             {currentQ.question}
           </p>
 
           {/* Options */}
-          <div className="space-y-1">
+          <div className='space-y-1'>
             {currentQ.options.map((opt, oi) => {
               const selected = (selectedOptions[currentQ.question] ?? []).includes(opt.label);
               return (
@@ -231,31 +271,47 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
                   key={opt.label}
                   onClick={() => toggleOption(currentQ, opt.label)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors',
-                    focusedOption === oi && 'ring-1 ring-primary/50',
+                    'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition-colors cursor-pointer',
+                    focusedOption === oi && 'ring-1 ring-[#007AFF]/50',
                     selected
-                      ? currentQ.multiSelect
-                        ? 'border-primary bg-primary/10 text-text'
-                        : 'border-primary bg-primary/10 text-text'
-                      : 'border-border bg-bg text-text-secondary hover:bg-bg-hover',
+                      ? 'border-[#007AFF] bg-[#E8F2FF]'
+                      : 'border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F7]',
                   )}
                 >
-                  <span className={cn(
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    selected
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-border',
-                  )}>
-                    {selected && (
-                      currentQ.multiSelect
-                        ? <span className="text-[10px]">&#10003;</span>
-                        : <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <span className={cn(selected && 'font-medium')}>{opt.label}</span>
+                  {/* Radio / Checkbox indicator */}
+                  {currentQ.multiSelect ? (
+                    <span className={cn(
+                      'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border',
+                      selected
+                        ? 'border-[#007AFF] bg-[#007AFF]'
+                        : 'border-[rgba(0,0,0,0.16)]',
+                    )}>
+                      {selected && (
+                        <svg width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='white' strokeWidth='3'>
+                          <path d='M20 6 9 17l-5-5' />
+                        </svg>
+                      )}
+                    </span>
+                  ) : (
+                    <span className={cn(
+                      'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border',
+                      selected
+                        ? 'border-[#007AFF]'
+                        : 'border-[rgba(0,0,0,0.16)]',
+                    )}>
+                      {selected && (
+                        <span className='h-[7px] w-[7px] rounded-full bg-[#007AFF]' />
+                      )}
+                    </span>
+                  )}
+                  <div className='min-w-0'>
+                    <span className={cn(selected ? 'font-medium text-[#0055B3]' : 'text-text')}>
+                      {opt.label}
+                    </span>
                     {opt.description && (
-                      <p className="text-[10px] text-text-tertiary mt-0.5 truncate">{opt.description}</p>
+                      <p className='text-[10px] text-text-tertiary mt-0.5 truncate'>
+                        {opt.description}
+                      </p>
                     )}
                   </div>
                 </button>
@@ -263,54 +319,70 @@ export function AskQuestionBanner({ request, onDecision }: AskQuestionBannerProp
             })}
           </div>
 
-          {/* Custom answer input */}
-          <input
-            ref={customInputRef}
-            type="text"
-            placeholder="Or type a custom answer..."
-            value={customAnswers[currentQ.question] ?? ''}
-            onChange={(e) =>
-              setCustomAnswers((prev) => ({
-                ...prev,
-                [currentQ.question]: e.target.value,
-              }))
-            }
-            className={cn(
-              'mt-1.5 w-full rounded-md border border-border bg-bg px-2.5 py-1 text-xs text-text placeholder:text-text-tertiary focus:border-primary focus:outline-none',
-              focusedOption === currentQ.options.length && 'ring-1 ring-primary/50',
-            )}
-          />
+          {/* Free text input + Submit */}
+          <div className='mt-2.5 flex items-center gap-1.5'>
+            <input
+              ref={customInputRef}
+              type='text'
+              placeholder='输入自定义回答...'
+              value={customAnswers[currentQ.question] ?? ''}
+              onChange={(e) =>
+                setCustomAnswers((prev) => ({
+                  ...prev,
+                  [currentQ.question]: e.target.value,
+                }))
+              }
+              className={cn(
+                'flex-1 rounded-md border border-[rgba(0,0,0,0.08)] bg-[#F5F5F7] px-2.5 py-1.5',
+                'text-xs text-text placeholder:text-text-tertiary',
+                'focus:border-[#007AFF] focus:bg-white focus:outline-none',
+                focusedOption === currentQ.options.length && 'ring-1 ring-[#007AFF]/50',
+              )}
+            />
+            <button
+              onClick={handleNext}
+              disabled={!isQuestionAnswered(currentQ)}
+              className={cn(
+                'rounded-lg px-4 py-1.5 text-xs font-medium transition-colors cursor-pointer shrink-0',
+                isQuestionAnswered(currentQ)
+                  ? 'bg-[#007AFF] text-white hover:bg-[#0062CC] shadow-[0_2px_6px_rgba(0,122,255,0.25)]'
+                  : 'bg-[#F5F5F7] text-text-tertiary cursor-not-allowed',
+              )}
+            >
+              提交
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex gap-2 px-3 py-2 border-t border-primary/20">
-        <button
-          onClick={() => onDecision(request.requestId, 'deny')}
-          className="rounded-md border border-border px-3 py-1 text-xs text-text-secondary hover:bg-bg-hover"
-        >
-          Cancel
-        </button>
-        <div className="flex-1" />
-        {questions.length > 1 && (
-          <span className="text-[10px] text-text-tertiary self-center">
+      {/* Actions footer for multi-question */}
+      {questions.length > 1 && (
+        <div className='flex items-center gap-2 px-3.5 py-2 border-t border-[rgba(0,0,0,0.06)]'>
+          <button
+            onClick={() => onDecision(request.requestId, 'deny')}
+            className='rounded-md border border-[rgba(0,0,0,0.08)] px-3 py-1 text-xs text-text-secondary hover:bg-[#F5F5F7] cursor-pointer'
+          >
+            取消
+          </button>
+          <div className='flex-1' />
+          <span className='text-[10px] text-text-tertiary'>
             {activeTab + 1}/{questions.length}
           </span>
-        )}
-        <button
-          onClick={handleNext}
-          disabled={!isQuestionAnswered(currentQ)}
-          className={cn(
-            'rounded-md px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1',
-            isQuestionAnswered(currentQ)
-              ? 'bg-primary text-white hover:bg-primary-hover'
-              : 'bg-bg-warm text-text-tertiary cursor-not-allowed',
-          )}
-        >
-          {isLastTab ? 'Submit' : 'Next'}
-          {!isLastTab && <ChevronRight className="h-3 w-3" />}
-        </button>
-      </div>
+          <button
+            onClick={handleNext}
+            disabled={!isQuestionAnswered(currentQ)}
+            className={cn(
+              'rounded-md px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer',
+              isQuestionAnswered(currentQ)
+                ? 'bg-[#007AFF] text-white hover:bg-[#0062CC]'
+                : 'bg-[#F5F5F7] text-text-tertiary cursor-not-allowed',
+            )}
+          >
+            {isLastTab ? '提交' : '下一题'}
+            {!isLastTab && <ChevronRight className='h-3 w-3' />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -374,7 +374,7 @@ export function SkillsTab() {
               </button>
               <button
                 onClick={() => handleDeleteSkill(deleteTarget)}
-                className="rounded bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 transition-colors cursor-pointer"
+                className="rounded bg-error px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-colors cursor-pointer"
               >
                 Delete
               </button>

@@ -19,11 +19,11 @@ export function PlanCard({ content, todos, isLastMessage, isStreaming, onApprove
   const totalTodos = todos.length;
 
   return (
-    <div className="mt-2 rounded-lg border-2 border-success/20 bg-success/3 shadow-whisper-sm overflow-hidden">
+    <div className="mt-2 rounded-lg border border-success/20 bg-success/3 shadow-elevation-1">
       {/* Green header bar */}
       <div className="flex items-center gap-2 bg-success/8 px-3 py-2">
         <ListTodo className="h-3.5 w-3.5 shrink-0 text-success" />
-        <span className="text-xs font-semibold text-success">Plan</span>
+        <span className="text-xs font-semibold text-success font-heading">Plan</span>
         {totalTodos > 0 && (
           <span className="pill bg-success/10 text-success text-[10px]">
             {completedTodos}/{totalTodos} tasks

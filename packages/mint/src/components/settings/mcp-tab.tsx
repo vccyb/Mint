@@ -256,9 +256,9 @@ export function McpTab() {
 
                   {/* Status indicator */}
                   {testResult?.status === 'connected' ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                   ) : testResult?.status === 'error' ? (
-                    <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    <XCircle className="h-3.5 w-3.5 text-error shrink-0" />
                   ) : (
                     <div className={cn(
                       'h-2 w-2 rounded-full shrink-0',
@@ -272,7 +272,7 @@ export function McpTab() {
                         {config.name}
                       </span>
                       {testResult && testResult.tools.length > 0 && (
-                        <span className="pill text-[10px] font-semibold bg-purple-50 text-purple-700">
+                        <span className="pill text-[10px] font-semibold bg-warning/10 text-warning">
                           {testResult.tools.length} tool{testResult.tools.length !== 1 ? 's' : ''}
                         </span>
                       )}
@@ -292,7 +292,7 @@ export function McpTab() {
                     className={cn(
                       'rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors',
                       config.enabled
-                        ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                        ? 'bg-success/10 text-success hover:bg-success/15'
                         : 'bg-bg-warm text-text-tertiary hover:bg-bg-hover',
                     )}
                   >
@@ -315,7 +315,7 @@ export function McpTab() {
                   <button
                     onClick={() => handleDelete(config.id)}
                     disabled={deleting === config.id}
-                    className="flex h-6 w-6 items-center justify-center rounded text-text-tertiary hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                    className="flex h-6 w-6 items-center justify-center rounded text-text-tertiary hover:bg-error/5 hover:text-error transition-colors disabled:opacity-50"
                   >
                     {deleting === config.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -329,7 +329,7 @@ export function McpTab() {
                 {isExpanded && (
                   <div className="border-t border-border px-3 py-2 bg-bg-warm/50">
                     {testResult?.error && (
-                      <p className="text-xs text-red-600 mb-2">{testResult.error}</p>
+                      <p className="text-xs text-error mb-2">{testResult.error}</p>
                     )}
                     {testResult && testResult.tools.length > 0 ? (
                       <div className="space-y-1">

@@ -108,8 +108,8 @@ export function FileMentionPopup({ query, anchorRect, onSelect, onClose }: FileM
     ? {
         position: 'fixed',
         bottom: window.innerHeight - anchorRect.top + 4,
-        left: anchorRect.left,
-        width: anchorRect.width,
+        left: anchorRect.left + (anchorRect.width - 260) / 2,
+        width: 260,
       }
     : { display: 'none' };
 
@@ -158,7 +158,7 @@ export function FileMentionPopup({ query, anchorRect, onSelect, onClose }: FileM
                   onMouseEnter={() => setSelectedIndex(i)}
                 >
                   {isDir ? (
-                    <Folder className="h-4 w-4 shrink-0 text-blue-500" />
+                    <Folder className="h-4 w-4 shrink-0 text-warning" />
                   ) : (
                     <File className="h-4 w-4 shrink-0 text-text-tertiary" />
                   )}

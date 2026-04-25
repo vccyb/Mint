@@ -1,12 +1,30 @@
 'use client';
 
 import { useState, useCallback, type ReactNode } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
+
+/** Clipboard SVG icon for copy button */
+function ClipboardIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className={className}
+    >
+      <rect width="14" height="14" x="8" y="8" rx="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  );
+}
 
 function CodeBlockWithCopy({ children, className }: { children: ReactNode; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -18,26 +36,29 @@ function CodeBlockWithCopy({ children, className }: { children: ReactNode; class
     setTimeout(() => setCopied(false), 2000);
   }, [children]);
 
-  // Extract language from className (e.g. "language-typescript")
   const lang = className?.replace('language-', '') ?? '';
 
   return (
-    <div className="relative group my-3">
-      <div className="flex items-center justify-between rounded-t-xl border border-border bg-bg-warm px-4 py-1.5">
-        <span className="text-[10px] text-text-tertiary font-mono uppercase">{lang || 'code'}</span>
+    <div className="my-3 rounded-lg overflow-hidden shadow-elevation-1">
+      {/* Header bar: language label + copy button */}
+      <div className="flex items-center justify-between bg-[#F5F5F7] px-3 py-1.5">
+        <span className="text-[10px] font-semibold text-[#6E6E73] font-mono uppercase tracking-wider">
+          {lang || 'code'}
+        </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 text-text-tertiary hover:text-text transition-colors text-[10px]"
+          className="flex items-center gap-1 text-[#AEAEB2] hover:text-[#6E6E73] transition-colors text-[10px] cursor-pointer"
         >
           {copied ? (
-            <><Check className="h-3 w-3" /> Copied</>
+            <><Check className="h-3 w-3" /> Copied!</>
           ) : (
-            <><Copy className="h-3 w-3" /> Copy</>
+            <><ClipboardIcon /> 复制</>
           )}
         </button>
       </div>
-      <pre className="overflow-x-auto rounded-b-xl bg-bg-warm p-4 text-sm leading-relaxed border border-t-0 border-border !mt-0">
-        <code className={className}>{children}</code>
+      {/* Code body: light background */}
+      <pre className="overflow-x-auto bg-white p-4 text-sm leading-relaxed !mt-0">
+        <code className={`${className ?? ''} text-[#1D1D1F] font-mono`}>{children}</code>
       </pre>
     </div>
   );
@@ -45,7 +66,6 @@ function CodeBlockWithCopy({ children, className }: { children: ReactNode; class
 
 const markdownComponents: Partial<Components> = {
   pre: ({ children }) => {
-    // Extract code content and className from the child <code> element
     const codeElement = children as React.ReactElement<{
       className?: string;
       children?: ReactNode;
@@ -58,7 +78,7 @@ const markdownComponents: Partial<Components> = {
       );
     }
     return (
-      <pre className="overflow-x-auto rounded-xl bg-bg-warm p-4 text-sm leading-relaxed my-3 border border-border">
+      <pre className="overflow-x-auto rounded-lg bg-white p-4 text-sm leading-relaxed my-3 text-[#1D1D1F]">
         {children}
       </pre>
     );
@@ -93,23 +113,23 @@ const markdownComponents: Partial<Components> = {
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto my-3">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-sm border-collapse border border-gray-200">
         {children}
       </table>
     </div>
   ),
   th: ({ children }) => (
-    <th className="border border-border bg-bg-warm px-3 py-1.5 text-left text-xs font-semibold">
+    <th className="border border-gray-200 bg-gray-50 px-3 py-1.5 text-left text-xs font-semibold">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="border border-border px-3 py-1.5 text-sm">{children}</td>
+    <td className="border border-gray-200 px-3 py-1.5 text-sm">{children}</td>
   ),
   ul: ({ children }) => <ul className="my-2 ml-5 list-disc space-y-0.5">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 ml-5 list-decimal space-y-0.5">{children}</ol>,
   blockquote: ({ children }) => (
-    <blockquote className="my-2 border-l-[3px] border-primary/30 pl-4 text-text-secondary italic">
+    <blockquote className="my-2 border-l-4 border-gray-300 pl-4 text-gray-600">
       {children}
     </blockquote>
   ),

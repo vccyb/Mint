@@ -12,12 +12,9 @@ import {
   Zap,
   ChevronDown,
   ChevronRight,
-  Check,
-  XCircle,
+  FilePlus,
 } from 'lucide-react';
 import type { ToolCallInfo, SkillLoadInfo } from '@/types';
-
-// --- Reusable helpers (from tool-activity.tsx) ---
 
 function getToolIcon(name: string) {
   switch (name) {
@@ -27,6 +24,7 @@ function getToolIcon(name: string) {
     case 'file':
       return FileText;
     case 'Write':
+      return FilePlus;
     case 'Edit':
       return Pencil;
     case 'Grep':
@@ -66,8 +64,6 @@ function formatDuration(ms: number): string {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
 }
 
-// --- Grouping types ---
-
 interface ActivityGroup {
   skill: SkillLoadInfo | null;
   tools: ToolCallInfo[];
@@ -80,39 +76,31 @@ function groupActivities(
   if (skillLoads.length === 0) {
     return [{ skill: null, tools: toolCalls }];
   }
-
   const groups: ActivityGroup[] = [];
   let currentGroup: ActivityGroup | null = null;
   let skillIdx = 0;
-
   for (const tool of toolCalls) {
     if (skillIdx < skillLoads.length) {
       currentGroup = { skill: skillLoads[skillIdx], tools: [] };
       groups.push(currentGroup);
       skillIdx++;
     }
-
     if (currentGroup) {
       currentGroup.tools.push(tool);
     } else {
-      // No skill loaded yet — standalone group
       const standalone: ActivityGroup = { skill: null, tools: [tool] };
       groups.push(standalone);
       currentGroup = standalone;
     }
   }
-
   return groups;
 }
-
-// --- Sub-components ---
 
 function ToolRow({ tool }: { tool: ToolCallInfo }) {
   const Icon = getToolIcon(tool.name);
   const isRunning = tool.status === 'running';
   const isError = tool.status === 'error';
   const [expanded, setExpanded] = useState(false);
-
   const elapsed = tool.startedAt
     ? formatDuration((tool.completedAt ?? Date.now()) - tool.startedAt)
     : null;
@@ -120,51 +108,34 @@ function ToolRow({ tool }: { tool: ToolCallInfo }) {
   return (
     <div>
       <div
-        className="flex items-center gap-2 py-1 text-xs hover:bg-bg-warm rounded px-1.5 cursor-pointer"
+        className="flex items-center gap-1.5 py-1 text-xs hover:bg-[#EDEDF0] rounded-lg px-2 cursor-pointer transition-colors duration-150"
         onClick={() => setExpanded(!expanded)}
       >
-        <Icon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-        <span className="shrink-0 font-medium text-text-secondary">{tool.name}</span>
-        <span className="flex-1 truncate font-mono text-text-tertiary text-[11px]">
+        <Icon className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
+        <span className="shrink-0 font-semibold text-[#1D1D1F] font-mono text-[11px]">{tool.name}</span>
+        <span className="text-[#AEAEB2]">&middot;</span>
+        <span className="flex-1 truncate text-[#6E6E73] font-mono text-[11px]">
           {getToolSummary(tool)}
         </span>
-        {elapsed && (
-          <span className="text-[10px] text-text-tertiary font-mono tabular-nums shrink-0">
+        {elapsed && !isRunning && (
+          <span className="text-[10px] text-[#AEAEB2] font-mono tabular-nums shrink-0">
             {elapsed}
           </span>
         )}
         {isRunning ? (
-          <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary" />
+          <div className="h-3 w-3 shrink-0 rounded-full border-2 border-[#007AFF] border-t-transparent animate-spin" />
         ) : isError ? (
-          <XCircle className="h-3 w-3 shrink-0 text-red-500" />
+          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
         ) : (
-          <Check className="h-3 w-3 shrink-0 text-green-600" />
+          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34C759]" />
         )}
       </div>
-
       {expanded && (
-        <div className="ml-6 mr-2 mb-1 space-y-1.5 border-l border-border pl-3">
-          {tool.args && Object.keys(tool.args).length > 0 && (
-            <div>
-              <p className="text-text-tertiary text-[10px] uppercase tracking-wider mb-0.5 font-semibold">
-                Input
-              </p>
-              <pre className="bg-bg-warm rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed">
-                {JSON.stringify(tool.args, null, 2)}
-              </pre>
-            </div>
-          )}
+        <div className="ml-5 mr-2 mb-1 space-y-1.5 border-l border-[rgba(0,0,0,0.08)] pl-3">
           {tool.result && (
-            <div>
-              <p className="text-text-tertiary text-[10px] uppercase tracking-wider mb-0.5 font-semibold">
-                Output
-              </p>
-              <pre className="bg-bg-warm rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
-                {tool.result.length > 3000
-                  ? tool.result.slice(0, 3000) + '\n... (truncated)'
-                  : tool.result}
-              </pre>
-            </div>
+            <pre className="bg-[#F5F5F7] rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
+              {tool.result.length > 3000 ? tool.result.slice(0, 3000) + '\n... (truncated)' : tool.result}
+            </pre>
           )}
         </div>
       )}
@@ -174,18 +145,13 @@ function ToolRow({ tool }: { tool: ToolCallInfo }) {
 
 function SkillGroupHeader({ skill }: { skill: SkillLoadInfo }) {
   return (
-    <div className="flex items-center gap-2 py-1 px-1.5 text-xs">
-      <Zap className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-      <span className="font-medium text-text-secondary">{skill.name}</span>
-      {skill.description && (
-        <span className="text-[10px] text-text-tertiary truncate">{skill.description}</span>
-      )}
-      <span className="text-[10px] text-green-600 shrink-0">loaded</span>
+    <div className="flex items-center gap-2 py-1 px-2 text-xs">
+      <Zap className="h-3.5 w-3.5 shrink-0 text-[#FF9500]" />
+      <span className="font-medium text-[#6E6E73] font-mono">{skill.name}</span>
+      <span className="text-[10px] text-[#34C759] shrink-0">loaded</span>
     </div>
   );
 }
-
-// --- Summary helpers ---
 
 function computeSummary(
   toolCount: number,
@@ -194,27 +160,20 @@ function computeSummary(
   isStreaming: boolean,
 ): string {
   const parts: string[] = [];
-
-  parts.push(`${toolCount} tool${toolCount !== 1 ? 's' : ''}`);
-
+  parts.push(`${toolCount} 工具`);
   if (skillLoads.length === 1) {
-    parts.push(`⚡ ${skillLoads[0].name}`);
+    parts.push(`${skillLoads[0].name}`);
   } else if (skillLoads.length > 1) {
-    parts.push(`⚡ ${skillLoads.length} skills`);
+    parts.push(`${skillLoads.length} skills`);
   }
-
   if (totalDuration !== null) {
     parts.push(formatDuration(totalDuration));
   }
-
   if (isStreaming) {
     parts.push('running...');
   }
-
   return parts.join(' · ');
 }
-
-// --- Main component ---
 
 interface ActivityPanelProps {
   toolCalls: ToolCallInfo[];
@@ -226,7 +185,6 @@ export function ActivityPanel({ toolCalls, skillLoads, isStreaming }: ActivityPa
   const [expanded, setExpanded] = useState(isStreaming ?? false);
   const userToggledRef = useRef(false);
 
-  // Auto-collapse when streaming ends (unless user manually expanded)
   useEffect(() => {
     if (!isStreaming && !userToggledRef.current) {
       setExpanded(false);
@@ -240,58 +198,67 @@ export function ActivityPanel({ toolCalls, skillLoads, isStreaming }: ActivityPa
 
   const skills = skillLoads ?? [];
   const groups = groupActivities(skills, toolCalls);
-
-  // Compute total duration from tool calls
   const totalDuration = toolCalls.some((t) => t.startedAt)
     ? toolCalls.reduce((max, t) => {
         if (!t.startedAt) return max;
-        const end = t.completedAt ?? Date.now();
-        return Math.max(max, end - t.startedAt);
+        return Math.max(max, (t.completedAt ?? Date.now()) - t.startedAt);
       }, 0)
     : null;
 
   const summary = computeSummary(toolCalls.length, skills, totalDuration, isStreaming ?? false);
   const hasRunning = toolCalls.some((t) => t.status === 'running');
+  const completedCount = toolCalls.filter((t) => t.status === 'completed').length;
+  const modifiedFiles = new Set(
+    toolCalls
+      .filter((t) => t.status === 'completed' && (t.name === 'Edit' || t.name === 'Write'))
+      .map((t) => {
+        const a = t.args as Record<string, string>;
+        return a.file_path ?? a.filePath ?? '';
+      })
+      .filter(Boolean),
+  ).size;
 
   return (
-    <div className="mt-2">
-      {/* Summary header — clickable toggle */}
+    <div className="mt-2 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white overflow-hidden">
+      {/* Summary header */}
       <button
         onClick={handleToggle}
-        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors w-full text-left py-0.5"
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[#6E6E73] hover:bg-[#EDEDF0] transition-colors text-left cursor-pointer"
       >
         {expanded ? (
-          <ChevronDown className="h-3 w-3 shrink-0" />
+          <ChevronDown className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
         ) : (
-          <ChevronRight className="h-3 w-3 shrink-0" />
+          <ChevronRight className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
         )}
-        <span className="truncate">{summary}</span>
-        {hasRunning && <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />}
+        <span className="truncate font-medium">{summary}</span>
+        {!isStreaming && completedCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-[#34C759] bg-[#34C759]/10 shrink-0">
+            已完成
+          </span>
+        )}
+        {hasRunning && <Loader2 className="h-3 w-3 animate-spin text-[#007AFF] shrink-0" />}
       </button>
 
       {/* Expanded content */}
       {expanded && (
-        <div className="mt-1">
+        <div className="border-t border-[rgba(0,0,0,0.08)]">
           {groups.map((group, gi) => (
-            <div key={gi}>
-              {group.skill ? (
-                <div>
-                  <SkillGroupHeader skill={group.skill} />
-                  <div className="ml-4">
-                    {group.tools.map((tool) => (
-                      <ToolRow key={tool.id} tool={tool} />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {group.tools.map((tool) => (
-                    <ToolRow key={tool.id} tool={tool} />
-                  ))}
-                </div>
-              )}
+            <div key={gi} className="px-1 py-1">
+              {group.skill && <SkillGroupHeader skill={group.skill} />}
+              <div className={group.skill ? 'ml-4' : ''}>
+                {group.tools.map((tool) => (
+                  <ToolRow key={tool.id} tool={tool} />
+                ))}
+              </div>
             </div>
           ))}
+          {/* Summary bar at bottom */}
+          {!isStreaming && (
+            <div className="border-t border-[rgba(0,0,0,0.08)] px-3 py-1.5 text-[10px] text-[#AEAEB2]">
+              {completedCount} 个工具已完成
+              {modifiedFiles > 0 && ` · 修改 ${modifiedFiles} 个文件`}
+            </div>
+          )}
         </div>
       )}
     </div>

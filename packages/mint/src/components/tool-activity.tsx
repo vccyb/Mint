@@ -1,7 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Terminal, FileText, Pencil, Search, FolderSearch, Wrench, Loader2, Clock, Copy, Check } from 'lucide-react';
+import {
+  Terminal,
+  FileText,
+  Pencil,
+  Search,
+  FolderSearch,
+  Wrench,
+  Loader2,
+  Copy,
+  Check,
+  FilePlus,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DiffView, isDiffContent } from './diff-view';
 import type { ToolCallInfo } from '@/types';
@@ -21,7 +32,7 @@ function getToolIcon(name: string) {
     case 'file':
       return FileText;
     case 'Write':
-      return Pencil;
+      return FilePlus;
     case 'Edit':
       return Pencil;
     case 'Grep':
@@ -66,6 +77,7 @@ export function ToolActivity({ tool, startedAt, completedAt, defaultExpanded }: 
   const [copied, setCopied] = useState(false);
   const Icon = getToolIcon(tool.name);
   const isRunning = tool.status === 'running';
+  const isError = tool.status === 'error';
 
   const elapsed = startedAt
     ? formatDuration((completedAt ?? Date.now()) - startedAt)
@@ -78,65 +90,61 @@ export function ToolActivity({ tool, startedAt, completedAt, defaultExpanded }: 
   };
 
   return (
-    <div className="rounded border border-border bg-bg text-xs overflow-hidden">
+    <div className={cn(
+      'rounded-lg text-xs overflow-hidden',
+      isRunning && 'border border-[#007AFF]/15 bg-[#007AFF]/[0.02]',
+      !isRunning && 'border border-transparent',
+    )}>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-bg-warm transition-colors text-left cursor-pointer"
+        className="flex w-full items-center gap-1.5 px-2 py-1.5 hover:bg-[#EDEDF0] rounded-lg transition-all duration-150 text-left cursor-pointer"
       >
-        {expanded ? (
-          <ChevronDown className="h-3 w-3 shrink-0 text-text-tertiary" />
-        ) : (
-          <ChevronRight className="h-3 w-3 shrink-0 text-text-tertiary" />
-        )}
-        <Icon className="h-3 w-3 shrink-0 text-text-tertiary" />
-        <span className="shrink-0 font-semibold">{tool.name}</span>
-        <span className="text-text-tertiary mx-1">&mdash;</span>
-        <span className="flex-1 truncate text-text-secondary font-mono">
+        <Icon className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
+        <span className="shrink-0 font-semibold text-[#1D1D1F] font-mono text-[11px]">
+          {tool.name}
+        </span>
+        <span className="text-[#AEAEB2]">&middot;</span>
+        <span className="flex-1 truncate text-[#6E6E73] font-mono text-[11px]">
           {getToolSummary(tool)}
         </span>
-        {elapsed && (
-          <span className="flex items-center gap-1 text-[10px] text-text-tertiary shrink-0">
-            <Clock className="h-2.5 w-2.5" />
+        {elapsed && !isRunning && (
+          <span className="text-[10px] text-[#AEAEB2] font-mono tabular-nums shrink-0">
             {elapsed}
           </span>
         )}
         {isRunning ? (
-          <Loader2 className="h-3 w-3 shrink-0 text-primary-text animate-spin" />
+          <div className="h-3 w-3 shrink-0 rounded-full border-2 border-[#007AFF] border-t-transparent animate-spin" />
+        ) : isError ? (
+          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
         ) : (
-          <span className={cn(
-            'pill text-[10px] font-semibold',
-            tool.status === 'completed' && 'text-green-700 bg-green-50',
-            tool.status === 'error' && 'text-red-700 bg-red-50',
-          )}>
-            {tool.status}
-          </span>
+          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34C759]" />
         )}
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-3 py-2 space-y-2">
+        <div className="px-2 pb-2 pt-1 space-y-2">
           {tool.args && Object.keys(tool.args).length > 0 && (
             <div>
-              <p className="text-text-tertiary text-[10px] uppercase tracking-wider mb-1 font-semibold">
+              <p className="text-[#AEAEB2] text-[10px] uppercase tracking-wider mb-0.5 font-semibold">
                 Input
               </p>
-              <pre className="bg-bg-warm rounded p-2 overflow-x-auto text-[11px] font-mono leading-relaxed">
+              <pre className="bg-[#F5F5F7] rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed">
                 {JSON.stringify(tool.args, null, 2)}
               </pre>
             </div>
           )}
           {tool.result && (
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-text-tertiary text-[10px] uppercase tracking-wider font-semibold">
+              <div className="flex items-center justify-between mb-0.5">
+                <p className="text-[#AEAEB2] text-[10px] uppercase tracking-wider font-semibold">
                   Output
                 </p>
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-text-tertiary hover:text-text transition-colors"
+                  className="flex items-center gap-1 text-[#AEAEB2] hover:text-[#1D1D1F] transition-colors cursor-pointer"
                 >
                   {copied ? (
-                    <><Check className="h-3 w-3" /><span className="text-[10px]">Copied</span></>
+                    <><Check className="h-3 w-3 text-[#34C759]" /><span className="text-[10px]">Copied</span></>
                   ) : (
                     <><Copy className="h-3 w-3" /><span className="text-[10px]">Copy</span></>
                   )}
@@ -145,14 +153,14 @@ export function ToolActivity({ tool, startedAt, completedAt, defaultExpanded }: 
               {isDiffContent(tool.result) ? (
                 <DiffView content={tool.result.length > 5000 ? tool.result.slice(0, 5000) + '\n... (truncated)' : tool.result} />
               ) : (
-                <pre className="bg-bg-warm rounded p-2 overflow-x-auto text-[11px] font-mono leading-relaxed max-h-64 whitespace-pre-wrap break-all">
+                <pre className="bg-[#F5F5F7] rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
                   {tool.result.length > 5000 ? tool.result.slice(0, 5000) + '\n... (truncated)' : tool.result}
                 </pre>
               )}
             </div>
           )}
           {isRunning && !tool.result && (
-            <div className="flex items-center gap-2 text-text-tertiary">
+            <div className="flex items-center gap-2 text-[#AEAEB2]">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span className="text-[11px]">Running...</span>
             </div>
