@@ -1,7 +1,7 @@
 export async function register() {
   if (process.env['NEXT_RUNTIME'] === 'nodejs') {
     const { createLogger } = await import('@/lib/logger');
-    const log = createLogger('startup');
+    const log = createLogger('api.startup');
 
     log.info('Mint server starting', {
       nodeEnv: process.env['NODE_ENV'],

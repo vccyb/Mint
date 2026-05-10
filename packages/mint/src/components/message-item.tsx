@@ -74,7 +74,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
   if (message.role === 'question') {
     return (
       <div className="px-6 py-3">
-        <div className="mx-auto max-w-3xl flex gap-3">
+        <div className="mx-auto w-[80%] flex gap-3">
           <MintAvatar />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
@@ -98,7 +98,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
   if (message.role === 'answer') {
     return (
       <div className="px-6 py-3">
-        <div className="mx-auto max-w-3xl flex gap-3">
+        <div className="mx-auto w-[80%] flex gap-3">
           <MintAvatar />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
@@ -144,7 +144,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
   return (
     <div id={isUser ? `msg-${message.id}` : undefined} className="px-6 py-3">
       <div className={cn(
-        'mx-auto max-w-3xl flex gap-3',
+        'mx-auto w-[80%] flex gap-3',
         isUser && 'flex-row-reverse',
       )}>
         {/* Avatar */}
@@ -157,7 +157,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
         )}
 
         {/* Content */}
-        <div className={cn('flex-1 min-w-0 group relative', isUser && 'flex flex-col items-end')}>
+        <div className={cn('flex-1 min-w-0', isUser && 'flex flex-col items-end')}>
           {/* Header row: name + timestamp */}
           <div className={cn(
             'flex items-center gap-1.5 mb-1',

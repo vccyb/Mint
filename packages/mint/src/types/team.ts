@@ -1,50 +1,36 @@
-export type AgentStatus = 'idle' | 'running' | 'completed' | 'error';
-export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'error';
-export type TeamStatus = 'forming' | 'active' | 'completed' | 'error';
+// --- SDK-aligned types for real subagent execution ---
 
-export interface AgentDefinition {
-  id: string;
+/** SDK AgentDefinition shape for use with query({ agents }) */
+export interface SubAgentDefinition {
+  /** Agent identifier used in the agents map key */
   name: string;
-  role: string;
-  avatar: string;
-  instructions: string;
-  tools: string[];
-  status: AgentStatus;
-  currentTaskId: string | null;
-  startedAt: number | null;
-  completedAt: number | null;
-}
-
-export interface TeamTask {
-  id: string;
-  title: string;
+  /** When to use this agent — SDK uses this for automatic routing */
   description: string;
-  assigneeId: string;
-  status: TaskStatus;
-  result?: string;
-  toolsUsed?: string[];
-  startedAt: number | null;
-  completedAt: number | null;
+  /** System prompt for the subagent */
+  prompt: string;
+  /** Allowed tools for this subagent */
+  tools?: string[];
+  /** Model override: sonnet | opus | haiku | inherit */
+  model?: 'sonnet' | 'opus' | 'haiku' | 'inherit';
 }
 
-export interface MailboxMessage {
-  id: string;
-  fromAgentId: string;
-  toAgentId: string | '*';
-  content: string;
-  timestamp: number;
-  type: 'info' | 'question' | 'result' | 'handoff';
-}
+/** Real-time status of a teammate (worker agent) during execution */
+export type TeammateStatus = 'running' | 'completed' | 'failed' | 'stopped';
 
-export interface Team {
-  id: string;
-  name: string;
+export interface TeammateState {
+  taskId: string;
+  toolUseId?: string;
   description: string;
-  agents: AgentDefinition[];
-  tasks: TeamTask[];
-  mailbox: MailboxMessage[];
-  status: TeamStatus;
-  createdAt: number;
-  completedAt: number | null;
-  sessionId: string;
+  taskType?: string;
+  index: number;
+  status: TeammateStatus;
+  progressDescription?: string;
+  currentToolName?: string;
+  currentToolElapsedSeconds?: number;
+  toolHistory: string[];
+  summary?: string;
+  outputFile?: string;
+  usage?: { totalTokens?: number; toolUses?: number; durationMs?: number };
+  startedAt: number;
+  endedAt?: number;
 }

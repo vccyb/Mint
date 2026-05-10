@@ -11,7 +11,7 @@ import {
   type DragEvent,
   type ClipboardEvent,
 } from 'react';
-import { ArrowUp, Square, Paperclip, Mic, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { ArrowUp, Square, Paperclip, Mic, X, FileText, Image as ImageIcon, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Attachment, MentionType, MentionChip } from '@/types';
 import { MENTION_TRIGGERS, MENTION_TOKEN, extractMentions } from '@/types';
@@ -22,7 +22,7 @@ const MAX_FILES = 5;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 interface MessageInputProps {
-  onSend: (message: string, attachments?: Attachment[], mentionedTools?: MentionChip[]) => void;
+  onSend: (message: string, attachments?: Attachment[], mentionedTools?: MentionChip[], enableThinking?: boolean) => void;
   onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
@@ -39,6 +39,12 @@ interface MessageInputProps {
   tokenBudget?: number;
   /** Whether the ask/todo panel is active (dims input) */
   panelActive?: boolean;
+  /** Whether to render the outer container (default: true) */
+  withContainer?: boolean;
+  /** Whether thinking mode is enabled (chat mode) */
+  thinkingEnabled?: boolean;
+  /** Toggle thinking mode */
+  onThinkingToggle?: () => void;
 }
 
 export interface MessageInputHandle {
@@ -86,7 +92,7 @@ function detectMentionType(textBeforeCursor: string): { type: MentionType; query
     if (match) {
       // For skill trigger (/(^|\s)\/(\S*)$/), the match may include a leading space.
       // startPos should point at the "/" character, not the space.
-      const triggerChar = textBeforeCursor[match.index] === '/' ? match.index : match.index + 1;
+      const triggerChar = match.index;
       return { type, query: match[1], startPos: triggerChar };
     }
   }
@@ -108,6 +114,9 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   tokenUsage = 0,
   tokenBudget = 200000,
   panelActive = false,
+  withContainer = true,
+  thinkingEnabled = false,
+  onThinkingToggle,
 }, ref) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -256,7 +265,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
       }
     }
 
-    onSend(trimmed, finalAttachments, nonFileMentions.length > 0 ? nonFileMentions : undefined);
+    onSend(trimmed, finalAttachments, nonFileMentions.length > 0 ? nonFileMentions : undefined, thinkingEnabled);
     const key = sessionKey ?? '__default__';
     sessionDraftsRef.current.set(key, { input: '', attachments: [] });
     setInput('');
@@ -264,7 +273,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [input, attachments, disabled, onSend, fetchMentionedFileContent, sessionKey]);
+  }, [input, attachments, disabled, onSend, fetchMentionedFileContent, sessionKey, thinkingEnabled]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -339,6 +348,11 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   }, []);
 
   // Drag and drop
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     setDragOver(true);
@@ -443,28 +457,42 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   };
   const tokenBarColor = tokenPct > 80 ? 'bg-[#FF3B30]' : tokenPct > 50 ? 'bg-[#FF9500]' : 'bg-[#34C759]';
 
-  return (
-    <div className={cn(
-      'shrink-0 border-t border-[rgba(0,0,0,0.08)] bg-white px-6 py-3',
-      panelActive && 'opacity-50 pointer-events-none',
-    )}>
-      {/* Error toast */}
-      {error && (
-        <div className="mx-auto mb-2 max-w-[640px] rounded border border-red-300 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+  const innerContent = (
+    <>
+      <div
+        ref={inputContainerRef}
+        className={cn(
+          'mx-auto flex w-[80%] flex-col rounded-xl border bg-white overflow-hidden',
+          'shadow-[0_2px_8px_rgba(0,0,0,0.06)]',
+          isFocused && !dragOver
+            ? 'border-[1.5px] border-[#007AFF] shadow-[0_0_0_3px_rgba(0,122,255,0.08)]'
+            : dragOver
+              ? 'border-[1.5px] border-[#007AFF] bg-[#E8F2FF]/30'
+              : 'border-[rgba(0,0,0,0.08)]',
+          panelActive && 'opacity-50 pointer-events-none',
+        )}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {/* Error toast */}
+        {error && (
+        <div className="mb-2 rounded border border-red-300 bg-red-50 px-3 py-1.5 text-xs text-red-700">
           {error}
         </div>
       )}
 
       {/* Concurrency limit warning */}
       {concurrencyLimitReached && (
-        <div className="mx-auto mb-2 max-w-[640px] rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+        <div className="mb-2 rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
           最多同时执行 5 个 Agent 任务，请等待完成后再试
         </div>
       )}
 
       {/* Attachment chips */}
       {attachments.length > 0 && (
-        <div className="mx-auto mb-2 flex max-w-[640px] flex-wrap gap-1.5">
+        <div className="mb-2 flex flex-wrap gap-1.5">
           {attachments.map((att) => (
             <div
               key={att.id}
@@ -488,22 +516,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
         </div>
       )}
 
-      <div
-        ref={inputContainerRef}
-        className={cn(
-          'mx-auto flex max-w-[640px] flex-col rounded-xl border bg-white overflow-hidden',
-          'shadow-[0_2px_8px_rgba(0,0,0,0.06)]',
-          isFocused && !dragOver
-            ? 'border-[1.5px] border-[#007AFF] shadow-[0_0_0_3px_rgba(0,122,255,0.08)]'
-            : dragOver
-              ? 'border-[1.5px] border-[#007AFF] bg-[#E8F2FF]/30'
-              : 'border-[rgba(0,0,0,0.08)]',
-        )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="flex items-end gap-2 px-3 pt-3 pb-1">
+      <div className="flex items-end gap-2 px-3 pt-3 pb-1">
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-tertiary transition-colors cursor-pointer hover:text-text"
@@ -604,6 +617,21 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
         {/* Footer toolbar */}
         <div className='mt-1 flex items-center justify-between gap-3 border-t border-[rgba(0,0,0,0.04)] px-3 py-1.5'>
           <div className='flex items-center gap-2'>
+            {onThinkingToggle && (
+              <button
+                onClick={onThinkingToggle}
+                className={cn(
+                  'flex h-5 items-center gap-1 rounded px-1.5 text-[10px] transition-colors cursor-pointer',
+                  thinkingEnabled
+                    ? 'bg-[#E8F2FF] text-[#007AFF]'
+                    : 'text-text-tertiary hover:text-text hover:bg-bg-warm',
+                )}
+                title='Toggle thinking mode'
+              >
+                <Brain className='h-3 w-3' />
+                <span>Thinking</span>
+              </button>
+            )}
             {permissionMode && onPermissionModeChange && (
               <PermissionModeSelector
                 mode={permissionMode}
@@ -631,6 +659,20 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
           onClose={handleMentionClose}
         />
       )}
+    </>
+  );
+
+  // Conditionally render with or without outer container
+  if (!withContainer) {
+    return innerContent;
+  }
+
+  return (
+    <div className={cn(
+      'shrink-0 border-t border-[rgba(0,0,0,0.08)] bg-white px-6 py-3',
+      panelActive && 'opacity-50 pointer-events-none',
+    )}>
+      {innerContent}
     </div>
   );
 });

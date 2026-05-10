@@ -21,3 +21,42 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { mode = 'chat', projectId, title } = body as {
+      mode?: Mode;
+      projectId?: string;
+      title?: string;
+    };
+
+    const storage = getStorage();
+    await storage.initialize();
+
+    // 创建会话
+    const sessionId = `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const sessionMetadata = {
+      id: sessionId,
+      title: title ?? '新对话',
+      mode,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messageCount: 0,
+      model: 'glm-5.1',
+      ...(projectId && { projectId }),
+    };
+
+    await storage.createSession(sessionMetadata);
+
+    // 如果指定了工程，将会话添加到工程中
+    if (projectId) {
+      await storage.projects.moveSessionToProject(sessionId, projectId);
+    }
+
+    return NextResponse.json(sessionMetadata);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create session';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

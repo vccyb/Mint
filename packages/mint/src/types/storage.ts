@@ -10,6 +10,8 @@ export interface SessionMetadata {
   model: string;
   pinned?: boolean;
   pinnedAt?: number;
+  /** 所属工程 ID（仅 Agent 模式） */
+  projectId?: string;
 }
 
 export interface SessionRecord {

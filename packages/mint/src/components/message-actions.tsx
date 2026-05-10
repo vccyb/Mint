@@ -21,13 +21,12 @@ export function MessageActions({ content, isUser, onEdit }: MessageActionsProps)
 
   return (
     <div className={cn(
-      'absolute -top-3 right-0 flex items-center gap-0.5',
-      'rounded-full border border-[rgba(0,0,0,0.08)] bg-white px-1 py-0.5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)]',
-      'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+      'flex items-center gap-1 mt-1',
+      isUser ? 'justify-end' : 'justify-start',
     )}>
       <button
         onClick={handleCopy}
-        className="flex h-6 w-6 items-center justify-center rounded-full text-[#AEAEB2] hover:bg-[#EDEDF0] hover:text-[#1D1D1F] transition-all duration-150 cursor-pointer"
+        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-text-tertiary hover:bg-bg-warm hover:text-text transition-colors cursor-pointer"
         aria-label="Copy message"
       >
         {copied ? <Check className="h-3 w-3 text-[#34C759]" /> : <Copy className="h-3 w-3" />}
@@ -35,7 +34,7 @@ export function MessageActions({ content, isUser, onEdit }: MessageActionsProps)
       {isUser && onEdit && (
         <button
           onClick={onEdit}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[#AEAEB2] hover:bg-[#EDEDF0] hover:text-[#1D1D1F] transition-all duration-150 cursor-pointer"
+          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-text-tertiary hover:bg-bg-warm hover:text-text transition-colors cursor-pointer"
           aria-label="Edit message"
         >
           <Pencil className="h-3 w-3" />

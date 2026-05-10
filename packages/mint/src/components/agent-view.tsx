@@ -10,16 +10,14 @@ import { PanelRight } from 'lucide-react';
 import { MessageList } from './message-list';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { FilePanel } from './file-panel';
-import { TeamPanel } from './team/team-panel';
 import { AskQuestionBanner } from './ask-question-banner';
 import {
   RightPanel,
   RightPanelContext,
   type PanelState,
-  type PanelTab,
 } from './right-panel';
 import { TodoList } from './todo-list';
-import type { ChatMessage, Attachment, PermissionRequestData, Team, TodoItem } from '@/types';
+import type { ChatMessage, Attachment, PermissionRequestData, TodoItem } from '@/types';
 
 interface AgentViewProps {
   messages: ChatMessage[];
@@ -41,7 +39,10 @@ interface AgentViewProps {
     mode: 'bypassPermissions' | 'default' | 'plan',
   ) => void;
   onTogglePlanMode?: () => void;
-  team?: Team | null;
+  /** 当前会话是否关联了工程 */
+  hasProject?: boolean;
+  /** 当前选中的工程 ID */
+  activeProjectId?: string | null;
 }
 
 export function AgentView({
@@ -58,10 +59,10 @@ export function AgentView({
   permissionMode = 'default',
   onPermissionModeChange,
   onTogglePlanMode,
-  team,
+  hasProject = false,
+  activeProjectId = null,
 }: AgentViewProps) {
   const [panelState, setPanelState] = useState<PanelState>('visible');
-  const [activeTab, setActiveTab] = useState<PanelTab>('files');
   const [editingContent, setEditingContent] = useState<string>('');
   const inputRef = useRef<MessageInputHandle>(null);
 
@@ -69,10 +70,8 @@ export function AgentView({
     () => ({
       panelState,
       setPanelState,
-      activeTab,
-      setActiveTab,
     }),
-    [panelState, activeTab],
+    [panelState],
   );
 
   // Auto-focus input when messages change
@@ -81,11 +80,6 @@ export function AgentView({
   }, [messages.length]);
 
   const isFullscreen = panelState === 'fullscreen';
-
-  // Count running agents for the badge
-  const activeAgentCount = team?.agents.filter(
-    (a) => a.status === 'running',
-  ).length ?? 0;
 
   const togglePanel = () => {
     if (panelState === 'hidden') {
@@ -166,24 +160,25 @@ export function AgentView({
                 onSend={onSend}
                 onStop={onStop}
                 isStreaming={isStreaming}
-                placeholder="Describe a task for the agent..."
+                placeholder="描述一个任务给 Agent 执行..."
                 externalValue={editingContent}
                 concurrencyLimitReached={concurrencyLimitReached}
                 permissionMode={permissionMode}
                 onPermissionModeChange={onPermissionModeChange}
                 onTogglePlanMode={onTogglePlanMode}
+                withContainer={false}
               />
               </div>
             </div>
           )}
 
-          {/* Right Panel */}
-          <RightPanel activeAgentCount={activeAgentCount}>
-            {activeTab === 'team' ? (
-              <TeamPanel team={team ?? null} fullscreen={isFullscreen} />
-            ) : (
-              <FilePanel fullscreen={isFullscreen} />
-            )}
+          {/* Right Panel - Files only */}
+          <RightPanel>
+            <FilePanel
+              fullscreen={isFullscreen}
+              hasProject={hasProject}
+              projectId={activeProjectId}
+            />
           </RightPanel>
         </div>
       </div>

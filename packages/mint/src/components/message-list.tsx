@@ -36,7 +36,7 @@ function StreamingIndicator({ startTime }: { startTime: number | null }) {
 
   return (
     <div className="px-6 py-3">
-      <div className="mx-auto max-w-3xl flex items-center gap-2 text-xs text-[#AEAEB2]">
+      <div className="mx-auto w-[80%] flex items-center gap-2 text-xs text-[#AEAEB2]">
         <Loader2 className="h-3 w-3 animate-spin text-[#007AFF]" />
         <span>正在思考...</span>
         <span className="font-mono text-[10px] bg-[#F5F5F7] rounded px-1.5 py-0.5">

@@ -6,11 +6,15 @@ import { ConfigStorage, type AppConfig } from './config';
 import { SessionStorage } from './session';
 import { GroupStorage } from './group';
 import { ensureSkillsDirs } from './skills';
+import { ProjectStorage } from './project';
+import { ThreadStorage } from './thread';
 
 export class FileSystemStorage implements StorageAdapter {
   public readonly config: ConfigStorage;
   public readonly sessions: SessionStorage;
   public readonly groups: GroupStorage;
+  public readonly projects: ProjectStorage;
+  public readonly threads: ThreadStorage;
 
   constructor(
     private dataDir: string,
@@ -19,12 +23,16 @@ export class FileSystemStorage implements StorageAdapter {
     this.config = new ConfigStorage(path.join(dataDir, 'config.json'));
     this.sessions = new SessionStorage(sessionsDir);
     this.groups = new GroupStorage(dataDir);
+    this.projects = new ProjectStorage(dataDir);
+    this.threads = new ThreadStorage(dataDir);
   }
 
   async initialize(): Promise<void> {
     await fs.mkdir(this.dataDir, { recursive: true });
     await fs.mkdir(this.sessionsDir, { recursive: true });
     await ensureSkillsDirs();
+    await this.projects.initialize();
+    await this.threads.initialize();
   }
 
   async createSession(metadata: SessionMetadata): Promise<void> {

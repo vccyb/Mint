@@ -1,11 +1,12 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { NextResponse } from 'next/server';
+import { resolveProjectPath } from '@/lib/path-resolver';
 
 const execAsync = promisify(exec);
 
-const execOptions = () => ({
-  cwd: process.env.MINT_CWD || process.cwd(),
+const execOptions = (cwd: string) => ({
+  cwd,
   maxBuffer: 1024 * 1024,
 });
 
@@ -38,12 +39,20 @@ function parseGitStatus(raw: string): ChangedFile[] {
   return files;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId');
+
+    const cwd = await resolveProjectPath({
+      projectId: projectId || undefined,
+      fallbackPath: process.env.MINT_CWD || process.cwd(),
+    });
+
     // Get tracked changes (staged + unstaged)
     const { stdout: statusOut } = await execAsync(
       'git status --porcelain --no-renames',
-      execOptions(),
+      execOptions(cwd),
     );
 
     // Get untracked files as well (already included with --porcelain)

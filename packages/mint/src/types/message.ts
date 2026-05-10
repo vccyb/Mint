@@ -74,10 +74,10 @@ export type StreamEventType =
   | 'todo_update'
   | 'permission_request'
   | 'plan_result'
-  | 'team_created'
-  | 'agent_status'
-  | 'mailbox_message'
-  | 'task_update'
+  | 'teammate_started'
+  | 'teammate_progress'
+  | 'teammate_completed'
+  | 'team_waiting_resume'
   | 'result'
   | 'error';
 
@@ -120,16 +120,8 @@ export interface StreamEventData {
   isPlanMode?: boolean;
   /** Classified error code for frontend display */
   errorCode?: StreamErrorCode;
-  /** Agent ID for team agent status updates */
-  agentId?: string;
-  /** Agent status for team events */
-  agentStatus?: import('./team').AgentStatus;
-  /** Team object for team_created events */
-  team?: import('./team').Team;
-  /** Mailbox message for mailbox_message events */
-  mailboxMessage?: import('./team').MailboxMessage;
-  /** Task object for task_update events */
-  task?: import('./team').TeamTask;
+  /** Teammate state for teammate_* events */
+  teammate?: import('./team').TeammateState;
 }
 
 export interface StreamResult {

@@ -1,6 +1,7 @@
 import { readFile, stat } from 'fs/promises';
 import { join, extname, relative } from 'path';
 import { NextResponse } from 'next/server';
+import { resolveProjectPath } from '@/lib/path-resolver';
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
@@ -47,12 +48,16 @@ function getLanguage(filename: string): string {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const filePath = searchParams.get('path');
+  const projectId = searchParams.get('projectId');
 
   if (!filePath) {
     return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 });
   }
 
-  const cwd = process.env.MINT_CWD || process.cwd();
+  const cwd = await resolveProjectPath({
+    projectId: projectId || undefined,
+    fallbackPath: process.env.MINT_CWD || process.cwd(),
+  });
   const absolutePath = join(cwd, filePath);
 
   // Security: ensure the resolved path is within cwd

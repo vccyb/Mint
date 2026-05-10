@@ -39,6 +39,10 @@ interface FilePanelProps {
   onClose?: () => void;
   onFileClick?: (path: string, name: string) => void;
   fullscreen?: boolean;
+  /** 工程是否已选择 - 只有选择工程后才显示文件 */
+  hasProject?: boolean;
+  /** 当前选中的工程 ID */
+  projectId?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -61,6 +65,8 @@ export function FilePanel({
   onClose,
   onFileClick,
   fullscreen = false,
+  hasProject = false,
+  projectId = null,
 }: FilePanelProps) {
   const [data, setData] = useState<FilesData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,50 +84,67 @@ export function FilePanel({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchFiles = useCallback(async () => {
+    if (!hasProject) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/files');
-      if (!res.ok) throw new Error('Failed to fetch files');
+      // 构建 URL，如果有 projectId 则添加查询参数
+      const url = projectId ? `/api/files?projectId=${encodeURIComponent(projectId)}` : '/api/files';
+      const res = await fetch(url);
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try { const j = await res.json(); if (j.error) detail = j.error; } catch { /* ignore */ }
+        throw new Error(detail);
+      }
       setData(await res.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasProject, projectId]);
 
   const fetchChanges = useCallback(async () => {
     try {
-      const res = await fetch('/api/files/changes');
+      const params = new URLSearchParams();
+      if (projectId) params.append('projectId', projectId);
+      const res = await fetch(`/api/files/changes?${params.toString()}`);
       if (!res.ok) return;
       const json = await res.json();
       setChangedFiles(json.files ?? []);
     } catch { /* ignore */ }
-  }, []);
+  }, [projectId]);
 
   const fetchDiff = useCallback(async (filePath: string) => {
     setDiffLoading(true);
     try {
-      const res = await fetch(`/api/files/diff?path=${encodeURIComponent(filePath)}`);
+      const params = new URLSearchParams({ path: filePath });
+      if (projectId) params.append('projectId', projectId);
+      const res = await fetch(`/api/files/diff?${params.toString()}`);
       if (!res.ok) { setDiffContent(null); return; }
       const text = await res.text();
       setDiffContent(text || null);
     } catch { setDiffContent(null); } finally { setDiffLoading(false); }
-  }, []);
+  }, [projectId]);
 
   const fetchContent = useCallback(async (filePath: string) => {
     setPreviewLoading(true);
     try {
-      const res = await fetch(`/api/files/content?path=${encodeURIComponent(filePath)}`);
+      const params = new URLSearchParams({ path: filePath });
+      if (projectId) params.append('projectId', projectId);
+      const res = await fetch(`/api/files/content?${params.toString()}`);
       if (!res.ok) { setPreviewContent(null); return; }
       const json = await res.json();
       setPreviewContent(json.content ?? null);
       setPreviewLanguage(json.language ?? 'plaintext');
     } catch { setPreviewContent(null); } finally { setPreviewLoading(false); }
-  }, []);
+  }, [projectId]);
 
-  useEffect(() => { fetchFiles(); fetchChanges(); }, [fetchFiles, fetchChanges]);
+  useEffect(() => { fetchFiles(); fetchChanges(); }, [fetchFiles, fetchChanges, projectId]);
 
   useEffect(() => {
     if (!showDropdown) return;
@@ -166,26 +189,30 @@ export function FilePanel({
     <div className="h-full overflow-hidden flex flex-col">
       {/* Header */}
       <div className={`flex items-center justify-between ${headerPad} border-b border-border bg-bg shrink-0`}>
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className={`flex items-center gap-1 ${textSize} font-semibold text-text cursor-pointer`}
-          >
-            {filter === 'all' ? 'All Files' : 'Changed'}
-            <ChevronDown className={fullscreen ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
-          </button>
-          {showDropdown && (
-            <div className="absolute top-full left-0 mt-1 z-10 rounded border border-border bg-bg shadow-lg py-0.5 min-w-24">
-              <FilterItem label="All Files" value="all" filter={filter} onClick={() => { setFilter('all'); setSelectedFile(null); setDiffContent(null); setShowDropdown(false); }} compact={fullscreen} />
-              <FilterItem label={`Changed${changedFiles.length > 0 ? ` (${changedFiles.length})` : ''}`} value="changes" filter={filter} onClick={() => { setFilter('changes'); setSelectedFile(null); setPreviewContent(null); setShowDropdown(false); }} compact={fullscreen} />
-            </div>
-          )}
-        </div>
+        {!hasProject ? (
+          <span className={`${textSize} font-semibold text-text-tertiary`}>未选择工程</span>
+        ) : (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className={`flex items-center gap-1 ${textSize} font-semibold text-text cursor-pointer`}
+            >
+              {filter === 'all' ? 'All Files' : 'Changed'}
+              <ChevronDown className={fullscreen ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+            </button>
+            {showDropdown && (
+              <div className="absolute top-full left-0 mt-1 z-10 rounded border border-border bg-bg shadow-lg py-0.5 min-w-24">
+                <FilterItem label="All Files" value="all" filter={filter} onClick={() => { setFilter('all'); setSelectedFile(null); setDiffContent(null); setShowDropdown(false); }} compact={fullscreen} />
+                <FilterItem label={`Changed${changedFiles.length > 0 ? ` (${changedFiles.length})` : ''}`} value="changes" filter={filter} onClick={() => { setFilter('changes'); setSelectedFile(null); setPreviewContent(null); setShowDropdown(false); }} compact={fullscreen} />
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-1 shrink-0">
           {!fullscreen && data && (
             <span className="text-[10px] text-text-tertiary truncate mr-2" title={data.root}>{data.projectName}</span>
           )}
-          <button onClick={refreshAll} className="text-text-tertiary hover:text-text cursor-pointer" disabled={loading}>
+          <button onClick={refreshAll} className="text-text-tertiary hover:text-text cursor-pointer" disabled={loading || !hasProject}>
             <RefreshCw className={`${fullscreen ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${loading ? 'spinner' : ''}`} />
           </button>
           {onClose && (
@@ -196,7 +223,15 @@ export function FilePanel({
         </div>
       </div>
 
-      {fullscreen ? (
+      {!hasProject ? (
+        /* No project selected - show empty state */
+        <div className="flex-1 flex items-center justify-center min-h-0">
+          <div className="text-center py-8">
+            <FolderOpen className="h-8 w-8 text-text-tertiary mx-auto mb-2" />
+            <p className={`${textSize} text-text-tertiary`}>请先在左侧选择一个工程</p>
+          </div>
+        </div>
+      ) : fullscreen ? (
         /* Fullscreen: side-by-side layout — file tree left, diff/preview right */
         <div className="flex flex-1 min-h-0">
           {/* File tree */}

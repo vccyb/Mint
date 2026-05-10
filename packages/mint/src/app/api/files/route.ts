@@ -1,6 +1,8 @@
-import { readdir, stat, readFile } from 'fs/promises';
-import { join, relative, basename } from 'path';
-import { NextResponse } from 'next/server';
+import { readdir, stat, readFile, access } from 'fs/promises';
+import { join, relative, basename, resolve } from 'path';
+import { NextRequest, NextResponse } from 'next/server';
+import { getStorage } from '@/lib/storage';
+import { homedir } from 'os';
 
 interface FileNode {
   name: string;
@@ -60,29 +62,79 @@ async function readTree(dir: string, root: string, depth: number): Promise<FileN
   return nodes;
 }
 
-export async function GET() {
-  const cwd = process.env.MINT_CWD || process.cwd();
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get('projectId');
+
+  // 如果指定了 projectId，获取工程的路径
+  let targetPath = process.env.MINT_CWD || process.cwd();
+  let projectName = basename(targetPath);
+
+  if (projectId) {
+    try {
+      const storage = getStorage();
+      await storage.initialize();
+      const projects = await storage.projects.list();
+      const project = projects.find((p) => p.id === projectId);
+
+      if (project && project.projectPath) {
+        // 空路径或当前目录，使用默认值
+        if (!project.projectPath || project.projectPath === '.') {
+          targetPath = process.env.MINT_CWD || process.cwd();
+          projectName = project.name;
+        } else {
+          // 直接解析为绝对路径
+          let resolvedPath = resolve(project.projectPath);
+
+          // 检查路径是否存在
+          try {
+            await access(resolvedPath);
+          } catch {
+            // 路径不存在，尝试其他位置
+            const cwdPath = resolve(process.cwd(), project.projectPath);
+            const homePath = resolve(homedir(), project.projectPath);
+            const mintPath = resolve(process.env.MINT_CWD || process.cwd(), project.projectPath);
+
+            const paths = [cwdPath, homePath, mintPath];
+            for (const path of paths) {
+              try {
+                await access(path);
+                resolvedPath = path;
+                break;
+              } catch {
+                // 继续尝试下一个
+              }
+            }
+          }
+
+          targetPath = resolvedPath;
+          projectName = project.name;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to get project path:', err);
+    }
+  }
 
   try {
-    // Check if cwd is accessible
-    const s = await stat(cwd);
+    // Check if targetPath is accessible
+    const s = await stat(targetPath);
     if (!s.isDirectory()) {
       return NextResponse.json({ error: 'Not a directory' }, { status: 400 });
     }
 
-    const tree = await readTree(cwd, cwd, 0);
+    const tree = await readTree(targetPath, targetPath, 0);
 
     // Also try to read a project name from package.json
-    let projectName = basename(cwd);
     try {
-      const pkg = await readFile(join(cwd, 'package.json'), 'utf-8');
+      const pkg = await readFile(join(targetPath, 'package.json'), 'utf-8');
       const json = JSON.parse(pkg);
       if (json.name) projectName = json.name;
     } catch {
       // no package.json, use dirname
     }
 
-    return NextResponse.json({ root: cwd, projectName, tree });
+    return NextResponse.json({ root: targetPath, projectName, tree });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to read directory' },

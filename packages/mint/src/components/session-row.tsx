@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Bot, Trash2, Pin, PinOff, Check } from 'lucide-react';
+import { Bot, Trash2, Pin, PinOff, Check } from 'lucide-react';
 import type { Mode, SessionMetadata, SessionGroup } from '@/types';
 import type { StreamStatus } from '@/lib/streaming-registry';
 
@@ -73,13 +73,9 @@ export function SessionRow({
       {hasIndicator && !isStreaming && (
         <Check className="h-3 w-3 text-success shrink-0" />
       )}
-      {/* Mode icon */}
-      {!hasIndicator && (
-        mode === 'chat' ? (
-          <MessageSquare className="h-3 w-3 shrink-0 text-text-tertiary" />
-        ) : (
-          <Bot className="h-3 w-3 shrink-0 text-text-tertiary" />
-        )
+      {/* Mode icon — agent only */}
+      {!hasIndicator && mode === 'agent' && (
+        <Bot className="h-3 w-3 shrink-0 text-text-tertiary" />
       )}
       {/* Pinned icon */}
       {session.pinned && (

@@ -3,14 +3,14 @@
 import { useRef, useState, useEffect } from 'react';
 import { MessageList } from './message-list';
 import { MessageInput, type MessageInputHandle } from './message-input';
-import type { ChatMessage, Attachment } from '@/types';
+import type { ChatMessage, Attachment, MentionChip } from '@/types';
 
 interface ChatViewProps {
   messages: ChatMessage[];
   sessionKey?: string | null;
   isStreaming: boolean;
   streamStartTime?: number | null;
-  onSend: (message: string, attachments?: Attachment[]) => void;
+  onSend: (message: string, attachments?: Attachment[], mentionedTools?: unknown[], enableThinking?: boolean) => void;
   onStop?: () => void;
 }
 
@@ -24,6 +24,7 @@ export function ChatView({
 }: ChatViewProps) {
   const inputRef = useRef<MessageInputHandle>(null);
   const [editingContent, setEditingContent] = useState<string>('');
+  const [thinkingEnabled, setThinkingEnabled] = useState(false);
 
   // Auto-focus input when messages change
   useEffect(() => {
@@ -40,6 +41,9 @@ export function ChatView({
         onStop={onStop}
         isStreaming={isStreaming}
         externalValue={editingContent}
+        withContainer={false}
+        thinkingEnabled={thinkingEnabled}
+        onThinkingToggle={() => setThinkingEnabled(!thinkingEnabled)}
       />
     </div>
   );

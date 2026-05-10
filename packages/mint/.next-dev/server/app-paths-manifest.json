@@ -1,0 +1,8 @@
+{
+  "/api/sessions/route": "app/api/sessions/route.js",
+  "/api/files/changes/route": "app/api/files/changes/route.js",
+  "/api/projects/route": "app/api/projects/route.js",
+  "/api/sessions/[id]/route": "app/api/sessions/[id]/route.js",
+  "/api/files/route": "app/api/files/route.js",
+  "/page": "app/page.js"
+}

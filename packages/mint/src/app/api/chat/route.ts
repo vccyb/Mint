@@ -9,13 +9,14 @@ const MAX_ATTACHMENT_SIZE = 1024 * 1024; // 1MB
 
 export async function POST(request: Request) {
   const reqId = generateId();
-  const log = createRequestLogger('chat-route', reqId);
+  const log = createRequestLogger('api.chat', reqId);
 
   try {
-    const { message, sessionId, attachments } = (await request.json()) as {
+    const { message, sessionId, attachments, enableThinking } = (await request.json()) as {
       message: string;
       sessionId?: string;
       attachments?: Attachment[];
+      enableThinking?: boolean;
     };
 
     const storage = getStorage();
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(buildRequestBody(true)),
+      body: JSON.stringify(buildRequestBody(enableThinking ?? false)),
     });
 
     // Fallback: if thinking param is rejected, retry without it

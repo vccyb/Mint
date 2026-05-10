@@ -6,39 +6,30 @@ import {
   ReactNode,
   useCallback,
 } from 'react';
-import { X, Maximize2, Minimize2, Users, FolderOpen } from 'lucide-react';
+import { X, Maximize2, Minimize2, FolderOpen } from 'lucide-react';
 
 export type PanelState = 'hidden' | 'visible' | 'fullscreen';
-export type PanelTab = 'files' | 'team';
 
 interface RightPanelContextValue {
   panelState: PanelState;
   setPanelState: (state: PanelState) => void;
-  activeTab: PanelTab;
-  setActiveTab: (tab: PanelTab) => void;
 }
 
 export const RightPanelContext = createContext<RightPanelContextValue>({
   panelState: 'hidden',
   setPanelState: () => {},
-  activeTab: 'files',
-  setActiveTab: () => {},
 });
 
 export const useRightPanel = () => useContext(RightPanelContext);
 
 interface RightPanelProps {
   children: ReactNode;
-  /** Number of active (running) agents — shown as badge on Team tab */
-  activeAgentCount?: number;
 }
 
 export function RightPanel({
   children,
-  activeAgentCount = 0,
 }: RightPanelProps) {
-  const { panelState, setPanelState, activeTab, setActiveTab } =
-    useRightPanel();
+  const { panelState, setPanelState } = useRightPanel();
 
   const toggleFullscreen = useCallback(() => {
     setPanelState(panelState === 'fullscreen' ? 'visible' : 'fullscreen');
@@ -60,42 +51,13 @@ export function RightPanel({
         isFullscreen ? 'flex-1' : 'w-[280px] shrink-0'
       }`}
     >
-      {/* Tab bar */}
+      {/* Header bar */}
       <div className="flex items-center gap-0 px-2 pt-1.5 pb-0 border-b border-border shrink-0">
-        {/* Team tab */}
-        <button
-          onClick={() => setActiveTab('team')}
-          className={`relative flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-t-[5px] transition-colors cursor-pointer ${
-            activeTab === 'team'
-              ? 'bg-bg text-[#1D1D1F]'
-              : 'text-[#AEAEB2] hover:text-[#6E6E73]'
-          }`}
-        >
-          <Users className="h-3 w-3" />
-          <span>Team</span>
-          {activeAgentCount > 0 && (
-            <span className={`flex items-center justify-center min-w-[14px] h-[14px] rounded-full text-[8px] font-bold leading-none px-[3px] ${
-              activeTab === 'team'
-                ? 'bg-[#007AFF] text-white'
-                : 'bg-[#007AFF]/15 text-[#007AFF]'
-            }`}>
-              {activeAgentCount}
-            </span>
-          )}
-        </button>
-
-        {/* Files tab */}
-        <button
-          onClick={() => setActiveTab('files')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-t-[5px] transition-colors cursor-pointer ${
-            activeTab === 'files'
-              ? 'bg-bg text-[#1D1D1F]'
-              : 'text-[#AEAEB2] hover:text-[#6E6E73]'
-          }`}
-        >
-          <FolderOpen className="h-3 w-3" />
-          <span>文件</span>
-        </button>
+        {/* Title */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5">
+          <FolderOpen className="h-3 w-3 text-gray-500" />
+          <span className="text-[11px] font-medium text-gray-600">文件</span>
+        </div>
 
         <div className="flex-1" />
 

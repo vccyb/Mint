@@ -1,17 +1,19 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { NextResponse } from 'next/server';
+import { resolveProjectPath } from '@/lib/path-resolver';
 
 const execAsync = promisify(exec);
 
-const execOptions = () => ({
-  cwd: process.env.MINT_CWD || process.cwd(),
+const execOptions = (cwd: string) => ({
+  cwd,
   maxBuffer: 1024 * 1024,
 });
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const filePath = searchParams.get('path');
+  const projectId = searchParams.get('projectId');
 
   if (!filePath) {
     return NextResponse.json(
@@ -20,16 +22,21 @@ export async function GET(request: Request) {
     );
   }
 
+  const cwd = await resolveProjectPath({
+    projectId: projectId || undefined,
+    fallbackPath: process.env.MINT_CWD || process.cwd(),
+  });
+
   try {
     // Get unstaged diff
     const { stdout } = await execAsync(
       `git diff -- ${JSON.stringify(filePath)}`,
-      execOptions(),
+      execOptions(cwd),
     );
     // Get staged diff
     const { stdout: stagedStdout } = await execAsync(
       `git diff --cached -- ${JSON.stringify(filePath)}`,
-      execOptions(),
+      execOptions(cwd),
     );
 
     const combinedDiff = stdout + (stagedStdout ? '\n' + stagedStdout : '');
@@ -44,7 +51,7 @@ export async function GET(request: Request) {
     try {
       const { stdout: headDiff } = await execAsync(
         `git diff HEAD -- ${JSON.stringify(filePath)}`,
-        execOptions(),
+        execOptions(cwd),
       );
       if (headDiff.trim()) {
         return new NextResponse(headDiff, {
@@ -57,7 +64,7 @@ export async function GET(request: Request) {
     try {
       const { stdout: content } = await execAsync(
         `cat -- ${JSON.stringify(filePath)}`,
-        execOptions(),
+        execOptions(cwd),
       );
       const lines = content.split('\n');
       const addedLines = lines.map((l: string) => `+${l}`).join('\n');
