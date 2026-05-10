@@ -14,6 +14,7 @@ import type { Mode, SessionMetadata, SessionGroup } from '@/types';
 
 interface SessionSidebarProps {
   mode: Mode;
+  sessions: SessionMetadata[];
   onModeChange: (mode: Mode) => void;
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
@@ -24,10 +25,9 @@ interface SessionSidebarProps {
 }
 
 export function SessionSidebar({
-  mode, onModeChange, activeSessionId, onSelectSession,
+  mode, sessions, onModeChange, activeSessionId, onSelectSession,
   onNewChat, onDeleteSession, onTogglePin, onOpenSettings,
 }: SessionSidebarProps) {
-  const [sessions, setSessions] = useState<SessionMetadata[]>([]);
   const [groups, setGroups] = useState<SessionGroup[]>([]);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -53,13 +53,6 @@ export function SessionSidebar({
     onSelectSession(id);
   }, [onSelectSession]);
 
-  const loadSessions = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/sessions?mode=${mode}`);
-      if (res.ok) setSessions(await res.json());
-    } catch { /* ignore */ }
-  }, [mode]);
-
   const loadGroups = useCallback(async () => {
     if (mode !== 'agent') return;
     try {
@@ -68,7 +61,7 @@ export function SessionSidebar({
     } catch { /* ignore */ }
   }, [mode]);
 
-  useEffect(() => { loadSessions(); loadGroups(); }, [loadSessions, loadGroups, activeSessionId]);
+  useEffect(() => { loadGroups(); }, [loadGroups]);
 
   const handleCreateGroup = useCallback(async () => {
     const res = await fetch('/api/groups', {

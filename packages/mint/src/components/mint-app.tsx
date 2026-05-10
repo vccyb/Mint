@@ -32,6 +32,7 @@ function MintAppInner() {
 
   // Track session titles from sidebar data
   const [sessionMap, setSessionMap] = useState<Map<string, SessionMetadata>>(new Map());
+  const [sessionsList, setSessionsList] = useState<SessionMetadata[]>([]);
 
   // Check if current session has a project
   const hasProject = activeHook.sessionId
@@ -126,11 +127,12 @@ function MintAppInner() {
     [refreshSidebar, agentHook],
   );
 
-  // Load session titles for sidebar
+  // Load sessions for sidebar (single source of truth)
   useEffect(() => {
     fetch(`/api/sessions?mode=${mode}`)
       .then((res) => res.json())
       .then((data: SessionMetadata[]) => {
+        setSessionsList(data);
         const map = new Map<string, SessionMetadata>();
         for (const s of data) map.set(s.id, s);
         setSessionMap(map);
@@ -159,6 +161,7 @@ function MintAppInner() {
         <SessionSidebar
           key={`${mode}-${sidebarKey}`}
           mode={mode}
+          sessions={sessionsList}
           onModeChange={handleModeChange}
           activeSessionId={activeHook.sessionId}
           onSelectSession={activeHook.loadSession}
@@ -171,6 +174,7 @@ function MintAppInner() {
         <ProjectSidebar
           key={`${mode}-${sidebarKey}`}
           mode={mode}
+          sessions={sessionsList}
           onModeChange={handleModeChange}
           activeSessionId={activeHook.sessionId}
           onSelectSession={handleSelectSession}

@@ -13,6 +13,7 @@ import type { Project, SessionMetadata, Mode } from '@/types';
 
 interface ProjectSidebarProps {
   mode: Mode;
+  sessions: SessionMetadata[];
   onModeChange: (mode: Mode) => void;
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
@@ -25,6 +26,7 @@ interface ProjectSidebarProps {
 
 export function ProjectSidebar({
   mode,
+  sessions,
   onModeChange,
   activeSessionId,
   onSelectSession,
@@ -35,7 +37,6 @@ export function ProjectSidebar({
   onProjectSelect,
 }: ProjectSidebarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [sessions, setSessions] = useState<SessionMetadata[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'project' | 'session'; id: string } | null>(null);
@@ -44,19 +45,13 @@ export function ProjectSidebar({
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const streamStatuses = useStreamStatuses();
 
-  // 加载工程和会话
+  // 加载工程列表
   const loadData = useCallback(async () => {
     try {
-      const [projectsRes, sessionsRes] = await Promise.all([
-        fetch('/api/projects'),
-        fetch('/api/sessions?mode=agent'),
-      ]);
-
-      if (projectsRes.ok && sessionsRes.ok) {
-        const projectsData = await projectsRes.json();
-        const sessionsData = await sessionsRes.json();
-        setProjects(projectsData.projects || []);
-        setSessions(sessionsData || []);
+      const res = await fetch('/api/projects');
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data.projects || []);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -65,7 +60,7 @@ export function ProjectSidebar({
 
   useEffect(() => {
     loadData();
-  }, [loadData, activeSessionId]);
+  }, [loadData]);
 
   // Auto-expand all projects by default
   useEffect(() => {
