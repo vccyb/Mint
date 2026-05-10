@@ -109,7 +109,7 @@ export function SessionSidebar({
   const groupedIds = new Set(groups.flatMap((g) => g.sessionIds));
 
   const rowProps = (s: SessionMetadata, extra?: { indent?: boolean }) => ({
-    key: s.id, session: s, mode, isActive: activeSessionId === s.id,
+    session: s, mode, isActive: activeSessionId === s.id,
     streamStatus: streamStatuses.get(s.id),
     isCompletedUnvisited: unvisitedCompleted.has(s.id),
     onSelect: handleSelect, onDelete: setDeleteTarget, onTogglePin,
@@ -125,7 +125,7 @@ export function SessionSidebar({
     const ungrouped = filtered.filter((s) => !s.pinned && !groupedIds.has(s.id));
     return (
       <>
-        {pinned.map((s) => <SessionRow {...rowProps(s)} />)}
+        {pinned.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
         {pinned.length > 0 && (groups.length > 0 || ungrouped.length > 0) && <div className="my-1 mx-2 border-t border-border" />}
         {groups.map((g) => {
           const gs = g.sessionIds.map((sid) => filtered.find((s) => s.id === sid)).filter(Boolean) as SessionMetadata[];
@@ -135,7 +135,7 @@ export function SessionSidebar({
                 onToggle={() => toggleGroup(g.id)} onRename={(n) => handleRenameGroup(g.id, n)}
                 onDelete={() => handleDeleteGroup(g.id)}
                 onDrop={(sid) => patchGroup(`/api/groups/${g.id}`, { moveSession: sid })} />
-              {!collapsedGroups.has(g.id) && gs.map((s) => <SessionRow {...rowProps(s, { indent: true })} />)}
+              {!collapsedGroups.has(g.id) && gs.map((s) => <SessionRow key={s.id} {...rowProps(s, { indent: true })} />)}
             </div>
           );
         })}
@@ -143,7 +143,7 @@ export function SessionSidebar({
           <><div className="my-1 mx-2 border-t border-border" />
             <div className="px-2 py-1 text-[10px] font-semibold text-text-tertiary/60 uppercase tracking-wider">未分组</div></>
         )}
-        {ungrouped.map((s) => <SessionRow {...rowProps(s)} />)}
+        {ungrouped.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
       </>
     );
   };
@@ -153,9 +153,9 @@ export function SessionSidebar({
     const unpinned = filtered.filter((s) => !s.pinned);
     return (
       <>
-        {pinned.map((s) => <SessionRow {...rowProps(s)} />)}
+        {pinned.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
         {pinned.length > 0 && unpinned.length > 0 && <div className="my-1 mx-2 border-t border-border" />}
-        {unpinned.map((s) => <SessionRow {...rowProps(s)} />)}
+        {unpinned.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
       </>
     );
   };

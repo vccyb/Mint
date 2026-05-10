@@ -182,10 +182,13 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     }
   }, [attachments, externalValue, sessionKey]);
 
-  // Web Speech API availability
-  const speechAvailable =
-    typeof window !== 'undefined' &&
-    (('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window));
+  // Web Speech API availability (useState+useEffect to avoid hydration mismatch)
+  const [speechAvailable, setSpeechAvailable] = useState(false);
+  useEffect(() => {
+    setSpeechAvailable(
+      ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window),
+    );
+  }, []);
 
   const showError = useCallback((msg: string) => {
     setError(msg);

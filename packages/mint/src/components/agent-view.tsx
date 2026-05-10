@@ -5,11 +5,13 @@ import {
   useRef,
   useEffect,
   useMemo,
+  useCallback,
 } from 'react';
 import { PanelRight } from 'lucide-react';
 import { MessageList } from './message-list';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { FilePanel } from './file-panel';
+import { FilePreviewPanel } from './file-preview';
 import { AskQuestionBanner } from './ask-question-banner';
 import {
   RightPanel,
@@ -64,6 +66,9 @@ export function AgentView({
 }: AgentViewProps) {
   const [panelState, setPanelState] = useState<PanelState>('visible');
   const [editingContent, setEditingContent] = useState<string>('');
+  const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
+  const [fileTreeWidth, setFileTreeWidth] = useState(220);
+  const [previewWidth, setPreviewWidth] = useState(480);
   const inputRef = useRef<MessageInputHandle>(null);
 
   const ctxValue = useMemo(
@@ -79,15 +84,67 @@ export function AgentView({
     inputRef.current?.focus();
   }, [messages.length]);
 
-  const isFullscreen = panelState === 'fullscreen';
+  const hasPreview = previewFile !== null;
 
   const togglePanel = () => {
     if (panelState === 'hidden') {
       setPanelState('visible');
     } else {
       setPanelState('hidden');
+      setPreviewFile(null);
     }
   };
+
+  const handleFileClick = (path: string, name: string) => {
+    setPreviewFile({ path, name });
+  };
+
+  const handleClosePreview = () => {
+    setPreviewFile(null);
+  };
+
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = fileTreeWidth;
+      const onMove = (ev: MouseEvent) => {
+        const delta = startX - ev.clientX;
+        setFileTreeWidth(Math.min(400, Math.max(150, startWidth + delta)));
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [fileTreeWidth],
+  );
+
+  const handlePreviewResize = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = previewWidth;
+      const onMove = (ev: MouseEvent) => {
+        const delta = startX - ev.clientX; // 向左拖 = 预览变宽
+        setPreviewWidth(Math.min(800, Math.max(200, startWidth + delta)));
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [previewWidth],
+  );
+
+  // Close preview when session changes
+  useEffect(() => {
+    setPreviewFile(null);
+  }, [sessionKey]);
 
   // Compute latest todos for pinned TodoList above input (Codex style)
   const latestTodoMsg = [...messages].reverse().find(
@@ -120,11 +177,10 @@ export function AgentView({
           </button>
         </div>
 
-        {/* Body: Chat + Right Panel */}
+        {/* Body: Chat + File Panel + Preview Panel */}
         <div className="flex flex-1 min-h-0">
-          {/* Chat area — hidden when panel is fullscreen */}
-          {!isFullscreen && (
-            <div className="flex flex-col flex-1 min-h-0 min-w-0">
+          {/* Chat area */}
+          <div className="flex flex-col flex-1 min-h-0 min-w-0">
               <MessageList
                 messages={messages}
                 isStreaming={isStreaming}
@@ -170,16 +226,47 @@ export function AgentView({
               />
               </div>
             </div>
+
+          {/* Resize handle between chat and file tree */}
+          {panelState !== 'hidden' && (
+            <div
+              onMouseDown={handleResizeMouseDown}
+              className="w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/20 transition-colors"
+            />
           )}
 
-          {/* Right Panel - Files only */}
-          <RightPanel>
+          {/* Right Panel - File tree */}
+          <RightPanel width={`${fileTreeWidth}px`}>
             <FilePanel
-              fullscreen={isFullscreen}
               hasProject={hasProject}
               projectId={activeProjectId}
+              selectedFile={previewFile?.path}
+              onFileClick={handleFileClick}
             />
           </RightPanel>
+
+          {/* Resize handle between file tree and preview */}
+          {hasPreview && (
+            <div
+              onMouseDown={handlePreviewResize}
+              className="w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/20 transition-colors"
+            />
+          )}
+
+          {/* Preview Panel - 3rd column */}
+          {hasPreview && (
+            <div
+              className="shrink-0 flex flex-col min-h-0 border-l border-border overflow-hidden"
+              style={{ width: `${previewWidth}px` }}
+            >
+              <FilePreviewPanel
+                filePath={previewFile.path}
+                fileName={previewFile.name}
+                projectId={activeProjectId}
+                onClose={handleClosePreview}
+              />
+            </div>
+          )}
         </div>
       </div>
     </RightPanelContext.Provider>

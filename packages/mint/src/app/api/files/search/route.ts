@@ -9,7 +9,6 @@ const IGNORE = new Set([
 ]);
 
 const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp',
   '.mp3', '.mp4', '.wav', '.zip', '.tar', '.gz', '.rar', '.7z',
   '.woff', '.woff2', '.ttf', '.eot', '.otf',
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
