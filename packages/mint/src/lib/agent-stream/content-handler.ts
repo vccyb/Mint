@@ -64,21 +64,33 @@ function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Arra
     const todoEvent: StreamEventData = { type: 'todo_update', data: '', sessionId: sid, todos };
     enqueue(new TextEncoder().encode(encodeSSE(todoEvent)));
   } else if (toolName === 'Task' || toolName === 'Agent') {
+    const taskDescription = extractTaskDescription(parsedArgs);
+    const startTime = Date.now();
+    const promptStr = typeof parsedArgs.prompt === 'string' ? parsedArgs.prompt
+      : typeof parsedArgs.description === 'string' ? parsedArgs.description
+      : '';
+
+    // Bridge data for future SDK upgrade (task_started path)
+    state.pendingTaskDescriptions.set(toolId, taskDescription);
+    state.pendingTaskStartTimes.set(toolId, startTime);
+    if (promptStr) state.pendingTaskInputs.set(toolId, promptStr);
+
     state.taskToolIds.add(toolId);
+    state.log.info('Task tool args', { toolName, args: JSON.stringify(parsedArgs).slice(0, 200) });
+
+    // Create teammate (primary path — SDK does not expose task_started events)
     const idx = state.nextTeammateIndex++;
     state.teammateIndexMap.set(toolId, idx);
     state.startedTaskIds.add(toolId);
-    const startTime = Date.now();
     state.teammateStartTimes.set(toolId, startTime);
-    const taskDescription = extractTaskDescription(parsedArgs);
     state.teammateDescriptions.set(toolId, taskDescription);
     state.teammateToolHistories.set(toolId, []);
+    if (promptStr) state.teammatePrompts.set(toolId, promptStr);
 
-    state.log.info('Task tool args', { toolName, args: JSON.stringify(parsedArgs).slice(0, 200) });
     const taskType = toolName === 'Task' ? 'local_agent' : 'subagent';
-
     const teammate: TeammateState = {
       taskId: toolId, toolUseId: toolId, description: taskDescription,
+      prompt: promptStr || undefined,
       taskType, index: idx, status: 'running', toolHistory: [], startedAt: startTime,
     };
     const teammateEvent: StreamEventData = { type: 'teammate_started', data: '', sessionId: sid, teammate };

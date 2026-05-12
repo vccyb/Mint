@@ -168,6 +168,7 @@ export async function POST(request: Request) {
             attachments, isPlanMode, isNewSession,
             adapter, enqueue: safeEnqueue, storage,
             skillPathMap, skillsEnabled: config?.skillsEnabled ?? false,
+            abortSignal: request.signal,
           });
         } finally {
           streamClosed = true;

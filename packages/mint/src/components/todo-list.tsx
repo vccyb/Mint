@@ -9,6 +9,10 @@ interface TodoListProps {
   pinned?: boolean;
   /** Optional tool info to display alongside tasks */
   toolInfo?: Record<number, string>;
+  /** Callback to dismiss the pinned TodoList */
+  onDismiss?: () => void;
+  /** Number of running agents to show as a badge */
+  teamCount?: number;
 }
 
 /* ─── Status Icons (SVG) ───────────────────────────── */
@@ -39,7 +43,7 @@ function PendingIcon() {
 
 /* ─── Main Component ───────────────────────────────── */
 
-export function TodoList({ todos, pinned = false, toolInfo }: TodoListProps) {
+export function TodoList({ todos, pinned = false, toolInfo, onDismiss, teamCount }: TodoListProps) {
   if (todos.length === 0) return null;
 
   const completed = todos.filter((t) => t.status === 'completed').length;
@@ -64,6 +68,27 @@ export function TodoList({ todos, pinned = false, toolInfo }: TodoListProps) {
           <span className='ml-auto text-[10px] font-semibold text-[#34C759] font-mono'>
             {completed}/{total}
           </span>
+          {teamCount != null && teamCount > 0 && (
+            <span className='inline-flex items-center gap-0.5 text-[9px] text-[#007AFF] font-medium'>
+              <svg width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5'>
+                <path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2' />
+                <circle cx='9' cy='7' r='4' />
+                <path d='M23 21v-2a4 4 0 0 0-3-3.87' />
+                <path d='M16 3.13a4 4 0 0 1 0 7.75' />
+              </svg>
+              {teamCount}
+            </span>
+          )}
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              className='h-4 w-4 rounded flex items-center justify-center hover:bg-[rgba(0,0,0,0.06)] transition-colors shrink-0 cursor-pointer'
+            >
+              <svg width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='#6E6E73' strokeWidth='3'>
+                <path d='M18 6L6 18M6 6l12 12' />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Progress bar */}

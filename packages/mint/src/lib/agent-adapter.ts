@@ -8,7 +8,8 @@ const log = createLogger('lib.agent-adapter');
 
 const READ_ONLY_TOOLS = [
   'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch',
-  'TaskOutput', 'Agent', 'mcp__pencil__get_editor_state',
+  'TaskOutput', 'Agent', 'TodoWrite',
+  'mcp__pencil__get_editor_state',
   'mcp__pencil__batch_get',
 ];
 
@@ -114,7 +115,7 @@ export class AgentAdapter {
     queryOptions: Parameters<typeof query>[0]['options'],
   ): AsyncIterable<any> {
     this.abortController = new AbortController();
-    return query({ prompt, options: queryOptions });
+    return query({ prompt, options: { ...queryOptions, abortController: this.abortController } });
   }
 
   /** Resume an existing SDK session with a follow-up prompt. */
@@ -125,7 +126,7 @@ export class AgentAdapter {
   ): AsyncIterable<any> {
     return query({
       prompt,
-      options: { ...queryOptions, resume: sdkSessionId },
+      options: { ...queryOptions, resume: sdkSessionId, abortController: this.abortController ?? undefined },
     });
   }
 

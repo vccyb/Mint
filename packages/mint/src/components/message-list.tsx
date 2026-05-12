@@ -5,7 +5,8 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { AutoScrollArea } from './ui/scroll-area';
 import { MessageItem } from './message-item';
 import { ConversationMinimap } from './conversation-minimap';
-import type { ChatMessage } from '@/types';
+import { InlineTeamStatus } from './team/inline-team-status';
+import type { ChatMessage, TeammateState } from '@/types';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -14,6 +15,9 @@ interface MessageListProps {
   onEditMessage?: (id: string, content: string) => void;
   onApprovePlan?: (mode: 'auto' | 'manual') => void;
   hideLastTodoAndPlan?: boolean;
+  teammates?: TeammateState[];
+  isWaitingResume?: boolean;
+  onViewTeam?: () => void;
 }
 
 function StreamingIndicator({ startTime }: { startTime: number | null }) {
@@ -81,7 +85,7 @@ function EmptyState() {
   );
 }
 
-export function MessageList({ messages, isStreaming, streamStartTime, onEditMessage, onApprovePlan, hideLastTodoAndPlan }: MessageListProps) {
+export function MessageList({ messages, isStreaming, streamStartTime, onEditMessage, onApprovePlan, hideLastTodoAndPlan, teammates, isWaitingResume, onViewTeam }: MessageListProps) {
   if (messages.length === 0) {
     return <EmptyState />;
   }
@@ -101,6 +105,34 @@ export function MessageList({ messages, isStreaming, streamStartTime, onEditMess
               hideTodoAndPlan={hideLastTodoAndPlan && index === messages.length - 1}
             />
           ))}
+          {teammates && teammates.length > 0 && !hideLastTodoAndPlan && (
+            <InlineTeamStatus
+              teammates={teammates}
+              isWaitingResume={isWaitingResume ?? false}
+              onViewTeam={onViewTeam ?? (() => {})}
+            />
+          )}
+          {teammates && teammates.length > 0 && hideLastTodoAndPlan && (
+            <div className="px-6 py-1.5">
+              <div className="mx-auto max-w-[640px] flex items-center gap-2 h-[28px] px-3 rounded-lg bg-[#F5F5F7]/60 text-[10px] text-[#6E6E73]">
+                <div className="flex items-center -space-x-1">
+                  {teammates.slice(0, 3).map((tm) => {
+                    const colors = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55'];
+                    const color = colors[tm.index % colors.length];
+                    return (
+                      <div key={tm.taskId} className="w-3.5 h-3.5 rounded-full ring-1 ring-white" style={{ backgroundColor: color }} />
+                    );
+                  })}
+                </div>
+                <span>{teammates.filter(t => t.status === 'running').length > 0
+                  ? `${teammates.filter(t => t.status === 'running').length} agents 运行中`
+                  : `${teammates.length} agents 已完成`}</span>
+                <button onClick={onViewTeam} className="ml-auto text-[#007AFF] hover:text-[#0066CC] cursor-pointer">
+                  查看 →
+                </button>
+              </div>
+            </div>
+          )}
           {isStreaming && <StreamingIndicator startTime={streamStartTime ?? null} />}
         </div>
       </AutoScrollArea>

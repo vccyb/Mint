@@ -7,19 +7,21 @@ import {
   useMemo,
   useCallback,
 } from 'react';
-import { PanelRight } from 'lucide-react';
+import { PanelRight, Users } from 'lucide-react';
 import { MessageList } from './message-list';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { FilePanel } from './file-panel';
 import { FilePreviewPanel } from './file-preview';
 import { AskQuestionBanner } from './ask-question-banner';
+import { TeamDrawer } from './team/team-drawer';
+import { TeamDetailOverlay } from './team/team-detail-overlay';
 import {
   RightPanel,
   RightPanelContext,
   type PanelState,
 } from './right-panel';
 import { TodoList } from './todo-list';
-import type { ChatMessage, Attachment, PermissionRequestData, TodoItem } from '@/types';
+import type { ChatMessage, Attachment, PermissionRequestData, TodoItem, TeammateState } from '@/types';
 
 interface AgentViewProps {
   messages: ChatMessage[];
@@ -45,6 +47,10 @@ interface AgentViewProps {
   hasProject?: boolean;
   /** 当前选中的工程 ID */
   activeProjectId?: string | null;
+  /** Agent teammates 状态列表 */
+  teammates?: TeammateState[];
+  /** 是否正在等待 resume */
+  isWaitingResume?: boolean;
 }
 
 export function AgentView({
@@ -63,12 +69,18 @@ export function AgentView({
   onTogglePlanMode,
   hasProject = false,
   activeProjectId = null,
+  teammates,
+  isWaitingResume,
 }: AgentViewProps) {
   const [panelState, setPanelState] = useState<PanelState>('visible');
   const [editingContent, setEditingContent] = useState<string>('');
   const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
   const [fileTreeWidth, setFileTreeWidth] = useState(220);
   const [previewWidth, setPreviewWidth] = useState(480);
+  const [teamPanelOpen, setTeamPanelOpen] = useState(false);
+  const [teamPanelFullscreen, setTeamPanelFullscreen] = useState(false);
+  const [selectedTeammateId, setSelectedTeammateId] = useState<string | null>(null);
+  const [dismissedTodos, setDismissedTodos] = useState(false);
   const inputRef = useRef<MessageInputHandle>(null);
 
   const ctxValue = useMemo(
@@ -144,6 +156,7 @@ export function AgentView({
   // Close preview when session changes
   useEffect(() => {
     setPreviewFile(null);
+    setDismissedTodos(false);
   }, [sessionKey]);
 
   // Compute latest todos for pinned TodoList above input (Codex style)
@@ -155,7 +168,7 @@ export function AgentView({
 
   return (
     <RightPanelContext.Provider value={ctxValue}>
-      <div className="flex flex-1 flex-col min-h-0">
+      <div className="relative flex flex-1 flex-col min-h-0">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-border/80 bg-white/55 px-6 py-3 shrink-0 backdrop-blur">
           <div className="pill bg-primary-light text-primary-text">Agent</div>
@@ -163,6 +176,25 @@ export function AgentView({
             具备读写文件与执行命令能力
           </span>
           <div className="flex-1" />
+          {/* Teams button */}
+          <button
+            onClick={() => { setTeamPanelOpen(!teamPanelOpen); setTeamPanelFullscreen(false); }}
+            className={`relative flex items-center justify-center w-[28px] h-[28px] rounded-[6px] transition-colors cursor-pointer ${
+              teamPanelOpen
+                ? 'bg-[#E8F2FF] text-[#007AFF]'
+                : teammates && teammates.length > 0
+                  ? 'text-[#007AFF]'
+                  : 'text-[#AEAEB2] hover:text-[#6E6E73] hover:bg-bg-warm'
+            }`}
+            title="Agent Teams"
+          >
+            <Users className="h-4 w-4" />
+            {teammates && teammates.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-primary text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                {teammates.length}
+              </span>
+            )}
+          </button>
           {/* Panel toggle */}
           <button
             onClick={togglePanel}
@@ -190,11 +222,19 @@ export function AgentView({
                 }
                 onApprovePlan={onApprovePlan}
                 hideLastTodoAndPlan={hasActiveTodos}
+                teammates={teammates}
+                isWaitingResume={isWaitingResume}
+                onViewTeam={() => { setTeamPanelOpen(true); setTeamPanelFullscreen(false); }}
               />
-              {hasActiveTodos && !pendingPermission && (
+              {hasActiveTodos && !pendingPermission && !dismissedTodos && (
                 <div className="px-6 py-2">
                   <div className="mx-auto max-w-[640px]">
-                    <TodoList todos={latestTodos!} pinned />
+                    <TodoList
+                      todos={latestTodos!}
+                      pinned
+                      onDismiss={() => setDismissedTodos(true)}
+                      teamCount={teammates?.filter(t => t.status === 'running').length}
+                    />
                   </div>
                 </div>
               )}
@@ -209,7 +249,7 @@ export function AgentView({
                   </div>
                 </div>
               )}
-              <div className={hasActiveTodos && !pendingPermission ? 'opacity-50 pointer-events-none' : ''}>
+              <div className="pb-3">
               <MessageInput
                 ref={inputRef}
                 sessionKey={sessionKey}
@@ -223,6 +263,7 @@ export function AgentView({
                 onPermissionModeChange={onPermissionModeChange}
                 onTogglePlanMode={onTogglePlanMode}
                 withContainer={false}
+                inputDisabled={hasActiveTodos && !pendingPermission}
               />
               </div>
             </div>
@@ -266,6 +307,29 @@ export function AgentView({
                 onClose={handleClosePreview}
               />
             </div>
+          )}
+
+          {/* Team Drawer */}
+          {teamPanelOpen && !teamPanelFullscreen && (
+            <TeamDrawer
+              teammates={teammates ?? []}
+              isWaitingResume={isWaitingResume ?? false}
+              onExpand={(taskId) => {
+                setSelectedTeammateId(taskId ?? null);
+                setTeamPanelFullscreen(true);
+              }}
+              onClose={() => setTeamPanelOpen(false)}
+            />
+          )}
+
+          {/* Team Detail Overlay */}
+          {teamPanelOpen && teamPanelFullscreen && (
+            <TeamDetailOverlay
+              teammates={teammates ?? []}
+              isWaitingResume={isWaitingResume ?? false}
+              initialSelectedId={selectedTeammateId}
+              onClose={() => { setTeamPanelOpen(false); setTeamPanelFullscreen(false); setSelectedTeammateId(null); }}
+            />
           )}
         </div>
       </div>

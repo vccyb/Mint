@@ -45,6 +45,7 @@ export function ChatView({
         thinkingEnabled={thinkingEnabled}
         onThinkingToggle={() => setThinkingEnabled(!thinkingEnabled)}
       />
+      <div className="pb-3" />
     </div>
   );
 }

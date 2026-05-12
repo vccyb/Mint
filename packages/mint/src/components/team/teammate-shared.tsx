@@ -39,3 +39,7 @@ export function formatElapsed(startedAt: number, endedAt?: number): string {
   }
   return `${Math.floor(diffMs / 3_600_000)}h`;
 }
+
+export function teammateName(tm: TeammateState): string {
+  return tm.description || `Agent ${tm.index + 1}`;
+}

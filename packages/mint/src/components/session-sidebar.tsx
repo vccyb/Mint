@@ -48,6 +48,13 @@ export function SessionSidebar({
     prevStreamingIds.current = currentIds;
   }, [mode, streamStatuses]);
 
+  // 30s 后自动清除 "已完成" 标识
+  useEffect(() => {
+    if (unvisitedCompleted.size === 0) return;
+    const timer = setTimeout(() => setUnvisitedCompleted(new Set()), 30_000);
+    return () => clearTimeout(timer);
+  }, [unvisitedCompleted]);
+
   const handleSelect = useCallback((id: string) => {
     setUnvisitedCompleted((p) => { if (!p.has(id)) return p; const n = new Set(p); n.delete(id); return n; });
     onSelectSession(id);

@@ -66,6 +66,8 @@ export interface RunSessionParams {
   };
   skillPathMap: Map<string, { name: string; description: string }>;
   skillsEnabled: boolean;
+  /** HTTP request signal — propagated from client disconnect */
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -101,6 +103,20 @@ export class AgentOrchestrator {
       log.warn('Global session timeout reached, aborting', { sessionId });
       globalAbort.abort();
     }, GLOBAL_TIMEOUT_MS);
+
+    // Propagate client disconnect (HTTP request abort) to global abort + adapter
+    if (params.abortSignal) {
+      if (params.abortSignal.aborted) {
+        globalAbort.abort();
+        adapter.abort();
+      } else {
+        params.abortSignal.addEventListener('abort', () => {
+          log.info('Client disconnected, aborting session', { sessionId });
+          globalAbort.abort();
+          adapter.abort();
+        }, { once: true });
+      }
+    }
 
     try {
       await this.runWithRetry(params, globalAbort.signal);
@@ -277,12 +293,30 @@ export class AgentOrchestrator {
     });
 
     const iterator = result[Symbol.asyncIterator]();
+    let lastMessageTime = Date.now();
+    const getStallMs = () => state.startedTaskIds.size > 0 ? 120_000 : 30_000;
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const raceResult = await Promise.race([iterator.next(), abortPromise]);
-      if (raceResult === 'aborted') break;
+      const stallPromise = new Promise<'stalled'>((resolve) => {
+        const check = () => {
+          if (loopAbort.signal.aborted) return;
+          const elapsed = Date.now() - lastMessageTime;
+          if (elapsed > getStallMs()) { resolve('stalled'); return; }
+          setTimeout(check, 5000);
+        };
+        setTimeout(check, 5000);
+      });
+
+      const raceResult = await Promise.race([iterator.next(), abortPromise, stallPromise]);
+      if (raceResult === 'aborted' || raceResult === 'stalled') {
+        if (raceResult === 'stalled') {
+          log.warn('SDK iterator stalled for 30s, aborting to trigger auto-resume');
+        }
+        break;
+      }
       if ((raceResult as IteratorResult<any>).done) break;
       processSDKMessage((raceResult as IteratorResult<any>).value, state, enqueue);
+      lastMessageTime = Date.now();
     }
 
     loopAbort.abort();
@@ -399,7 +433,9 @@ export class AgentOrchestrator {
       timestamp: Date.now(),
       toolCalls: state.toolCalls.length > 0 ? state.toolCalls : undefined,
       skillLoads: state.skillLoads.length > 0 ? state.skillLoads : undefined,
-      todos: state.latestTodos.length > 0 ? state.latestTodos : undefined,
+      todos: state.latestTodos.length > 0
+        ? state.latestTodos.map(t => t.status === 'in_progress' ? { ...t, status: 'completed' as const } : t)
+        : undefined,
       thinkingContent: state.thinkingContent || undefined,
       isPlanMode: params.isPlanMode || undefined,
     };

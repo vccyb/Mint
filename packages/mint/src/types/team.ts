@@ -21,6 +21,8 @@ export interface TeammateState {
   taskId: string;
   toolUseId?: string;
   description: string;
+  /** Full prompt/instruction from lead agent to this teammate */
+  prompt?: string;
   taskType?: string;
   index: number;
   status: TeammateStatus;

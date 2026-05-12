@@ -39,6 +39,8 @@ interface MessageInputProps {
   tokenBudget?: number;
   /** Whether the ask/todo panel is active (dims input) */
   panelActive?: boolean;
+  /** Disable text input while keeping stop button clickable */
+  inputDisabled?: boolean;
   /** Whether to render the outer container (default: true) */
   withContainer?: boolean;
   /** Whether thinking mode is enabled (chat mode) */
@@ -114,6 +116,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   tokenUsage = 0,
   tokenBudget = 200000,
   panelActive = false,
+  inputDisabled = false,
   withContainer = true,
   thinkingEnabled = false,
   onThinkingToggle,
@@ -472,7 +475,8 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
             : dragOver
               ? 'border-[1.5px] border-[#007AFF] bg-[#E8F2FF]/30'
               : 'border-[rgba(0,0,0,0.08)]',
-          panelActive && 'opacity-50 pointer-events-none',
+          (panelActive || inputDisabled) && 'opacity-50',
+          panelActive && 'pointer-events-none',
         )}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
@@ -550,7 +554,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder ?? 'Send a message...'}
-            disabled={disabled}
+            disabled={disabled || inputDisabled}
             rows={1}
             className="max-h-40 min-h-[28px] flex-1 resize-none bg-transparent py-1 text-[13px] leading-[20px] placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
           />

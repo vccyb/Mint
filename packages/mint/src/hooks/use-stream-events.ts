@@ -103,9 +103,16 @@ export function handleStreamEvent(
     );
   } else if (event.type === 'result') {
     cb.updateMessages(sid, (prev) =>
-      prev.map((m) =>
-        m.id === assistantId ? { ...m, isStreaming: false } : m,
-      ),
+      prev.map((m) => {
+        if (m.id === assistantId) {
+          // Auto-complete any remaining in_progress todos
+          const todos = m.todos?.map((t: TodoItem) =>
+            t.status === 'in_progress' ? { ...t, status: 'completed' as const } : t
+          );
+          return { ...m, isStreaming: false, todos };
+        }
+        return m;
+      }),
     );
     cleanupSession(sid, ctx.resolvedSessionId, ctx.mode, cb);
   } else if (event.type === 'error') {
@@ -153,13 +160,15 @@ export function handleStreamEvent(
       return next;
     });
   } else if (event.type === 'teammate_progress' && event.teammate) {
+    const matchId = event.teammate!.taskId;
+    const matchToolUseId = event.teammate!.toolUseId;
     cb.setTeammatesMap((prev) => {
       const next = new Map(prev);
       const existing = next.get(sid) ?? [];
       next.set(
         sid,
         existing.map((t) =>
-          t.taskId === event.teammate!.taskId
+          t.taskId === matchId || (matchToolUseId && t.taskId === matchToolUseId)
             ? { ...t, ...event.teammate!, status: 'running' }
             : t,
         ),
@@ -167,13 +176,15 @@ export function handleStreamEvent(
       return next;
     });
   } else if (event.type === 'teammate_completed' && event.teammate) {
+    const matchId = event.teammate!.taskId;
+    const matchToolUseId = event.teammate!.toolUseId;
     cb.setTeammatesMap((prev) => {
       const next = new Map(prev);
       const existing = next.get(sid) ?? [];
       next.set(
         sid,
         existing.map((t) =>
-          t.taskId === event.teammate!.taskId
+          t.taskId === matchId || (matchToolUseId && t.taskId === matchToolUseId)
             ? { ...t, ...event.teammate!, status: event.teammate!.status }
             : t,
         ),

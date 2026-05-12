@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { TeammateState } from '@/types';
 import { avatarColor, formatElapsed, STATUS_BG, STATUS_COLORS, STATUS_LABEL } from './teammate-shared';
 
@@ -5,6 +6,7 @@ export function TeammateDetail({ teammate: tm, now }: { teammate: TeammateState;
   const color = avatarColor(tm.index);
   const elapsed = formatElapsed(tm.startedAt, tm.endedAt ?? (tm.status === 'running' ? undefined : now));
   const name = tm.description || `Agent ${tm.index + 1}`;
+  const [promptExpanded, setPromptExpanded] = useState(false);
 
   return (
     <div className="p-4">
@@ -46,6 +48,26 @@ export function TeammateDetail({ teammate: tm, now }: { teammate: TeammateState;
           {tm.description || '执行子任务'}
         </div>
       </div>
+
+      {/* Initial Prompt (collapsible) */}
+      {tm.prompt && (
+        <div className="mb-4">
+          <button
+            onClick={() => setPromptExpanded(!promptExpanded)}
+            className="flex items-center gap-1.5 mb-1.5 text-[10px] font-semibold text-[#6E6E73] cursor-pointer hover:text-[#1D1D1F] transition-colors"
+          >
+            <svg className="h-2.5 w-2.5 transition-transform" style={{ transform: promptExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            初始 Prompt
+          </button>
+          {promptExpanded && (
+            <div className="rounded-lg border border-border bg-[#F9FAFB] px-3 py-2.5 text-[11px] text-[#1D1D1F] leading-relaxed whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+              {tm.prompt}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Live Progress (running) */}
       {tm.status === 'running' && (

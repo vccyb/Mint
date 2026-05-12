@@ -6,7 +6,6 @@ import { resolveProjectPath } from '@/lib/path-resolver';
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
   '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv', '.flac',
   '.zip', '.tar', '.gz', '.rar', '.7z', '.bz2',
   '.woff', '.woff2', '.ttf', '.eot', '.otf',
@@ -15,6 +14,16 @@ const BINARY_EXTENSIONS = new Set([
   '.sqlite', '.db', '.pyc', '.pyo', '.class', '.jar',
   '.wasm',
 ]);
+
+const IMAGE_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
+]);
+
+const IMAGE_MIME: Record<string, string> = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.bmp': 'image/bmp', '.ico': 'image/x-icon',
+  '.webp': 'image/webp', '.svg': 'image/svg+xml',
+};
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
   '.ts': 'typescript', '.tsx': 'typescript', '.js': 'javascript', '.jsx': 'javascript',
@@ -80,6 +89,22 @@ export async function GET(request: Request) {
     }
 
     const ext = extname(absolutePath).toLowerCase();
+
+    // Handle image files — return base64 encoded content
+    if (IMAGE_EXTENSIONS.has(ext)) {
+      const buffer = await readFile(absolutePath);
+      const base64 = buffer.toString('base64');
+      const name = filePath.split('/').pop() ?? filePath;
+      return NextResponse.json({
+        path: filePath,
+        name,
+        content: base64,
+        encoding: 'base64',
+        mimeType: IMAGE_MIME[ext] ?? 'application/octet-stream',
+        size: fileStat.size,
+      });
+    }
+
     if (BINARY_EXTENSIONS.has(ext)) {
       return NextResponse.json({ error: 'Binary file preview not supported' }, { status: 415 });
     }

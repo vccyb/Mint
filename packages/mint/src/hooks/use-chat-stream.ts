@@ -288,6 +288,9 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry, initialPr
   const loadSession = useCallback(async (id: string) => {
     // Immediately switch to the target session and clear messages to avoid flash
     setActiveSessionKey(id);
+    // Clear stale streaming data from previous session
+    setTeammatesMap((prev) => { const next = new Map(prev); next.delete(id); return next; });
+    setWaitingResumeMap((prev) => { const n = new Map(prev); n.delete(id); return n; });
     setMessagesMap((prev) => {
       const next = new Map(prev);
       if (!next.has(id)) next.set(id, []);
@@ -297,10 +300,17 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry, initialPr
       const response = await fetch(`/api/sessions/${id}`);
       if (response.ok) {
         const { messages: loadedMessages } = await response.json();
+        // Auto-complete stale in_progress todos from completed sessions
+        const normalizedMessages = loadedMessages.map((m: ChatMessage) => {
+          if (m.todos && m.todos.length > 0 && !m.isStreaming) {
+            return { ...m, todos: m.todos.map((t: TodoItem) => t.status === 'in_progress' ? { ...t, status: 'completed' as const } : t) };
+          }
+          return m;
+        });
         setMessagesMap((prev) => {
           const next = new Map(prev);
           const existing = prev.get(id);
-          if (!existing || existing.length < loadedMessages.length) next.set(id, loadedMessages);
+          if (!existing || existing.length < normalizedMessages.length) next.set(id, normalizedMessages);
           return next;
         });
       }
@@ -319,6 +329,22 @@ export function useChatStream(mode: Mode, registry: StreamingRegistry, initialPr
         return { ...m, isStreaming: false, toolCalls: (m.toolCalls ?? []).map((t) => t.status === 'running' ? { ...t, status: 'error' as const, result: 'Cancelled' } : t) };
       }),
     );
+    // Mark running teammates as stopped and clear waiting resume
+    setTeammatesMap((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(target) ?? [];
+      if (existing.length > 0) {
+        next.set(target, existing.map((t) =>
+          t.status === 'running' ? { ...t, status: 'stopped' as const, endedAt: Date.now() } : t
+        ));
+      }
+      return next;
+    });
+    setWaitingResumeMap((prev) => {
+      const next = new Map(prev);
+      next.delete(target);
+      return next;
+    });
   }, [mode, registry, cleanupSession, updateMessagesForSession]);
 
   const clearSession = useCallback(() => {

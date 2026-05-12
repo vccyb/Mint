@@ -88,6 +88,8 @@ export function SessionRow({
         </div>
         {isStreaming ? (
           <div className="text-[10px] text-primary">运行中</div>
+        ) : isCompletedUnvisited ? (
+          <div className="text-[10px] text-success">已完成</div>
         ) : (
           <div className="text-[10px] text-text-tertiary">
             {formatRelativeTime(session.updatedAt)}

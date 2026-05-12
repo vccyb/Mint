@@ -44,6 +44,27 @@ export function ProjectSidebar({
   const [renameTarget, setRenameTarget] = useState<{ type: 'project' | 'session'; id: string; name: string } | null>(null);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const streamStatuses = useStreamStatuses();
+  const [unvisitedCompleted, setUnvisitedCompleted] = useState<Set<string>>(new Set());
+  const prevStreamingIds = useRef<Set<string>>(new Set());
+
+  // 追踪 streaming→completed 过渡，只在刚完成时显示 "已完成"
+  useEffect(() => {
+    const currentIds = new Set<string>();
+    for (const [id, status] of streamStatuses) {
+      if (status.isStreaming) currentIds.add(id);
+    }
+    for (const id of prevStreamingIds.current) {
+      if (!currentIds.has(id)) setUnvisitedCompleted((p) => new Set(p).add(id));
+    }
+    prevStreamingIds.current = currentIds;
+  }, [streamStatuses]);
+
+  // 30s 后自动清除 "已完成" 标识
+  useEffect(() => {
+    if (unvisitedCompleted.size === 0) return;
+    const timer = setTimeout(() => setUnvisitedCompleted(new Set()), 30_000);
+    return () => clearTimeout(timer);
+  }, [unvisitedCompleted]);
 
   // 加载工程列表
   const loadData = useCallback(async () => {
@@ -294,8 +315,11 @@ export function ProjectSidebar({
                           session={session}
                           active={activeSessionId === session.id}
                           isStreaming={streamStatuses.get(session.id)?.isStreaming === true}
-                          isCompleted={streamStatuses.has(session.id) && streamStatuses.get(session.id)?.isStreaming === false}
-                          onClick={() => onSelectSession(session.id)}
+                          isCompleted={unvisitedCompleted.has(session.id)}
+                          onClick={() => {
+                            setUnvisitedCompleted((p) => { const n = new Set(p); n.delete(session.id); return n; });
+                            onSelectSession(session.id);
+                          }}
                           onTogglePin={() => onTogglePin(session.id, !session.pinned)}
                           onDelete={() => setDeleteTarget({ type: 'session', id: session.id })}
                         />

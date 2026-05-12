@@ -151,6 +151,64 @@ function formatPretty(entry: Record<string, unknown>): string {
 
 // ─── Core log function ───
 
+// ─── In-memory ring buffer for log viewing ───
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  service: string;
+  scope: string;
+  message: string;
+  data?: Record<string, unknown>;
+  error?: ErrorInfo;
+  traceId?: string;
+}
+
+const RING_BUFFER_SIZE = 2000;
+const ringBuffer: LogEntry[] = [];
+let logCounter = 0;
+
+export function getRecentLogs(filter?: { sessionId?: string; scope?: string; level?: LogLevel; limit?: number; offset?: number }): { entries: LogEntry[]; total: number } {
+  let entries = ringBuffer;
+  if (filter?.level) {
+    const minPriority = LOG_LEVEL_PRIORITY[filter.level];
+    entries = entries.filter(e => LOG_LEVEL_PRIORITY[e.level] >= minPriority);
+  }
+  if (filter?.scope) {
+    entries = entries.filter(e => e.scope.startsWith(filter.scope!));
+  }
+  if (filter?.sessionId) {
+    entries = entries.filter(e => e.data?.sessionId === filter.sessionId);
+  }
+  const total = entries.length;
+  const limit = filter?.limit ?? 100;
+  const offset = filter?.offset ?? 0;
+  return { entries: entries.slice(offset, offset + limit), total };
+}
+
+export function getLogStats(): { total: number; byLevel: Record<string, number>; byScope: Record<string, number>; sessions: Array<{ sessionId: string; count: number }> } {
+  const byLevel: Record<string, number> = { debug: 0, info: 0, warn: 0, error: 0 };
+  const byScope: Record<string, number> = {};
+  const sessionMap: Record<string, number> = {};
+
+  for (const entry of ringBuffer) {
+    byLevel[entry.level] = (byLevel[entry.level] ?? 0) + 1;
+    const topScope = entry.scope.split('.')[0];
+    byScope[topScope] = (byScope[topScope] ?? 0) + 1;
+    if (entry.data?.sessionId && typeof entry.data.sessionId === 'string') {
+      sessionMap[entry.data.sessionId as string] = (sessionMap[entry.data.sessionId as string] ?? 0) + 1;
+    }
+  }
+
+  const sessions = Object.entries(sessionMap)
+    .map(([sessionId, count]) => ({ sessionId, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+
+  return { total: ringBuffer.length, byLevel, byScope, sessions };
+}
+
 function log(
   level: LogLevel,
   scope: string,
@@ -174,6 +232,21 @@ function log(
   };
 
   const line = prettyMode ? formatPretty(entry) : formatJson(entry);
+
+  // Capture to ring buffer
+  const logEntry: LogEntry = {
+    id: `log-${++logCounter}`,
+    timestamp: entry.timestamp as string,
+    level,
+    service: SERVICE_NAME,
+    scope,
+    message,
+    ...(Object.keys(cleanedMeta).length > 0 ? { data: cleanedMeta } : {}),
+    ...(error ? { error } : {}),
+    ...(traceId ? { traceId } : {}),
+  };
+  ringBuffer.push(logEntry);
+  if (ringBuffer.length > RING_BUFFER_SIZE) ringBuffer.shift();
 
   if (level === 'error' || level === 'warn') {
     process.stderr.write(line + '\n');
