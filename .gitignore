@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+
+# Cache
+.cache/
+.eslintcache
+
+# Next.js
+.next/
+packages/mint/.next/
+
+# Runtime data
+.data/
+
+# Reference projects (large)
+参考项目/
+
+# External SDK docs
+claude-agent-sdk-docs/
+
+# Temp / scratch files
+hello.txt
+test.md
+plan.md
+matrix_rain.py
+notion/
+youth-day-articles/

@@ -1,0 +1,19 @@
+{
+  "name": "parallel-agent-teams-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "并行模式 Agent Teams 示例，展示 @anthropic-ai/claude-agent-sdk 的并行子 Agent 用法",
+  "type": "module",
+  "scripts": {
+    "01": "npx tsx src/01-simple-parallel.ts",
+    "02": "npx tsx src/02-team-definition.ts",
+    "03": "npx tsx src/03-result-aggregation.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.111"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

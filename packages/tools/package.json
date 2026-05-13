@@ -1,0 +1,23 @@
+{
+  "name": "@harness/tools",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "doc-garden": "tsx scripts/doc-gardener.ts",
+    "quality": "tsx scripts/quality-scorer.ts",
+    "scaffold": "tsx scripts/scaffold.ts",
+    "lint": "eslint scripts/",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@harness/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  }
+}
