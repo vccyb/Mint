@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getStorage } from '@/lib/storage';
+import { DEFAULT_MODEL } from '@/lib/constants';
 
 /** GET /api/threads - 列出所有线程，可选按工程筛选 */
 export async function GET(request: NextRequest) {
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       type: 'thread',
       projectId: projectId || null,
       mode: mode || 'agent',
-      model: model || 'glm-5.1',
+      model: model || DEFAULT_MODEL,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       messageCount: 0,

@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
 
 export interface AppConfig {
   model: string;
@@ -11,9 +12,9 @@ export interface AppConfig {
 }
 
 const DEFAULT_CONFIG: AppConfig = {
-  model: 'glm-5.1',
-  apiKey: '086ecec9a9f54beb9cd699e9efa485a6.aQOSnbbfxK4JpzZf',
-  baseUrl: 'https://open.bigmodel.cn/api/anthropic',
+  model: DEFAULT_MODEL,
+  apiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  baseUrl: DEFAULT_BASE_URL,
 };
 
 export class ConfigStorage {

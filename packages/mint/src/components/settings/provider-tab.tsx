@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface ProviderConfig {
   model: string;
@@ -23,7 +24,7 @@ export function ProviderTab() {
       if (!res.ok) throw new Error('Failed to fetch config');
       const data = await res.json();
       setConfig({
-        model: data.model ?? 'glm-5.1',
+        model: data.model ?? DEFAULT_MODEL,
         apiKey: data.apiKey ?? '',
         baseUrl: data.baseUrl ?? '',
         permissionMode: data.permissionMode ?? 'bypassPermissions',
@@ -47,7 +48,7 @@ export function ProviderTab() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: config.model || 'glm-5.1',
+          model: config.model || DEFAULT_MODEL,
           apiKey: config.apiKey || undefined,
           baseUrl: config.baseUrl || undefined,
           permissionMode: config.permissionMode || 'bypassPermissions',

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStorage } from '@/lib/storage';
+import { DEFAULT_MODEL } from '@/lib/constants';
 import type { Mode } from '@/types';
 
 export async function GET(request: Request) {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       messageCount: 0,
-      model: 'glm-5.1',
+      model: DEFAULT_MODEL,
       ...(projectId && { projectId }),
     };
 

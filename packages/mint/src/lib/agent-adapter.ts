@@ -2,16 +2,10 @@ import { query, type CanUseTool } from '@anthropic-ai/claude-agent-sdk';
 import { encodeSSE } from '@/lib/sse';
 import { addPending, resolvePending } from '@/lib/permission-store';
 import { createLogger } from '@/lib/logger';
+import { READ_ONLY_TOOLS } from '@/lib/constants';
 import type { SubAgentDefinition, StreamEventData } from '@/types';
 
 const log = createLogger('lib.agent-adapter');
-
-const READ_ONLY_TOOLS = [
-  'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch',
-  'TaskOutput', 'Agent', 'TodoWrite',
-  'mcp__pencil__get_editor_state',
-  'mcp__pencil__batch_get',
-];
 
 export interface AgentAdapterOptions {
   model: string;

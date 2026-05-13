@@ -12,13 +12,10 @@ import {
   formatSummaryFallbackPrompt,
   areAllWorkersIdle,
 } from '@/lib/team-inbox-reader';
+import { MAX_ATTACHMENT_SIZE, MAX_AUTO_RETRIES, RETRY_BASE_MS, GLOBAL_TIMEOUT_MS } from '@/lib/constants';
 import type { ChatMessage, StreamEventData, TeammateState, Attachment } from '@/types';
 
 const log = createLogger('lib.agent-orchestrator');
-const MAX_ATTACHMENT_SIZE = 1024 * 1024;
-const MAX_AUTO_RETRIES = 3;
-const RETRY_BASE_MS = 1000;
-const GLOBAL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /** Create a timer Promise that can be aborted. */
 function timerWithAbort(ms: number, signal: AbortSignal): Promise<'timeout' | 'aborted'> {

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useRef, useCallback, useSyncExternalStore, type ReactNode } from 'react';
 import type { Mode } from '@/types';
+import { MAX_CONCURRENT_STREAMS } from '@/lib/constants';
 
 export interface StreamStatus {
   isStreaming: boolean;
@@ -12,7 +13,7 @@ export class StreamingRegistry {
   private statuses = new Map<string, StreamStatus>();
   private abortControllers = new Map<string, AbortController>();
   private listeners = new Set<() => void>();
-  private readonly MAX_CONCURRENT = 5;
+  private readonly MAX_CONCURRENT = MAX_CONCURRENT_STREAMS;
   private cachedSnapshot: Map<string, StreamStatus> | null = null;
 
   register(sessionId: string, mode: Mode, abortController: AbortController): void {

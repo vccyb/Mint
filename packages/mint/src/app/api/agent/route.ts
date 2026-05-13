@@ -11,6 +11,7 @@ import { buildSkillIndexPrompt } from '@/lib/agent-stream';
 import { AgentAdapter } from '@/lib/agent-adapter';
 import { AgentOrchestrator } from '@/lib/agent-orchestrator';
 import { resolveProjectPath } from '@/lib/path-resolver';
+import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
 import type { ChatMessage, Attachment } from '@/types';
 
 const orchestrator = new AgentOrchestrator();
@@ -43,8 +44,8 @@ export async function POST(request: Request) {
     await storage.initialize();
     const config = await storage.readConfig();
     const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
-    const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://open.bigmodel.cn/api/anthropic';
-    const model = config?.model ?? 'glm-5.1';
+    const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? DEFAULT_BASE_URL;
+    const model = config?.model ?? DEFAULT_MODEL;
 
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {

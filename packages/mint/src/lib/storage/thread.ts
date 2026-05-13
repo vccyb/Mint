@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { DEFAULT_MODEL } from '@/lib/constants';
 import type { Thread, FileChange, ChatMessage } from '@/types';
 
 const THREADS_DIR = 'threads';
@@ -51,7 +52,7 @@ export class ThreadStorage {
       pinned: thread.pinned || false,
       pinnedAt: thread.pinnedAt,
       mode: thread.mode || 'agent',
-      model: thread.model || 'glm-5.1',
+      model: thread.model || DEFAULT_MODEL,
     };
 
     const threadDir = this.getThreadDir(newThread.id);

@@ -3,6 +3,8 @@
  * Allows the SSE stream to await user decisions from the /api/agent/answer endpoint.
  */
 
+import { PERMISSION_TIMEOUT_MS } from '@/lib/constants';
+
 export type PermissionResult =
   | { behavior: 'allow'; updatedInput?: Record<string, unknown> }
   | { behavior: 'deny'; message: string };
@@ -32,7 +34,7 @@ export function addPending(
     const timeout = setTimeout(() => {
       resolve({ behavior: 'deny', message: 'Permission request timed out' });
       getStore().delete(requestId);
-    }, 60_000);
+    }, PERMISSION_TIMEOUT_MS);
 
     getStore().set(requestId, {
       resolve: (result) => {

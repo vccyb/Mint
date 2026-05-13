@@ -3,9 +3,8 @@ import { encodeSSE, createSSEResponse } from '@/lib/sse';
 import { generateId } from '@/lib/utils';
 import { createRequestLogger } from '@/lib/logger';
 import { classifyError } from '@/lib/classify-error';
+import { MAX_ATTACHMENT_SIZE, MAX_TOKENS, THINKING_BUDGET_TOKENS, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
 import type { ChatMessage, StreamEventData, Attachment } from '@/types';
-
-const MAX_ATTACHMENT_SIZE = 1024 * 1024; // 1MB
 
 export async function POST(request: Request) {
   const reqId = generateId();
@@ -24,8 +23,8 @@ export async function POST(request: Request) {
 
     const config = await storage.readConfig();
     const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
-    const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://open.bigmodel.cn/api/anthropic';
-    const model = config?.model ?? 'glm-5.1';
+    const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? DEFAULT_BASE_URL;
+    const model = config?.model ?? DEFAULT_MODEL;
 
     const sid = sessionId ?? generateId();
     let isNewSession = false;
@@ -107,10 +106,10 @@ export async function POST(request: Request) {
 
     const buildRequestBody = (enableThinking: boolean) => ({
       model: model,
-      max_tokens: 4096,
+      max_tokens: MAX_TOKENS,
       messages: apiMessages,
       stream: true,
-      ...(enableThinking ? { thinking: { type: 'enabled' as const, budget_tokens: 10000 } } : {}),
+      ...(enableThinking ? { thinking: { type: 'enabled' as const, budget_tokens: THINKING_BUDGET_TOKENS } } : {}),
     });
 
     let apiResponse = await fetch(`${baseUrl}/v1/messages`, {
