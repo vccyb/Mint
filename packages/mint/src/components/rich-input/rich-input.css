@@ -1,0 +1,48 @@
+/* Tiptap editor styles for the RichInput component */
+
+/* Base editor styles */
+.tiptap {
+  outline: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  color: #AEAEB2;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* Mention nodes — ensure they flow inline properly */
+.tiptap .file-mention,
+.tiptap .skill-mention,
+.tiptap .mcp-mention {
+  display: inline;
+}
+
+/* Ensure paragraph margins are minimal */
+.tiptap p {
+  margin: 0;
+}
+
+/* Scrollbar for overflow content */
+.tiptap-editor-outline-none {
+  outline: none;
+}
+
+/* Make the ProseMirror content editable area flow correctly */
+.ProseMirror {
+  outline: none;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* NodeView wrapper should be inline */
+.tiptap [data-node-view-wrapper] {
+  display: inline;
+}

@@ -1,28 +1,23 @@
 /**
  * Structured logger — zero external dependencies.
  *
- * Follows OpenTelemetry log model conventions:
- *   - service: identifies the service (e.g. "mint-api")
- *   - scope: hierarchical dot notation (e.g. "api.agent", "lib.team-orchestrator")
- *   - traceId: request correlation ID
- *   - duration: elapsed milliseconds for timed operations
- *   - error: auto-enriched from Error instances (type, message, stack)
+ * Features:
+ *   - Four log levels: debug, info, warn, error
+ *   - Two output formats: pretty (colored TTY) and JSON (production)
+ *   - In-memory ring buffer for live log viewing
+ *   - Optional file persistence with daily rotation (LOG_FILE=1)
+ *   - Hierarchical scopes and request-scoped trace IDs
+ *   - Automatic Error enrichment (type, message, stack)
  *
- * Output modes (LOG_FORMAT env var):
- *   - "pretty": colored human-readable format (auto-enabled in TTY)
- *   - "json": single-line JSON per entry (default in production)
- *
- * Usage:
- *   const log = createLogger('api.agent');
- *   log.info('Request received', { sessionId: 'abc' });
- *
- *   const reqLog = createRequestLogger('api.agent', requestId);
- *   reqLog.info('Stream completed', { contentLength: 1200 });
- *
- *   const done = log.startTimer();
- *   // ... do work ...
- *   done('Operation complete'); // logs with { duration: 1234 }
+ * Environment variables:
+ *   LOG_LEVEL   — debug|info|warn|error (default: info)
+ *   LOG_FORMAT  — pretty|json (default: pretty in TTY, json otherwise)
+ *   LOG_FILE    — set to "1" to enable file output to ~/.mint/logs/
  */
+
+import { appendFile, mkdir } from 'fs/promises';
+import { homedir } from 'os';
+import { join } from 'path';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -36,6 +31,8 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
 // ─── Configuration ───
 
 const SERVICE_NAME = process.env['SERVICE_NAME'] ?? 'mint-api';
+const LOG_BUFFER_SIZE = 5000;
+const LOG_RETENTION_DAYS = 7;
 
 function getConfiguredLevel(): LogLevel {
   const envLevel = process.env['LOG_LEVEL']?.toLowerCase();
@@ -50,8 +47,13 @@ function isPrettyMode(): boolean {
   return process.stdout.isTTY === true;
 }
 
+function isFileLoggingEnabled(): boolean {
+  return process.env['LOG_FILE'] === '1';
+}
+
 const configuredLevel = getConfiguredLevel();
 const prettyMode = isPrettyMode();
+const fileLogging = isFileLoggingEnabled();
 
 // ─── ANSI colors (zero deps) ───
 
@@ -149,7 +151,49 @@ function formatPretty(entry: Record<string, unknown>): string {
   return line;
 }
 
-// ─── Core log function ───
+// ─── File persistence ───
+
+function getLogDir(): string {
+  return join(homedir(), '.mint', 'logs');
+}
+
+function getLogFilePath(): string {
+  const date = new Date().toISOString().slice(0, 10);
+  return join(getLogDir(), `mint-${date}.log`);
+}
+
+async function writeToFile(line: string): Promise<void> {
+  try {
+    const dir = getLogDir();
+    await mkdir(dir, { recursive: true });
+    await appendFile(getLogFilePath(), line + '\n');
+  } catch {
+    // File write failure must not break the application
+  }
+}
+
+/** Clean up log files older than LOG_RETENTION_DAYS. Called lazily. */
+let cleanupDone = false;
+async function cleanupOldLogs(): Promise<void> {
+  if (cleanupDone) return;
+  cleanupDone = true;
+  try {
+    const { readdir, stat, unlink } = await import('fs/promises');
+    const dir = getLogDir();
+    let entries;
+    try { entries = await readdir(dir); } catch { return; }
+    const now = Date.now();
+    const maxAge = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    for (const entry of entries) {
+      if (!entry.startsWith('mint-') || !entry.endsWith('.log')) continue;
+      const filePath = join(dir, entry);
+      try {
+        const s = await stat(filePath);
+        if (now - s.mtimeMs > maxAge) await unlink(filePath);
+      } catch { /* skip */ }
+    }
+  } catch { /* ignore */ }
+}
 
 // ─── In-memory ring buffer for log viewing ───
 
@@ -165,7 +209,6 @@ export interface LogEntry {
   traceId?: string;
 }
 
-const RING_BUFFER_SIZE = 2000;
 const ringBuffer: LogEntry[] = [];
 let logCounter = 0;
 
@@ -209,6 +252,8 @@ export function getLogStats(): { total: number; byLevel: Record<string, number>;
   return { total: ringBuffer.length, byLevel, byScope, sessions };
 }
 
+// ─── Core log function ───
+
 function log(
   level: LogLevel,
   scope: string,
@@ -246,12 +291,19 @@ function log(
     ...(traceId ? { traceId } : {}),
   };
   ringBuffer.push(logEntry);
-  if (ringBuffer.length > RING_BUFFER_SIZE) ringBuffer.shift();
+  if (ringBuffer.length > LOG_BUFFER_SIZE) ringBuffer.shift();
 
+  // Console output
   if (level === 'error' || level === 'warn') {
     process.stderr.write(line + '\n');
   } else {
     process.stdout.write(line + '\n');
+  }
+
+  // File persistence (async, fire-and-forget)
+  if (fileLogging) {
+    const jsonLine = formatJson(entry);
+    writeToFile(jsonLine).then(() => cleanupOldLogs());
   }
 }
 

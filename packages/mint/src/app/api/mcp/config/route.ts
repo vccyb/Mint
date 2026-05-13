@@ -5,82 +5,55 @@ import {
   removeMcpServer,
   toggleMcpServer,
 } from '@/lib/storage/mcp-config';
+import { withLogging } from '@/lib/with-logging';
 
-export async function GET() {
-  try {
-    const configs = await loadMcpConfig();
-    return NextResponse.json({ configs });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load MCP config' },
-      { status: 500 },
-    );
+export const GET = withLogging('api.mcp.config', async () => {
+  const configs = await loadMcpConfig();
+  return NextResponse.json({ configs });
+});
+
+export const POST = withLogging('api.mcp.config', async (request) => {
+  const body = (await request.json()) as {
+    name: string;
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+  };
+
+  if (!body.name || !body.command) {
+    return NextResponse.json({ error: 'name and command are required' }, { status: 400 });
   }
-}
 
-export async function POST(request: Request) {
-  try {
-    const body = (await request.json()) as {
-      name: string;
-      command: string;
-      args?: string[];
-      env?: Record<string, string>;
-    };
+  const config = await addMcpServer({
+    name: body.name,
+    command: body.command,
+    args: body.args ?? [],
+    env: body.env,
+    enabled: true,
+  });
 
-    if (!body.name || !body.command) {
-      return NextResponse.json({ error: 'name and command are required' }, { status: 400 });
-    }
+  return NextResponse.json({ config });
+});
 
-    const config = await addMcpServer({
-      name: body.name,
-      command: body.command,
-      args: body.args ?? [],
-      env: body.env,
-      enabled: true,
-    });
+export const DELETE = withLogging('api.mcp.config', async (request) => {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
 
-    return NextResponse.json({ config });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to add MCP server' },
-      { status: 500 },
-    );
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
-}
 
-export async function DELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+  await removeMcpServer(id);
+  return NextResponse.json({ ok: true });
+});
 
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
-    }
+export const PATCH = withLogging('api.mcp.config', async (request) => {
+  const { id } = (await request.json()) as { id: string };
 
-    await removeMcpServer(id);
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to remove MCP server' },
-      { status: 500 },
-    );
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
-}
 
-export async function PATCH(request: Request) {
-  try {
-    const { id } = (await request.json()) as { id: string };
-
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
-    }
-
-    await toggleMcpServer(id);
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to toggle MCP server' },
-      { status: 500 },
-    );
-  }
-}
+  await toggleMcpServer(id);
+  return NextResponse.json({ ok: true });
+});

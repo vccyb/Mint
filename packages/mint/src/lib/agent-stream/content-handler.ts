@@ -1,8 +1,11 @@
 import { encodeSSE } from '@/lib/sse';
 import { generateId } from '@/lib/utils';
+import { createLogger } from '@/lib/logger';
 import type { StreamEventData, ToolCallInfo, TodoItem, TeammateState } from '@/types';
 import { extractTaskDescription, isSkillRead } from './skill-utils';
 import type { SessionStreamState } from './session-context';
+
+const log = createLogger('lib.content-handler');
 
 /**
  * Handle SDK stream_event messages: text deltas, thinking deltas,
@@ -54,6 +57,7 @@ function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Arra
   try {
     parsedArgs = JSON.parse(state.currentToolInput || '{}');
   } catch {
+    log.warn('Failed to parse tool args', { toolName, toolId, rawInput: (state.currentToolInput || '').slice(0, 200) });
     parsedArgs = {};
   }
 

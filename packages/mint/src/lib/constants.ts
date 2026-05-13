@@ -13,6 +13,18 @@ export const THINKING_BUDGET_TOKENS = 10000;
 
 // ── Attachments ──────────────────────────────────────────────────────
 export const MAX_ATTACHMENT_SIZE = 1024 * 1024; // 1 MB
+export const MAX_EMBEDDED_TEXT_SIZE = 100 * 1024; // 100 KB — max text content embedded in prompts
+export const ALLOWED_FILE_TYPES = [
+  'text/*', 'image/*',
+  '.pdf',
+  '.md', '.txt', '.csv', '.json', '.xml', '.yaml', '.yml',
+  '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
+  '.py', '.rb', '.go', '.rs', '.java', '.kt',
+  '.c', '.cpp', '.h', '.hpp',
+  '.html', '.css', '.scss', '.less', '.svg',
+  '.sh', '.bash', '.zsh', '.sql', '.graphql',
+  '.toml', '.ini', '.env', '.gitignore',
+].join(',');
 
 // ── Agent Orchestration ──────────────────────────────────────────────
 export const MAX_AUTO_RETRIES = 3;

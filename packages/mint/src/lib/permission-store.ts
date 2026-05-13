@@ -4,6 +4,9 @@
  */
 
 import { PERMISSION_TIMEOUT_MS } from '@/lib/constants';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('lib.permission-store');
 
 export type PermissionResult =
   | { behavior: 'allow'; updatedInput?: Record<string, unknown> }
@@ -32,6 +35,7 @@ export function addPending(
 ): Promise<PermissionResult> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
+      log.warn('Permission request timed out', { requestId, toolName });
       resolve({ behavior: 'deny', message: 'Permission request timed out' });
       getStore().delete(requestId);
     }, PERMISSION_TIMEOUT_MS);
@@ -44,6 +48,7 @@ export function addPending(
       toolName,
       toolUseId,
     });
+    log.debug('Permission request pending', { requestId, toolName });
   });
 }
 
@@ -54,6 +59,7 @@ export function resolvePending(
   const store = getStore();
   const entry = store.get(requestId);
   if (!entry) return false;
+  log.info('Permission resolved', { requestId, behavior: result.behavior });
   entry.resolve(result);
   store.delete(requestId);
   return true;

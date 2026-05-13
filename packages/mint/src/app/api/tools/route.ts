@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withLogging } from '@/lib/with-logging';
 
 interface ToolInfo {
   name: string;
@@ -26,7 +27,7 @@ const SDK_TOOLS: ToolInfo[] = [
   { name: 'Skill', category: 'sdk', description: 'Invoke specialized skills' },
 ];
 
-export async function GET() {
+export const GET = withLogging('api.tools', async () => {
   const tools: ToolInfo[] = [
     ...MODEL_NATIVE_TOOLS,
     ...SDK_TOOLS,
@@ -34,4 +35,4 @@ export async function GET() {
   ];
 
   return NextResponse.json({ tools });
-}
+});

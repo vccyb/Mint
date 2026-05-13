@@ -1,7 +1,10 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { DEFAULT_MODEL } from '@/lib/constants';
+import { createLogger } from '@/lib/logger';
 import type { Thread, FileChange, ChatMessage } from '@/types';
+
+const log = createLogger('storage.thread');
 
 const THREADS_DIR = 'threads';
 const FILE_CHANGES_DIR = 'file-changes';
@@ -67,6 +70,7 @@ export class ThreadStorage {
     // 创建空消息文件
     await fs.writeFile(this.getMessagesPath(newThread.id), '');
 
+    log.debug('Thread created', { threadId: newThread.id, title: newThread.title });
     return newThread;
   }
 
@@ -80,6 +84,7 @@ export class ThreadStorage {
       this.getMetadataPath(threadId),
       JSON.stringify(updated, null, 2),
     );
+    log.debug('Thread updated', { threadId, fields: Object.keys(partial) });
   }
 
   /** 删除线程 */
@@ -94,7 +99,9 @@ export class ThreadStorage {
       } catch {
         // ignore if not exists
       }
+      log.debug('Thread deleted', { threadId });
     } catch {
+      log.warn('Failed to delete thread', { threadId });
       throw new Error(`Thread not found: ${threadId}`);
     }
   }
@@ -105,6 +112,7 @@ export class ThreadStorage {
       const content = await fs.readFile(this.getMetadataPath(threadId), 'utf-8');
       return JSON.parse(content) as Thread;
     } catch {
+      log.debug('Thread not found', { threadId });
       return null;
     }
   }
@@ -136,13 +144,14 @@ export class ThreadStorage {
 
           threads.push(thread);
         } catch {
-          // skip invalid entries
+          log.warn('Skipping invalid thread entry', { threadId: entry.name });
         }
       }
 
       // 按更新时间倒序排列
       return threads.sort((a, b) => b.updatedAt - a.updatedAt);
     } catch {
+      log.warn('Failed to list threads');
       return [];
     }
   }
@@ -160,6 +169,7 @@ export class ThreadStorage {
       messageCount: thread.messageCount + 1,
       updatedAt: Date.now(),
     });
+    log.debug('Message appended to thread', { threadId, messageCount: thread.messageCount + 1 });
   }
 
   /** 读取线程的所有消息 */
@@ -176,12 +186,14 @@ export class ThreadStorage {
             messages.push(data.message as ChatMessage);
           }
         } catch {
-          // skip invalid lines
+          log.warn('Skipping invalid message line', { threadId });
         }
       }
 
+      log.debug('Thread messages read', { threadId, messageCount: messages.length });
       return messages;
     } catch {
+      log.debug('No messages file for thread', { threadId });
       return [];
     }
   }

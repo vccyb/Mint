@@ -37,6 +37,7 @@ export class AgentAdapter {
     sessionId: string,
     enqueue: (data: Uint8Array) => boolean,
   ): Parameters<typeof query>[0]['options'] {
+    log.info('Building query options', { sessionId, model: this.options.model, permissionMode: this.options.permissionMode });
     const { model, permissionMode, systemPrompt, env, cwd, agents } = this.options;
     const encoder = new TextEncoder();
     const permMode = permissionMode;
@@ -68,9 +69,11 @@ export class AgentAdapter {
         options: Parameters<CanUseTool>[2],
       ) => {
         if (permMode === 'bypassPermissions') {
+          log.debug('Permission check', { toolName, behavior: 'allow', reason: 'bypassPermissions' });
           return { behavior: 'allow' as const, updatedInput: input };
         }
         if (permMode === 'plan') {
+          log.debug('Permission check', { toolName, behavior: 'deny', reason: 'plan mode' });
           return { behavior: 'deny' as const };
         }
 
@@ -108,6 +111,7 @@ export class AgentAdapter {
     prompt: string,
     queryOptions: Parameters<typeof query>[0]['options'],
   ): AsyncIterable<any> {
+    log.info('Executing SDK query');
     this.abortController = new AbortController();
     return query({ prompt, options: { ...queryOptions, abortController: this.abortController } });
   }
@@ -118,6 +122,7 @@ export class AgentAdapter {
     sdkSessionId: string,
     queryOptions: Parameters<typeof query>[0]['options'],
   ): AsyncIterable<any> {
+    log.info('Resuming SDK query', { sdkSessionId });
     return query({
       prompt,
       options: { ...queryOptions, resume: sdkSessionId, abortController: this.abortController ?? undefined },
@@ -127,6 +132,7 @@ export class AgentAdapter {
   /** Abort the current query. */
   abort(): void {
     if (this.abortController) {
+      log.info('Aborting query');
       this.abortController.abort();
       this.abortController = null;
     }

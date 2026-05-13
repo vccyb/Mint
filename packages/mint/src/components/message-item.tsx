@@ -2,6 +2,7 @@
 
 import { MessageCircleQuestion, CheckCircle2, FileText, Image as ImageIcon, File, Zap, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFileIcon } from '@/lib/file-icons';
 import { MarkdownRenderer } from './markdown-renderer';
 import { ThinkingBlock } from './thinking-block';
 import { ErrorBlock } from './error-block';
@@ -24,36 +25,45 @@ function MintAvatar() {
   );
 }
 
-/** Parse mentions and render as styled chips (light mode for dark bg) */
-function renderUserContent(content: string) {
+/** Parse mentions and render as inline styled references (Codex-style) */
+function renderUserContent(content: string, onFileClick?: (path: string) => void) {
   const parts = content.split(/(@\{[^}]+\}|\/\{[^}]+\}|#\{[^}]+\})/g);
   return parts.map((part, i) => {
     const fileMatch = part.match(/^@\{(.+)\}$/);
     if (fileMatch) {
       const filePath = fileMatch[1];
       const fileName = filePath.split('/').pop() ?? filePath;
+      const { Icon, color } = getFileIcon(fileName);
       return (
-        <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded px-1.5 text-[11px] font-mono">
-          <File className="h-3 w-3" />
-          @{fileName}
+        <span
+          key={i}
+          role={onFileClick ? 'button' : undefined}
+          tabIndex={onFileClick ? 0 : undefined}
+          title={filePath}
+          onClick={onFileClick ? () => onFileClick(filePath) : undefined}
+          onKeyDown={onFileClick ? (e) => e.key === 'Enter' && onFileClick(filePath) : undefined}
+          className="inline-flex items-center gap-1 px-0.5 text-[12px] font-mono text-[#007AFF] hover:underline cursor-pointer align-middle"
+        >
+          <Icon className={cn('h-3 w-3 shrink-0', color)} />
+          {fileName}
         </span>
       );
     }
     const skillMatch = part.match(/^\/\{(.+)\}$/);
     if (skillMatch) {
       return (
-        <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded px-1.5 text-[11px] font-mono">
+        <span key={i} title={`/${skillMatch[1]}`} className="inline-flex items-center gap-0.5 px-0.5 text-[12px] font-mono text-purple-600 align-middle">
           <Zap className="h-3 w-3" />
-          /{skillMatch[1]}
+          {skillMatch[1]}
         </span>
       );
     }
     const mcpMatch = part.match(/^#\{(.+)\}$/);
     if (mcpMatch) {
       return (
-        <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded px-1.5 text-[11px] font-mono">
+        <span key={i} title={`#${mcpMatch[1]}`} className="inline-flex items-center gap-0.5 px-0.5 text-[12px] font-mono text-green-600 align-middle">
           <Wrench className="h-3 w-3" />
-          #{mcpMatch[1]}
+          {mcpMatch[1]}
         </span>
       );
     }
@@ -68,9 +78,10 @@ interface MessageItemProps {
   isLastMessage?: boolean;
   onApprovePlan?: (mode: 'auto' | 'manual') => void;
   hideTodoAndPlan?: boolean;
+  onFileClick?: (path: string) => void;
 }
 
-export function MessageItem({ message, onEditMessage, streamStartTime, isLastMessage, onApprovePlan, hideTodoAndPlan }: MessageItemProps) {
+export function MessageItem({ message, onEditMessage, streamStartTime, isLastMessage, onApprovePlan, hideTodoAndPlan, onFileClick }: MessageItemProps) {
   if (message.role === 'question') {
     return (
       <div className="px-6 py-3">
@@ -165,7 +176,7 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
           )}>
             <span className={cn(
               'text-xs font-semibold',
-              isUser ? 'text-[#0055B3]' : 'text-[#1D1D1F]',
+              isUser ? 'text-[#1D1D1F]' : 'text-[#1D1D1F]',
             )}>
               {isUser ? 'You' : 'Mint'}
             </span>
@@ -178,8 +189,8 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
           {/* Message body */}
           {isUser ? (
             <div className="max-w-[460px]">
-              <div className="bg-[#007AFF] text-white px-3.5 py-2.5 rounded-t-xl rounded-bl-xl rounded-br-sm text-sm leading-relaxed">
-                {renderUserContent(message.content)}
+              <div className="bg-[#F5F5F7] text-[#1D1D1F] px-3.5 py-2.5 rounded-xl text-sm leading-relaxed">
+                {renderUserContent(message.content, onFileClick)}
               </div>
             </div>
           ) : (
@@ -210,19 +221,25 @@ export function MessageItem({ message, onEditMessage, streamStartTime, isLastMes
           {/* Attachments */}
           {isUser && message.attachments && message.attachments.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {message.attachments.map((att) => (
-                <div
-                  key={att.id}
-                  className="flex items-center gap-1.5 rounded-md border border-border bg-bg-warm px-2 py-1 text-xs text-text-secondary"
-                >
-                  {att.type.startsWith('image/') ? (
-                    <ImageIcon className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <FileText className="h-3 w-3 shrink-0" />
-                  )}
-                  <span className="max-w-[150px] truncate">{att.name}</span>
-                </div>
-              ))}
+              {message.attachments.map((att) => {
+                const fileName = att.name.split('/').pop() ?? att.name;
+                const { Icon, color } = getFileIcon(fileName);
+                return (
+                  <div
+                    key={att.id}
+                    role="button"
+                    tabIndex={0}
+                    title={att.name}
+                    onClick={() => onFileClick?.(att.name)}
+                    onKeyDown={(e) => e.key === 'Enter' && onFileClick?.(att.name)}
+                    className="flex items-center gap-1.5 rounded-md border border-border bg-white
+                      px-2 py-1 text-xs text-text-secondary cursor-pointer hover:bg-bg-hover transition-colors"
+                  >
+                    <Icon className={cn('h-3 w-3 shrink-0', color)} />
+                    <span className="max-w-[150px] truncate">{fileName}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
 

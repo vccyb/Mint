@@ -1,6 +1,9 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { createLogger } from '@/lib/logger';
 import type { ChatMessage, SessionMetadata, SessionRecord } from '@/types';
+
+const log = createLogger('storage.session');
 
 export class SessionStorage {
   constructor(private sessionsDir: string) {}
@@ -10,12 +13,14 @@ export class SessionStorage {
     const record: SessionRecord = { type: 'metadata', metadata };
     await fs.mkdir(this.sessionsDir, { recursive: true });
     await fs.writeFile(filePath, JSON.stringify(record) + '\n');
+    log.debug('Session created', { sessionId: metadata.id });
   }
 
   async append(sessionId: string, message: ChatMessage): Promise<void> {
     const filePath = this.getFilePath(sessionId);
     const record: SessionRecord = { type: 'message', message };
     await fs.appendFile(filePath, JSON.stringify(record) + '\n');
+    log.debug('Message appended', { sessionId });
   }
 
   async read(
@@ -41,6 +46,7 @@ export class SessionStorage {
       throw new Error(`Session ${sessionId} has no metadata`);
     }
 
+    log.debug('Session read', { sessionId, messageCount: messages.length });
     return { metadata, messages };
   }
 
@@ -54,6 +60,7 @@ export class SessionStorage {
       lines.push(JSON.stringify({ type: 'message', message: msg }));
     }
     await fs.writeFile(filePath, lines.join('\n') + '\n');
+    log.debug('Metadata updated', { sessionId, fields: Object.keys(partial) });
   }
 
   async list(): Promise<SessionMetadata[]> {
@@ -68,7 +75,7 @@ export class SessionStorage {
           const { metadata } = await this.read(sessionId);
           metas.push(metadata);
         } catch {
-          // skip corrupted files
+          log.warn('Skipping corrupted session file', { file });
         }
       }
 
@@ -79,6 +86,7 @@ export class SessionStorage {
         return b.updatedAt - a.updatedAt;
       });
     } catch {
+      log.warn('Failed to list sessions');
       return [];
     }
   }
@@ -86,6 +94,7 @@ export class SessionStorage {
   async delete(sessionId: string): Promise<void> {
     const filePath = this.getFilePath(sessionId);
     await fs.unlink(filePath).catch(() => {});
+    log.debug('Session deleted', { sessionId });
   }
 
   private getFilePath(sessionId: string): string {

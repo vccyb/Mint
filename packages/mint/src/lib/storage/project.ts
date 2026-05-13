@@ -1,6 +1,9 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { createLogger } from '@/lib/logger';
 import type { Project } from '@/types';
+
+const log = createLogger('storage.project');
 
 const DEFAULT_DATA: Project[] = [];
 
@@ -19,14 +22,18 @@ export class ProjectStorage {
   async read(): Promise<Project[]> {
     try {
       const raw = await fs.readFile(this.filePath, 'utf-8');
-      return JSON.parse(raw) as Project[];
+      const projects = JSON.parse(raw) as Project[];
+      log.debug('Projects read', { count: projects.length });
+      return projects;
     } catch {
+      log.debug('No projects file found, returning default');
       return DEFAULT_DATA;
     }
   }
 
   async write(projects: Project[]): Promise<void> {
     await fs.writeFile(this.filePath, JSON.stringify(projects, null, 2));
+    log.debug('Projects written', { count: projects.length });
   }
 
   /** 别名方法，兼容 API 调用 */
@@ -51,6 +58,7 @@ export class ProjectStorage {
     };
     projects.push(project);
     await this.write(projects);
+    log.debug('Project added', { projectId: project.id, name });
     return project;
   }
 
@@ -60,11 +68,13 @@ export class ProjectStorage {
     if (idx === -1) return;
     projects[idx] = { ...projects[idx], ...partial, updatedAt: Date.now() };
     await this.write(projects);
+    log.debug('Project updated', { projectId, fields: Object.keys(partial) });
   }
 
   async deleteProject(projectId: string): Promise<void> {
     const projects = await this.read();
     await this.write(projects.filter((p) => p.id !== projectId));
+    log.debug('Project deleted', { projectId });
   }
 
   async getProject(projectId: string): Promise<Project | null> {

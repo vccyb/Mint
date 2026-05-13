@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Search, ChevronDown, ChevronRight, Filter, X, Copy, Check } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Search, ChevronDown, ChevronRight, Filter, X, Copy, Check, Download } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 
 interface LogEntry {
@@ -25,6 +25,8 @@ interface LogStats {
 
 interface LogsViewProps {
   onBack: () => void;
+  initialSessionId?: string | null;
+  sessionTitle?: string;
 }
 
 const LEVEL_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
@@ -34,7 +36,7 @@ const LEVEL_CONFIG: Record<string, { bg: string; text: string; dot: string }> = 
   error: { bg: 'bg-[#FFE5E5]/60', text: 'text-[#FF3B30]', dot: 'bg-[#FF3B30]' },
 };
 
-export function LogsView({ onBack }: LogsViewProps) {
+export function LogsView({ onBack, initialSessionId, sessionTitle }: LogsViewProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<LogStats | null>(null);
   const [total, setTotal] = useState(0);
@@ -42,7 +44,7 @@ export function LogsView({ onBack }: LogsViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [levelFilter, setLevelFilter] = useState<string>('');
   const [scopeFilter, setScopeFilter] = useState('');
-  const [sessionIdFilter, setSessionIdFilter] = useState('');
+  const [sessionIdFilter, setSessionIdFilter] = useState(initialSessionId ?? '');
   const [searchQuery, setSearchQuery] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -114,6 +116,15 @@ export function LogsView({ onBack }: LogsViewProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const exportLogs = () => {
+    const params = new URLSearchParams();
+    params.set('format', 'export');
+    if (levelFilter) params.set('level', levelFilter);
+    if (scopeFilter) params.set('scope', scopeFilter);
+    if (sessionIdFilter) params.set('sessionId', sessionIdFilter);
+    window.open(`/api/logs?${params}`, '_blank');
+  };
+
   return (
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
@@ -123,6 +134,11 @@ export function LogsView({ onBack }: LogsViewProps) {
         </button>
         <div className="flex items-center gap-2">
           <div className="pill bg-[#E8F2FF] text-[#007AFF]">Logs</div>
+          {initialSessionId && sessionTitle ? (
+            <span className="text-xs text-[#6E6E73] truncate max-w-[200px]">
+              {sessionTitle}
+            </span>
+          ) : null}
           <span className="text-xs text-[#AEAEB2]">
             {total} entries
           </span>
@@ -134,6 +150,13 @@ export function LogsView({ onBack }: LogsViewProps) {
         >
           {copied ? <Check className="h-3 w-3 text-[#34C759]" /> : <Copy className="h-3 w-3" />}
           {copied ? 'Copied' : 'Copy'}
+        </button>
+        <button
+          onClick={exportLogs}
+          className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer bg-[#F5F5F7] text-[#6E6E73] hover:bg-[#EDEDF0]"
+        >
+          <Download className="h-3 w-3" />
+          Export
         </button>
         <button
           onClick={() => { setAutoRefresh(!autoRefresh); fetchLogs(); }}
@@ -197,6 +220,7 @@ export function LogsView({ onBack }: LogsViewProps) {
             <option value="">All scopes</option>
             <option value="api">API</option>
             <option value="lib">Library</option>
+            <option value="storage">Storage</option>
           </select>
           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-[#AEAEB2] pointer-events-none" />
         </div>

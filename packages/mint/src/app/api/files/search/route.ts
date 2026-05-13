@@ -1,7 +1,8 @@
 import { readdir, stat } from 'fs/promises';
 import { join, relative, extname } from 'path';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { resolveProjectPath } from '@/lib/path-resolver';
+import { withLogging } from '@/lib/with-logging';
 
 const IGNORE = new Set([
   'node_modules', '.git', '.next', '.DS_Store', 'dist', '.turbo',
@@ -68,9 +69,10 @@ async function searchFiles(
   }
 }
 
-export async function GET(request: NextRequest) {
-  const query = request.nextUrl.searchParams.get('q')?.trim();
-  const projectId = request.nextUrl.searchParams.get('projectId');
+export const GET = withLogging('api.files.search', async (request) => {
+  const url = new URL(request.url);
+  const query = url.searchParams.get('q')?.trim();
+  const projectId = url.searchParams.get('projectId');
 
   if (!query) {
     return NextResponse.json({ results: [] });
@@ -81,20 +83,13 @@ export async function GET(request: NextRequest) {
     fallbackPath: process.env.MINT_CWD || process.cwd(),
   });
 
-  try {
-    const s = await stat(cwd);
-    if (!s.isDirectory()) {
-      return NextResponse.json({ error: 'Not a directory' }, { status: 400 });
-    }
-
-    const results: FileSearchResult[] = [];
-    await searchFiles(cwd, cwd, query, 0, results);
-
-    return NextResponse.json({ results: results.slice(0, MAX_RESULTS) });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Search failed' },
-      { status: 500 },
-    );
+  const s = await stat(cwd);
+  if (!s.isDirectory()) {
+    return NextResponse.json({ error: 'Not a directory' }, { status: 400 });
   }
-}
+
+  const results: FileSearchResult[] = [];
+  await searchFiles(cwd, cwd, query, 0, results);
+
+  return NextResponse.json({ results: results.slice(0, MAX_RESULTS) });
+});

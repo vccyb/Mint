@@ -225,6 +225,10 @@ export function AgentView({
                 teammates={teammates}
                 isWaitingResume={isWaitingResume}
                 onViewTeam={() => { setTeamPanelOpen(true); setTeamPanelFullscreen(false); }}
+                onFileClick={(path) => {
+                  const name = path.split('/').pop() ?? path;
+                  handleFileClick(path, name);
+                }}
               />
               {hasActiveTodos && !pendingPermission && !dismissedTodos && (
                 <div className="px-6 py-2">
@@ -264,6 +268,8 @@ export function AgentView({
                 onTogglePlanMode={onTogglePlanMode}
                 withContainer={false}
                 inputDisabled={hasActiveTodos && !pendingPermission}
+                mode="agent"
+                projectId={activeProjectId}
               />
               </div>
             </div>

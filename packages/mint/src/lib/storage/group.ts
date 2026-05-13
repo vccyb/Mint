@@ -1,6 +1,9 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { createLogger } from '@/lib/logger';
 import type { SessionGroup } from '@/types';
+
+const log = createLogger('storage.group');
 
 const DEFAULT_DATA: SessionGroup[] = [];
 
@@ -14,14 +17,18 @@ export class GroupStorage {
   async read(): Promise<SessionGroup[]> {
     try {
       const raw = await fs.readFile(this.filePath, 'utf-8');
-      return JSON.parse(raw) as SessionGroup[];
+      const groups = JSON.parse(raw) as SessionGroup[];
+      log.debug('Groups read', { count: groups.length });
+      return groups;
     } catch {
+      log.debug('No groups file found, returning default');
       return DEFAULT_DATA;
     }
   }
 
   async write(groups: SessionGroup[]): Promise<void> {
     await fs.writeFile(this.filePath, JSON.stringify(groups, null, 2));
+    log.debug('Groups written', { count: groups.length });
   }
 
   async addGroup(name: string): Promise<SessionGroup> {
@@ -35,6 +42,7 @@ export class GroupStorage {
     };
     groups.push(group);
     await this.write(groups);
+    log.debug('Group added', { groupId: group.id, name });
     return group;
   }
 
@@ -44,11 +52,13 @@ export class GroupStorage {
     if (idx === -1) return;
     groups[idx] = { ...groups[idx], ...partial, updatedAt: Date.now() };
     await this.write(groups);
+    log.debug('Group updated', { groupId, fields: Object.keys(partial) });
   }
 
   async deleteGroup(groupId: string): Promise<void> {
     const groups = await this.read();
     await this.write(groups.filter((g) => g.id !== groupId));
+    log.debug('Group deleted', { groupId });
   }
 
   async moveSessionToGroup(sessionId: string, groupId: string | null): Promise<void> {
@@ -66,5 +76,6 @@ export class GroupStorage {
       }
     }
     await this.write(groups);
+    log.debug('Session moved to group', { sessionId, groupId });
   }
 }

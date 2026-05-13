@@ -237,7 +237,11 @@ function MintAppInner() {
 
         {/* View */}
         {showLogs ? (
-          <LogsView onBack={() => setShowLogs(false)} />
+          <LogsView
+            onBack={() => setShowLogs(false)}
+            initialSessionId={activeHook.sessionId}
+            sessionTitle={sessionTitle}
+          />
         ) : showSettings ? (
           <SettingsView onBack={() => setShowSettings(false)} />
         ) : mode === 'chat' ? (

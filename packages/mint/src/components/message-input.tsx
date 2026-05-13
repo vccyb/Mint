@@ -7,16 +7,17 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
-  type KeyboardEvent,
   type DragEvent,
-  type ClipboardEvent,
 } from 'react';
 import { ArrowUp, Square, Paperclip, Mic, X, FileText, Image as ImageIcon, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Attachment, MentionType, MentionChip } from '@/types';
-import { MENTION_TRIGGERS, MENTION_TOKEN, extractMentions } from '@/types';
-import { MentionPopup } from './mention-popup';
+import { isTextFile, isPdfFile } from '@/lib/attachment-utils';
+import { ALLOWED_FILE_TYPES } from '@/lib/constants';
+import type { Attachment, MentionChip } from '@/types';
+import { extractMentions } from '@/types';
 import { PermissionModeSelector } from './permission-mode-selector';
+import { RichInput, type RichInputHandle } from './rich-input/rich-input';
+import './rich-input/rich-input.css';
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
@@ -47,6 +48,10 @@ interface MessageInputProps {
   thinkingEnabled?: boolean;
   /** Toggle thinking mode */
   onThinkingToggle?: () => void;
+  /** Input mode: 'agent' uses Tiptap rich editor with mentions, 'chat' uses plain textarea */
+  mode?: 'agent' | 'chat';
+  /** Current project ID for scoping file search in agent mode */
+  projectId?: string | null;
 }
 
 export interface MessageInputHandle {
@@ -55,50 +60,40 @@ export interface MessageInputHandle {
 
 function readFileAsAttachment(file: File): Promise<Attachment> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
     const isImage = file.type.startsWith('image/');
+    const isText = !isImage && isTextFile(file.type, file.name);
+    const isPdf = !isImage && !isText && isPdfFile(file.type, file.name);
 
+    // Unsupported binary files (ZIP, EXE, etc.): skip content
+    if (!isImage && !isText && !isPdf) {
+      resolve({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        content: undefined,
+      });
+      return;
+    }
+
+    const reader = new FileReader();
     reader.onload = () => {
       resolve({
         id: Date.now().toString(36) + Math.random().toString(36).slice(2),
         name: file.name,
         type: file.type,
         size: file.size,
-        content: isImage
-          ? (reader.result as string)
-          : (reader.result as string),
+        content: reader.result as string,
       });
     };
     reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
 
-    if (isImage) {
+    if (isImage || isPdf) {
       reader.readAsDataURL(file);
     } else {
       reader.readAsText(file);
     }
   });
-}
-
-interface MentionState {
-  active: boolean;
-  type: MentionType;
-  query: string;
-  startPos: number;
-  anchorRect: DOMRect | null;
-}
-
-function detectMentionType(textBeforeCursor: string): { type: MentionType; query: string; startPos: number } | null {
-  // Check in priority order: @ (file), / (skill), # (mcp)
-  for (const [type, regex] of Object.entries(MENTION_TRIGGERS) as [MentionType, RegExp][]) {
-    const match = regex.exec(textBeforeCursor);
-    if (match) {
-      // For skill trigger (/(^|\s)\/(\S*)$/), the match may include a leading space.
-      // startPos should point at the "/" character, not the space.
-      const triggerChar = match.index;
-      return { type, query: match[1], startPos: triggerChar };
-    }
-  }
-  return null;
 }
 
 export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(function MessageInput({
@@ -120,17 +115,18 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   withContainer = true,
   thinkingEnabled = false,
   onThinkingToggle,
+  mode = 'chat',
+  projectId = null,
 }, ref) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mention, setMention] = useState<MentionState>({
-    active: false, type: 'file', query: '', startPos: -1, anchorRect: null,
-  });
   const [isFocused, setIsFocused] = useState(false);
+  const [hasContent, setHasContent] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const richInputRef = useRef<RichInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const baseTextRef = useRef('');
@@ -138,26 +134,42 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   const sessionDraftsRef = useRef<Map<string, { input: string; attachments: Attachment[] }>>(new Map());
   const inputContainerRef = useRef<HTMLDivElement>(null);
 
+  const isAgentMode = mode === 'agent';
+
   useImperativeHandle(ref, () => ({
-    focus: () => textareaRef.current?.focus(),
+    focus: () => {
+      if (isAgentMode) {
+        richInputRef.current?.focus();
+      } else {
+        textareaRef.current?.focus();
+      }
+    },
   }));
 
   // Auto-focus on mount
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+    if (isAgentMode) {
+      richInputRef.current?.focus();
+    } else {
+      textareaRef.current?.focus();
+    }
+  }, [isAgentMode]);
 
   useEffect(() => {
     const key = sessionKey ?? '__default__';
     const draft = sessionDraftsRef.current.get(key);
     setInput(draft?.input ?? '');
     setAttachments(draft?.attachments ?? []);
-    requestAnimationFrame(() => {
-      if (!textareaRef.current) return;
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    });
-  }, [sessionKey]);
+    if (!isAgentMode) {
+      requestAnimationFrame(() => {
+        if (!textareaRef.current) return;
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      });
+    } else if (draft?.input) {
+      richInputRef.current?.setContent(draft.input);
+    }
+  }, [sessionKey, isAgentMode]);
 
   useEffect(() => {
     const key = sessionKey ?? '__default__';
@@ -168,22 +180,20 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
   useEffect(() => {
     if (externalValue !== undefined && externalValue !== '') {
       setInput(externalValue);
-      const key = sessionKey ?? '__default__';
-      const currentDraft = sessionDraftsRef.current.get(key);
-      sessionDraftsRef.current.set(key, {
-        input: externalValue,
-        attachments: currentDraft?.attachments ?? attachments,
-      });
-      requestAnimationFrame(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(externalValue.length, externalValue.length);
-        }
-      });
+      if (isAgentMode) {
+        richInputRef.current?.setContent(externalValue);
+      } else {
+        requestAnimationFrame(() => {
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+            textareaRef.current.focus();
+            textareaRef.current.setSelectionRange(externalValue.length, externalValue.length);
+          }
+        });
+      }
     }
-  }, [attachments, externalValue, sessionKey]);
+  }, [externalValue, isAgentMode]);
 
   // Web Speech API availability (useState+useEffect to avoid hydration mismatch)
   const [speechAvailable, setSpeechAvailable] = useState(false);
@@ -213,14 +223,31 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
         return;
       }
 
+      // Reject unsupported file types (binary files that aren't images or PDFs)
+      const unsupported = fileArray.find(
+        (f) => !f.type.startsWith('image/') && !isTextFile(f.type, f.name) && !isPdfFile(f.type, f.name),
+      );
+      if (unsupported) {
+        showError(`"${unsupported.name}" is not a supported file type. Use text, code, or image files.`);
+        return;
+      }
+
       try {
         const newAttachments = await Promise.all(fileArray.map(readFileAsAttachment));
         setAttachments((prev) => [...prev, ...newAttachments]);
+
+        // Warn about images in agent mode
+        if (isAgentMode) {
+          const hasImages = newAttachments.some((a) => a.type.startsWith('image/'));
+          if (hasImages) {
+            showError('Images cannot be processed in Agent mode — sent as filename reference only');
+          }
+        }
       } catch (err) {
         showError(err instanceof Error ? err.message : 'Failed to read file');
       }
     },
-    [attachments.length, showError],
+    [attachments.length, isAgentMode, showError],
   );
 
   const removeAttachment = useCallback((id: string) => {
@@ -240,18 +267,17 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     return null;
   }, []);
 
-  const handleSend = useCallback(async () => {
+  // Chat mode send (plain textarea)
+  const handleChatSend = useCallback(async () => {
     const trimmed = input.trim();
     if ((!trimmed && attachments.length === 0) || disabled) return;
 
-    // Extract all mention types
     const allMentions = extractMentions(trimmed);
     const fileMentions = allMentions.filter((m) => m.type === 'file');
     const nonFileMentions = allMentions.filter((m) => m.type !== 'file');
 
     let finalAttachments = attachments.length > 0 ? [...attachments] : undefined;
 
-    // Fetch file content for @{path} mentions
     if (fileMentions.length > 0) {
       const fileContents = await Promise.all(
         fileMentions.map((m) => fetchMentionedFileContent(m.value)),
@@ -281,14 +307,46 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     }
   }, [input, attachments, disabled, onSend, fetchMentionedFileContent, sessionKey, thinkingEnabled]);
 
+  // Agent mode send (RichInput)
+  const handleAgentSend = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || disabled) return;
+
+    const allMentions = extractMentions(trimmed);
+    const fileMentions = allMentions.filter((m) => m.type === 'file');
+    const nonFileMentions = allMentions.filter((m) => m.type !== 'file');
+
+    let finalAttachments = attachments.length > 0 ? [...attachments] : undefined;
+
+    if (fileMentions.length > 0) {
+      const fileContents = await Promise.all(
+        fileMentions.map((m) => fetchMentionedFileContent(m.value)),
+      );
+      const contentAttachments: Attachment[] = fileContents
+        .filter((c): c is string => c !== null)
+        .map((content, i) => ({
+          id: `mention-${Date.now()}-${i}`,
+          name: fileMentions[i].value,
+          type: 'text/plain',
+          size: content.length,
+          content,
+        }));
+
+      if (contentAttachments.length > 0) {
+        finalAttachments = [...(finalAttachments ?? []), ...contentAttachments];
+      }
+    }
+
+    onSend(trimmed, finalAttachments, nonFileMentions.length > 0 ? nonFileMentions : undefined, thinkingEnabled);
+    const key = sessionKey ?? '__default__';
+    sessionDraftsRef.current.set(key, { input: '', attachments: [] });
+    setInput('');
+    setAttachments([]);
+  }, [attachments, disabled, onSend, fetchMentionedFileContent, sessionKey, thinkingEnabled]);
+
+  // Chat textarea keydown handler
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (mention.active && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Escape')) {
-        return;
-      }
-      if (mention.active && e.key === 'Enter') {
-        return;
-      }
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Tab' && e.shiftKey && onTogglePlanMode) {
         e.preventDefault();
         onTogglePlanMode();
@@ -296,62 +354,20 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
       }
       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
-        handleSend();
+        handleChatSend();
       }
     },
-    [handleSend, mention.active, onTogglePlanMode],
+    [handleChatSend, onTogglePlanMode],
   );
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInput(value);
+    setHasContent(value.trim().length > 0);
     const target = e.currentTarget;
     target.style.height = 'auto';
     target.style.height = target.scrollHeight + 'px';
-
-    // Check for all mention triggers at cursor position
-    const cursorPos = target.selectionStart;
-    const textBeforeCursor = value.slice(0, cursorPos);
-    const detected = detectMentionType(textBeforeCursor);
-
-    if (detected) {
-      const anchorRect = inputContainerRef.current?.getBoundingClientRect() ?? null;
-      setMention({
-        active: true,
-        type: detected.type,
-        query: detected.query,
-        startPos: detected.startPos,
-        anchorRect,
-      });
-    } else {
-      setMention((prev) =>
-        prev.active ? { ...prev, active: false, query: '', anchorRect: null } : prev,
-      );
-    }
   };
-
-  const handleMentionSelect = useCallback(
-    (item: MentionChip) => {
-      const tokenFn = MENTION_TOKEN[item.type];
-      const token = tokenFn(item.value);
-      const before = input.slice(0, mention.startPos);
-      const after = input.slice(textareaRef.current?.selectionStart ?? input.length);
-      const newText = `${before}${token}${after}`;
-      setInput(newText);
-      setMention({ active: false, type: 'file', query: '', startPos: -1, anchorRect: null });
-
-      requestAnimationFrame(() => {
-        const cursorPos = before.length + token.length;
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(cursorPos, cursorPos);
-      });
-    },
-    [input, mention.startPos],
-  );
-
-  const handleMentionClose = useCallback(() => {
-    setMention({ active: false, type: 'file', query: '', startPos: -1, anchorRect: null });
-  }, []);
 
   // Drag and drop
   const handleDragEnter = useCallback((e: DragEvent) => {
@@ -380,9 +396,9 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     [addFiles],
   );
 
-  // Paste handler
+  // Paste handler (chat mode textarea only)
   const handlePaste = useCallback(
-    (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -455,13 +471,24 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
     };
   }, []);
 
-  const canSend = Boolean(input.trim() || attachments.length > 0) && !concurrencyLimitReached;
+  const canSend = Boolean(hasContent || attachments.length > 0) && !concurrencyLimitReached;
   const tokenPct = tokenBudget > 0 ? (tokenUsage / tokenBudget) * 100 : 0;
   const formatTokens = (n: number) => {
     if (n >= 1000) return n.toLocaleString();
     return String(n);
   };
   const tokenBarColor = tokenPct > 80 ? 'bg-[#FF3B30]' : tokenPct > 50 ? 'bg-[#FF9500]' : 'bg-[#34C759]';
+
+  // The send button click handler depends on mode
+  const handleSendClick = isAgentMode
+    ? () => {
+        const text = richInputRef.current?.getTextContent() ?? '';
+        if (text.trim()) {
+          handleAgentSend(text);
+          richInputRef.current?.clear();
+        }
+      }
+    : handleChatSend;
 
   const innerContent = (
     <>
@@ -499,7 +526,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
 
       {/* Attachment chips */}
       {attachments.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        <div className="mb-2 flex flex-wrap gap-1.5 px-3 pt-2">
           {attachments.map((att) => (
             <div
               key={att.id}
@@ -513,7 +540,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
               <span className="max-w-[120px] truncate">{att.name}</span>
               <button
                 onClick={() => removeAttachment(att.id)}
-                className="ml-0.5 text-text-tertiary hover:text-text"
+                className="ml-0.5 text-text-tertiary hover:text-text cursor-pointer"
                 aria-label={`Remove ${att.name}`}
               >
                 <X className="h-3 w-3" />
@@ -536,6 +563,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ALLOWED_FILE_TYPES}
             className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
@@ -545,19 +573,36 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
             }}
           />
 
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={placeholder ?? 'Send a message...'}
-            disabled={disabled || inputDisabled}
-            rows={1}
-            className="max-h-40 min-h-[28px] flex-1 resize-none bg-transparent py-1 text-[13px] leading-[20px] placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
-          />
+          {/* Input area — RichInput for agent, textarea for chat */}
+          {isAgentMode ? (
+            <RichInput
+              ref={richInputRef}
+              placeholder={placeholder ?? '描述一个任务给 Agent 执行...'}
+              projectId={projectId}
+              disabled={disabled || inputDisabled}
+              onSend={handleAgentSend}
+              onUpdate={(text, hasText) => {
+                setInput(text);
+                setHasContent(hasText);
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+            />
+          ) : (
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder={placeholder ?? 'Send a message...'}
+              disabled={disabled || inputDisabled}
+              rows={1}
+              className="max-h-40 min-h-[28px] w-full resize-none bg-transparent py-1 text-[13px] leading-[20px] focus:outline-none disabled:opacity-50 placeholder:text-text-tertiary"
+            />
+          )}
 
           {speechAvailable && (
             <button
@@ -585,7 +630,7 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
             </button>
           ) : (
             <button
-              onClick={handleSend}
+              onClick={handleSendClick}
               disabled={disabled || !canSend}
               className={cn(
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors cursor-pointer',
@@ -655,17 +700,6 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(fu
           </div>
         </div>
       </div>
-
-      {/* Unified mention popup */}
-      {mention.active && (
-        <MentionPopup
-          type={mention.type}
-          query={mention.query}
-          anchorRect={mention.anchorRect}
-          onSelect={handleMentionSelect}
-          onClose={handleMentionClose}
-        />
-      )}
     </>
   );
 

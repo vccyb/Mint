@@ -1,8 +1,9 @@
 import { readdir, stat, readFile, access } from 'fs/promises';
 import { join, relative, basename, resolve } from 'path';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getStorage } from '@/lib/storage';
 import { homedir } from 'os';
+import { withLogging } from '@/lib/with-logging';
 
 interface FileNode {
   name: string;
@@ -62,7 +63,7 @@ async function readTree(dir: string, root: string, depth: number): Promise<FileN
   return nodes;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withLogging('api.files', async (request) => {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
 
@@ -111,34 +112,27 @@ export async function GET(request: NextRequest) {
           projectName = project.name;
         }
       }
-    } catch (err) {
-      console.error('Failed to get project path:', err);
-    }
-  }
-
-  try {
-    // Check if targetPath is accessible
-    const s = await stat(targetPath);
-    if (!s.isDirectory()) {
-      return NextResponse.json({ error: 'Not a directory' }, { status: 400 });
-    }
-
-    const tree = await readTree(targetPath, targetPath, 0);
-
-    // Also try to read a project name from package.json
-    try {
-      const pkg = await readFile(join(targetPath, 'package.json'), 'utf-8');
-      const json = JSON.parse(pkg);
-      if (json.name) projectName = json.name;
     } catch {
-      // no package.json, use dirname
+      // ignore project path resolution errors
     }
-
-    return NextResponse.json({ root: targetPath, projectName, tree });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to read directory' },
-      { status: 500 },
-    );
   }
-}
+
+  // Check if targetPath is accessible
+  const s = await stat(targetPath);
+  if (!s.isDirectory()) {
+    return NextResponse.json({ error: 'Not a directory' }, { status: 400 });
+  }
+
+  const tree = await readTree(targetPath, targetPath, 0);
+
+  // Also try to read a project name from package.json
+  try {
+    const pkg = await readFile(join(targetPath, 'package.json'), 'utf-8');
+    const json = JSON.parse(pkg);
+    if (json.name) projectName = json.name;
+  } catch {
+    // no package.json, use dirname
+  }
+
+  return NextResponse.json({ root: targetPath, projectName, tree });
+});

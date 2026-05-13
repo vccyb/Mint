@@ -13,6 +13,7 @@ import {
   areAllWorkersIdle,
 } from '@/lib/team-inbox-reader';
 import { MAX_ATTACHMENT_SIZE, MAX_AUTO_RETRIES, RETRY_BASE_MS, GLOBAL_TIMEOUT_MS } from '@/lib/constants';
+import { truncateContent, isPdfFile, extractPdfText } from '@/lib/attachment-utils';
 import type { ChatMessage, StreamEventData, TeammateState, Attachment } from '@/types';
 
 const log = createLogger('lib.agent-orchestrator');
@@ -142,7 +143,7 @@ export class AgentOrchestrator {
 
     try {
       const queryOptions = adapter.buildQueryOptions(sessionId, enqueue);
-      const fullPrompt = this.buildPrompt(params);
+      const fullPrompt = await this.buildPrompt(params);
 
       // Run SDK query with retry
       let lastError: Error | null = null;
@@ -399,19 +400,31 @@ export class AgentOrchestrator {
   }
 
   /** Build the full prompt with history and attachments. */
-  private buildPrompt(params: RunSessionParams): string {
+  private async buildPrompt(params: RunSessionParams): Promise<string> {
     let prompt = params.prompt;
     if (params.historyMessages) {
       prompt = `[Previous conversation]\n${params.historyMessages}\n[End of previous conversation]\n\nUser: ${params.prompt}`;
     }
     if (params.attachments && params.attachments.length > 0) {
-      const parts = params.attachments
-        .filter((a) => a.content && a.size <= MAX_ATTACHMENT_SIZE)
-        .map((a) =>
-          a.type.startsWith('image/')
-            ? `[Image: ${a.name}]`
-            : `[File: ${a.name}]\n\`\`\`\n${a.content}\n\`\`\``,
-        );
+      const parts: string[] = [];
+      for (const a of params.attachments) {
+        if (a.size > MAX_ATTACHMENT_SIZE) continue;
+
+        if (a.type.startsWith('image/')) {
+          parts.push(`[Image: ${a.name}] (images cannot be processed in agent mode)`);
+        } else if (a.type === 'application/pdf' && a.content) {
+          const pdfText = await extractPdfText(a.content);
+          if (pdfText) {
+            parts.push(`<file name="${a.name}">\n${truncateContent(pdfText)}\n</file>`);
+          } else {
+            parts.push(`[File: ${a.name}] (PDF text extraction failed)`);
+          }
+        } else if (a.content) {
+          parts.push(`[File: ${a.name}]\n\`\`\`\n${truncateContent(a.content)}\n\`\`\``);
+        } else {
+          parts.push(`[File: ${a.name}] (binary file, content not available in agent mode)`);
+        }
+      }
       if (parts.length > 0) {
         prompt = parts.join('\n\n') + '\n\n' + prompt;
       }

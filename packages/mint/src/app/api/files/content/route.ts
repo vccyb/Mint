@@ -2,6 +2,7 @@ import { readFile, stat } from 'fs/promises';
 import { join, extname, relative } from 'path';
 import { NextResponse } from 'next/server';
 import { resolveProjectPath } from '@/lib/path-resolver';
+import { withLogging } from '@/lib/with-logging';
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
@@ -54,7 +55,7 @@ function getLanguage(filename: string): string {
   return EXT_TO_LANGUAGE[extname(filename).toLowerCase()] ?? 'plaintext';
 }
 
-export async function GET(request: Request) {
+export const GET = withLogging('api.files.content', async (request) => {
   const { searchParams } = new URL(request.url);
   const filePath = searchParams.get('path');
   const projectId = searchParams.get('projectId');
@@ -75,54 +76,47 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Path traversal not allowed' }, { status: 403 });
   }
 
-  try {
-    const fileStat = await stat(absolutePath);
-    if (!fileStat.isFile()) {
-      return NextResponse.json({ error: 'Not a file' }, { status: 400 });
-    }
+  const fileStat = await stat(absolutePath);
+  if (!fileStat.isFile()) {
+    return NextResponse.json({ error: 'Not a file' }, { status: 400 });
+  }
 
-    if (fileStat.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: `File too large (${Math.round(fileStat.size / 1024)}KB). Maximum size is 1MB.` },
-        { status: 413 },
-      );
-    }
+  if (fileStat.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: `File too large (${Math.round(fileStat.size / 1024)}KB). Maximum size is 1MB.` },
+      { status: 413 },
+    );
+  }
 
-    const ext = extname(absolutePath).toLowerCase();
+  const ext = extname(absolutePath).toLowerCase();
 
-    // Handle image files — return base64 encoded content
-    if (IMAGE_EXTENSIONS.has(ext)) {
-      const buffer = await readFile(absolutePath);
-      const base64 = buffer.toString('base64');
-      const name = filePath.split('/').pop() ?? filePath;
-      return NextResponse.json({
-        path: filePath,
-        name,
-        content: base64,
-        encoding: 'base64',
-        mimeType: IMAGE_MIME[ext] ?? 'application/octet-stream',
-        size: fileStat.size,
-      });
-    }
-
-    if (BINARY_EXTENSIONS.has(ext)) {
-      return NextResponse.json({ error: 'Binary file preview not supported' }, { status: 415 });
-    }
-
-    const content = await readFile(absolutePath, 'utf-8');
+  // Handle image files — return base64 encoded content
+  if (IMAGE_EXTENSIONS.has(ext)) {
+    const buffer = await readFile(absolutePath);
+    const base64 = buffer.toString('base64');
     const name = filePath.split('/').pop() ?? filePath;
-
     return NextResponse.json({
       path: filePath,
       name,
-      content,
-      language: getLanguage(name),
+      content: base64,
+      encoding: 'base64',
+      mimeType: IMAGE_MIME[ext] ?? 'application/octet-stream',
       size: fileStat.size,
     });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to read file' },
-      { status: 500 },
-    );
   }
-}
+
+  if (BINARY_EXTENSIONS.has(ext)) {
+    return NextResponse.json({ error: 'Binary file preview not supported' }, { status: 415 });
+  }
+
+  const content = await readFile(absolutePath, 'utf-8');
+  const name = filePath.split('/').pop() ?? filePath;
+
+  return NextResponse.json({
+    path: filePath,
+    name,
+    content,
+    language: getLanguage(name),
+    size: fileStat.size,
+  });
+});

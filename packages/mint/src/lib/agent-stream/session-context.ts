@@ -1,4 +1,5 @@
 import type { ToolCallInfo, SkillLoadInfo, TodoItem } from '@/types';
+import type { Logger } from '@/lib/logger';
 
 /**
  * Mutable session state for a single agent stream.
@@ -7,7 +8,7 @@ import type { ToolCallInfo, SkillLoadInfo, TodoItem } from '@/types';
 export class SessionStreamState {
   sessionId: string;
   isPlanMode: boolean;
-  log: { info: (msg: string, data?: Record<string, unknown>) => void };
+  log: Logger;
 
   // --- content accumulators ---
   assistantContent = '';
@@ -62,7 +63,7 @@ export class SessionStreamState {
   constructor(opts: {
     sessionId: string;
     isPlanMode: boolean;
-    log: { info: (msg: string, data?: Record<string, unknown>) => void };
+    log: Logger;
     skillPathMap: Map<string, { name: string; description: string }>;
     skillsEnabled: boolean;
   }) {

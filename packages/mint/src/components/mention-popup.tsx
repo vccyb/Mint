@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { File, Zap, Wrench, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFileIcon } from '@/lib/file-icons';
 import type { MentionType, MentionChip } from '@/types';
 
 interface MentionPopupProps {
@@ -175,15 +176,23 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
                 onClick={() => onSelect(item)}
                 onMouseEnter={() => setSelectedIndex(i)}
               >
-                <TypeIcon className={cn('h-4 w-4 shrink-0', config.accent)} />
+                {type === 'file' ? (() => {
+                  const { Icon, color } = getFileIcon(item.label);
+                  return <Icon className={cn('h-4 w-4 shrink-0', color)} />;
+                })() : <TypeIcon className={cn('h-4 w-4 shrink-0', config.accent)} />}
                 <div className="min-w-0 flex-1">
-                  <span className={cn(
+                  <div className={cn(
                     'text-xs',
                     i === selectedIndex ? 'font-medium' : 'font-normal',
                   )}>
                     {item.label}
-                  </span>
-                  {item.description && (
+                  </div>
+                  {type === 'file' && item.value && (
+                    <div className="text-[10px] text-text-tertiary truncate">
+                      {item.value.length > 45 ? '…' + item.value.slice(-42) : item.value}
+                    </div>
+                  )}
+                  {item.description && type !== 'file' && (
                     <span className="text-[10px] text-text-tertiary ml-1.5 truncate">
                       {item.description}
                     </span>
