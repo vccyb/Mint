@@ -19,19 +19,21 @@ import { appendFile, mkdir } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+import {
+  LOG_LEVEL_PRIORITY,
+  nextLogId,
+  pushEntry,
+  type LogLevel,
+  type LogEntry,
+} from './ring-buffer';
+export type { LogLevel, LogEntry, ErrorInfo } from './ring-buffer';
+export { getRecentLogs, getLogStats } from './ring-buffer';
 
-const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
-};
+import { extractError, formatJson, formatPretty } from './formatters';
 
 // ─── Configuration ───
 
 const SERVICE_NAME = process.env['SERVICE_NAME'] ?? 'mint-api';
-const LOG_BUFFER_SIZE = 5000;
 const LOG_RETENTION_DAYS = 7;
 
 function getConfiguredLevel(): LogLevel {
@@ -54,102 +56,6 @@ function isFileLoggingEnabled(): boolean {
 const configuredLevel = getConfiguredLevel();
 const prettyMode = isPrettyMode();
 const fileLogging = isFileLoggingEnabled();
-
-// ─── ANSI colors (zero deps) ───
-
-const RESET = '\x1b[0m';
-const DIM = '\x1b[2m';
-const BOLD = '\x1b[1m';
-const GREEN = '\x1b[32m';
-const YELLOW = '\x1b[33m';
-const RED = '\x1b[31m';
-const CYAN = '\x1b[36m';
-
-const LEVEL_COLORS: Record<LogLevel, string> = {
-  debug: DIM,
-  info: GREEN,
-  warn: YELLOW,
-  error: RED + BOLD,
-};
-
-// ─── Error enrichment ───
-
-interface ErrorInfo {
-  type: string;
-  message: string;
-  stack?: string;
-}
-
-function extractError(meta: Record<string, unknown>): {
-  cleanedMeta: Record<string, unknown>;
-  error?: ErrorInfo;
-} {
-  for (const [key, value] of Object.entries(meta)) {
-    if (value instanceof Error) {
-      const { [key]: _, ...rest } = meta;
-      return {
-        cleanedMeta: rest,
-        error: {
-          type: value.constructor.name,
-          message: value.message,
-          stack: value.stack?.split('\n').slice(0, 10).join('\n'),
-        },
-      };
-    }
-  }
-  return { cleanedMeta: meta };
-}
-
-// ─── Formatters ───
-
-const CORE_KEYS = new Set([
-  'timestamp', 'level', 'service', 'scope', 'message',
-  'traceId', 'spanId', 'duration', 'error',
-]);
-
-function formatJson(entry: Record<string, unknown>): string {
-  return JSON.stringify(entry);
-}
-
-function formatPretty(entry: Record<string, unknown>): string {
-  const time = (entry.timestamp as string).slice(11, 23); // HH:mm:ss.SSS
-  const level = entry.level as LogLevel;
-  const scope = entry.scope as string;
-  const msg = entry.message as string;
-  const color = LEVEL_COLORS[level];
-  const levelStr = level.toUpperCase().padEnd(5);
-
-  let line = `${DIM}${time}${RESET} ${color}${levelStr}${RESET} ${CYAN}${scope}${RESET} ${msg}`;
-
-  // Extra fields
-  const extras: string[] = [];
-  for (const [k, v] of Object.entries(entry)) {
-    if (CORE_KEYS.has(k)) continue;
-    extras.push(
-      typeof v === 'object' && v !== null
-        ? `${DIM}${k}=${JSON.stringify(v)}${RESET}`
-        : `${DIM}${k}=${String(v)}${RESET}`,
-    );
-  }
-  if (entry.traceId) extras.push(`${DIM}traceId=${String(entry.traceId)}${RESET}`);
-  if (entry.duration != null) extras.push(`${DIM}duration=${String(entry.duration)}ms${RESET}`);
-
-  if (extras.length > 0) {
-    line += '\n  ' + extras.join(' ');
-  }
-
-  // Error block
-  if (entry.error && typeof entry.error === 'object') {
-    const err = entry.error as ErrorInfo;
-    line += `\n  ${RED}error.type=${err.type} error.message="${err.message}"${RESET}`;
-    if (err.stack) {
-      const stackLines = err.stack.split('\n').slice(0, 5).join('\n  ');
-      line += `\n  ${DIM}${stackLines}${RESET}`;
-    }
-  }
-
-  return line;
-}
 
 // ─── File persistence ───
 
@@ -181,7 +87,11 @@ async function cleanupOldLogs(): Promise<void> {
     const { readdir, stat, unlink } = await import('fs/promises');
     const dir = getLogDir();
     let entries;
-    try { entries = await readdir(dir); } catch { return; }
+    try {
+      entries = await readdir(dir);
+    } catch {
+      return;
+    }
     const now = Date.now();
     const maxAge = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
     for (const entry of entries) {
@@ -190,66 +100,13 @@ async function cleanupOldLogs(): Promise<void> {
       try {
         const s = await stat(filePath);
         if (now - s.mtimeMs > maxAge) await unlink(filePath);
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
-  } catch { /* ignore */ }
-}
-
-// ─── In-memory ring buffer for log viewing ───
-
-export interface LogEntry {
-  id: string;
-  timestamp: string;
-  level: LogLevel;
-  service: string;
-  scope: string;
-  message: string;
-  data?: Record<string, unknown>;
-  error?: ErrorInfo;
-  traceId?: string;
-}
-
-const ringBuffer: LogEntry[] = [];
-let logCounter = 0;
-
-export function getRecentLogs(filter?: { sessionId?: string; scope?: string; level?: LogLevel; limit?: number; offset?: number }): { entries: LogEntry[]; total: number } {
-  let entries = ringBuffer;
-  if (filter?.level) {
-    const minPriority = LOG_LEVEL_PRIORITY[filter.level];
-    entries = entries.filter(e => LOG_LEVEL_PRIORITY[e.level] >= minPriority);
+  } catch {
+    /* ignore */
   }
-  if (filter?.scope) {
-    entries = entries.filter(e => e.scope.startsWith(filter.scope!));
-  }
-  if (filter?.sessionId) {
-    entries = entries.filter(e => e.data?.sessionId === filter.sessionId);
-  }
-  const total = entries.length;
-  const limit = filter?.limit ?? 100;
-  const offset = filter?.offset ?? 0;
-  return { entries: entries.slice(offset, offset + limit), total };
-}
-
-export function getLogStats(): { total: number; byLevel: Record<string, number>; byScope: Record<string, number>; sessions: Array<{ sessionId: string; count: number }> } {
-  const byLevel: Record<string, number> = { debug: 0, info: 0, warn: 0, error: 0 };
-  const byScope: Record<string, number> = {};
-  const sessionMap: Record<string, number> = {};
-
-  for (const entry of ringBuffer) {
-    byLevel[entry.level] = (byLevel[entry.level] ?? 0) + 1;
-    const topScope = entry.scope.split('.')[0];
-    byScope[topScope] = (byScope[topScope] ?? 0) + 1;
-    if (entry.data?.sessionId && typeof entry.data.sessionId === 'string') {
-      sessionMap[entry.data.sessionId as string] = (sessionMap[entry.data.sessionId as string] ?? 0) + 1;
-    }
-  }
-
-  const sessions = Object.entries(sessionMap)
-    .map(([sessionId, count]) => ({ sessionId, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 20);
-
-  return { total: ringBuffer.length, byLevel, byScope, sessions };
 }
 
 // ─── Core log function ───
@@ -263,7 +120,9 @@ function log(
 ): void {
   if (LOG_LEVEL_PRIORITY[level] < LOG_LEVEL_PRIORITY[configuredLevel]) return;
 
-  const { cleanedMeta, error } = meta ? extractError(meta) : { cleanedMeta: {} as Record<string, unknown>, error: undefined };
+  const { cleanedMeta, error } = meta
+    ? extractError(meta)
+    : { cleanedMeta: {} as Record<string, unknown>, error: undefined };
 
   const entry: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
@@ -280,7 +139,7 @@ function log(
 
   // Capture to ring buffer
   const logEntry: LogEntry = {
-    id: `log-${++logCounter}`,
+    id: nextLogId(),
     timestamp: entry.timestamp as string,
     level,
     service: SERVICE_NAME,
@@ -290,8 +149,7 @@ function log(
     ...(error ? { error } : {}),
     ...(traceId ? { traceId } : {}),
   };
-  ringBuffer.push(logEntry);
-  if (ringBuffer.length > LOG_BUFFER_SIZE) ringBuffer.shift();
+  pushEntry(logEntry);
 
   // Console output
   if (level === 'error' || level === 'warn') {
@@ -339,8 +197,7 @@ function makeLogger(scope: string, traceId?: string): Logger {
       };
     },
 
-    withScope: (operation: string) =>
-      makeLogger(`${scope}.${operation}`, traceId),
+    withScope: (operation: string) => makeLogger(`${scope}.${operation}`, traceId),
   };
 }
 

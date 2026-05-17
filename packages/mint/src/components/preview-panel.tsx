@@ -38,16 +38,13 @@ export function PreviewPanel({
   const handleToggleFullscreen = useCallback(() => {
     if (panelState !== 'hidden') {
       // Use right panel fullscreen
-      setPanelState(
-        panelState === 'fullscreen' ? 'visible' : 'fullscreen',
-      );
+      setPanelState(panelState === 'fullscreen' ? 'visible' : 'fullscreen');
     } else {
       onToggleFullscreen();
     }
   }, [panelState, setPanelState, onToggleFullscreen]);
 
-  const effectiveFullscreen =
-    isFullscreen || panelState === 'fullscreen';
+  const effectiveFullscreen = isFullscreen || panelState === 'fullscreen';
 
   // Scroll active tab into view when it changes
   useEffect(() => {
@@ -133,29 +130,18 @@ export function PreviewPanel({
       {/* Content */}
       {currentFile ? (
         <div className="flex-1 overflow-auto min-h-0 max-h-32">
-          <CodeView
-            content={currentFile.content}
-            language={currentFile.language}
-          />
+          <CodeView content={currentFile.content} language={currentFile.language} />
         </div>
       ) : (
         <div className="flex items-center justify-center py-4">
-          <span className="text-[10px] text-text-tertiary">
-            Click a file to preview
-          </span>
+          <span className="text-[10px] text-text-tertiary">Click a file to preview</span>
         </div>
       )}
     </div>
   );
 }
 
-function CodeView({
-  content,
-  language,
-}: {
-  content: string;
-  language: string;
-}) {
+function CodeView({ content, language }: { content: string; language: string }) {
   const lines = content.split('\n');
 
   let highlighted: string;
@@ -166,10 +152,7 @@ function CodeView({
       highlighted = hljs.highlightAuto(content).value;
     }
   } catch {
-    highlighted = content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    highlighted = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   const highlightedLines = splitHighlightedLines(highlighted);

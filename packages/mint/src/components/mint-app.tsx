@@ -8,6 +8,7 @@ import { AgentView } from './agent-view';
 import { SettingsView } from './settings-view';
 import { LogsView } from './logs-view';
 import { InlineEdit } from './inline-edit';
+import { ThemeToggle } from './theme-toggle';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { StreamingRegistryProvider, useStreamingRegistry } from '@/lib/streaming-registry';
 import { BrowserSupportAlert } from './browser-support-alert';
@@ -42,13 +43,16 @@ function MintAppInner() {
     : Boolean(activeProjectId);
 
   // 选择会话时同步 activeProjectId
-  const handleSelectSession = useCallback((id: string) => {
-    activeHook.loadSession(id);
-    const meta = sessionMap.get(id);
-    if (meta?.projectId) {
-      setActiveProjectId(meta.projectId);
-    }
-  }, [activeHook, sessionMap]);
+  const handleSelectSession = useCallback(
+    (id: string) => {
+      activeHook.loadSession(id);
+      const meta = sessionMap.get(id);
+      if (meta?.projectId) {
+        setActiveProjectId(meta.projectId);
+      }
+    },
+    [activeHook, sessionMap],
+  );
 
   const handleModeChange = useCallback((newMode: Mode) => {
     setMode(newMode);
@@ -158,124 +162,138 @@ function MintAppInner() {
       {mode === 'agent' && <BrowserSupportAlert onClose={() => setShowBrowserAlert(false)} />}
 
       <div className="flex h-screen overflow-hidden bg-bg">
-      {/* Sidebar - 不同模式使用不同的侧边栏 */}
-      {mode === 'chat' ? (
-        <SessionSidebar
-          key={`${mode}-${sidebarKey}`}
-          mode={mode}
-          sessions={sessionsList}
-          onModeChange={handleModeChange}
-          activeSessionId={activeHook.sessionId}
-          onSelectSession={activeHook.loadSession}
-          onNewChat={activeHook.clearSession}
-          onDeleteSession={handleDeleteSession}
-          onTogglePin={handleTogglePin}
-          onOpenSettings={() => setShowSettings(true)}
-        />
-      ) : (
-        <ProjectSidebar
-          key={`${mode}-${sidebarKey}`}
-          mode={mode}
-          sessions={sessionsList}
-          onModeChange={handleModeChange}
-          activeSessionId={activeHook.sessionId}
-          onSelectSession={handleSelectSession}
-          onNewSessionInProject={handleNewSessionInProject}
-          onDeleteSession={handleDeleteSession}
-          onTogglePin={handleTogglePin}
-          onOpenSettings={() => setShowSettings(true)}
-          onProjectSelect={setActiveProjectId}
-        />
-      )}
-
-      {/* Main content */}
-      <div className="flex flex-1 flex-col min-h-0 min-w-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.4))]">
-        {/* Header */}
-        <div className="glass-header flex items-center justify-between px-4 py-2.5">
-          <div className="flex items-center gap-1.5">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="text-primary"
-              aria-hidden="true"
-            >
-              <path
-                d="m12 3-1.9 5.7a2 2 0 0 1-1.3 1.3L3 12l5.7 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.7a2 2 0 0 1 1.3-1.3L21 12l-5.7-1.9a2 2 0 0 1-1.3-1.3Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="text-[13px] font-bold text-text">MINT</span>
-            {activeHook.sessionId && sessionTitle && (
-              <>
-                <span className="mx-1 text-text-tertiary">/</span>
-                <InlineEdit
-                  value={sessionTitle}
-                  onSave={handleTitleSave}
-                  className="text-[13px] text-text-secondary"
-                />
-              </>
-            )}
-          </div>
-          <button
-            onClick={() => setShowLogs(true)}
-            className="flex items-center gap-1.5 text-[11px] font-medium text-[#6E6E73] hover:text-[#1D1D1F] px-2 py-1 rounded-lg hover:bg-[#F5F5F7] transition-colors cursor-pointer"
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-            </svg>
-            Logs
-          </button>
-        </div>
-
-        {/* View */}
-        {showLogs ? (
-          <LogsView
-            onBack={() => setShowLogs(false)}
-            initialSessionId={activeHook.sessionId}
-            sessionTitle={sessionTitle}
-          />
-        ) : showSettings ? (
-          <SettingsView onBack={() => setShowSettings(false)} />
-        ) : mode === 'chat' ? (
-          <ChatView
-            messages={chatHook.messages}
-            sessionKey={chatHook.sessionKey}
-            isStreaming={chatHook.isStreaming}
-            streamStartTime={chatHook.streamStartTime}
-            onSend={chatHook.sendMessage}
-            onStop={chatHook.stopStreaming}
+        {/* Sidebar - 不同模式使用不同的侧边栏 */}
+        {mode === 'chat' ? (
+          <SessionSidebar
+            key={`${mode}-${sidebarKey}`}
+            mode={mode}
+            sessions={sessionsList}
+            onModeChange={handleModeChange}
+            activeSessionId={activeHook.sessionId}
+            onSelectSession={activeHook.loadSession}
+            onNewChat={activeHook.clearSession}
+            onDeleteSession={handleDeleteSession}
+            onTogglePin={handleTogglePin}
+            onOpenSettings={() => setShowSettings(true)}
           />
         ) : (
-          <AgentView
-            messages={agentHook.messages}
-            sessionKey={agentHook.sessionKey}
-            isStreaming={agentHook.isStreaming}
-            streamStartTime={agentHook.streamStartTime}
-            onSend={agentHook.sendMessage}
-            onStop={agentHook.stopStreaming}
-            pendingPermission={agentHook.pendingPermission}
-            onPermissionDecision={agentHook.submitPermissionDecision}
-            concurrencyLimitReached={!registry.canStartNew()}
-            onApprovePlan={agentHook.approvePlan}
-            permissionMode={agentHook.permissionMode}
-            onPermissionModeChange={agentHook.setPermissionMode}
-            onTogglePlanMode={agentHook.togglePlanMode}
-            hasProject={hasProject}
-            activeProjectId={activeProjectId}
-            teammates={agentHook.teammates}
-            isWaitingResume={agentHook.isWaitingResume}
+          <ProjectSidebar
+            key={`${mode}-${sidebarKey}`}
+            mode={mode}
+            sessions={sessionsList}
+            onModeChange={handleModeChange}
+            activeSessionId={activeHook.sessionId}
+            onSelectSession={handleSelectSession}
+            onNewSessionInProject={handleNewSessionInProject}
+            onDeleteSession={handleDeleteSession}
+            onTogglePin={handleTogglePin}
+            onOpenSettings={() => setShowSettings(true)}
+            onProjectSelect={setActiveProjectId}
           />
         )}
+
+        {/* Main content */}
+        <div className="flex flex-1 flex-col min-h-0 min-w-0 bg-gradient-to-b from-card/72 to-card/40">
+          {/* Header */}
+          <div className="glass-header flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-center gap-1.5">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-primary"
+                aria-hidden="true"
+              >
+                <path
+                  d="m12 3-1.9 5.7a2 2 0 0 1-1.3 1.3L3 12l5.7 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.7a2 2 0 0 1 1.3-1.3L21 12l-5.7-1.9a2 2 0 0 1-1.3-1.3Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="text-[13px] font-bold text-text">MINT</span>
+              {activeHook.sessionId && sessionTitle && (
+                <>
+                  <span className="mx-1 text-text-tertiary">/</span>
+                  <InlineEdit
+                    value={sessionTitle}
+                    onSave={handleTitleSave}
+                    className="text-[13px] text-text-secondary"
+                  />
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <button
+                onClick={() => setShowLogs(true)}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-bg-warm transition-colors cursor-pointer"
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                Logs
+              </button>
+            </div>
+          </div>
+
+          {/* View */}
+          {showLogs ? (
+            <LogsView
+              onBack={() => setShowLogs(false)}
+              initialSessionId={activeHook.sessionId}
+              sessionTitle={sessionTitle}
+            />
+          ) : showSettings ? (
+            <SettingsView onBack={() => setShowSettings(false)} />
+          ) : mode === 'chat' ? (
+            <ChatView
+              messages={chatHook.messages}
+              sessionKey={chatHook.sessionKey}
+              isStreaming={chatHook.isStreaming}
+              streamStartTime={chatHook.streamStartTime}
+              onSend={chatHook.sendMessage}
+              onStop={chatHook.stopStreaming}
+            />
+          ) : (
+            <AgentView
+              messages={agentHook.messages}
+              sessionKey={agentHook.sessionKey}
+              isStreaming={agentHook.isStreaming}
+              streamStartTime={agentHook.streamStartTime}
+              onSend={agentHook.sendMessage}
+              onStop={agentHook.stopStreaming}
+              pendingPermission={agentHook.pendingPermission}
+              onPermissionDecision={agentHook.submitPermissionDecision}
+              concurrencyLimitReached={!registry.canStartNew()}
+              onApprovePlan={agentHook.approvePlan}
+              permissionMode={agentHook.permissionMode}
+              onPermissionModeChange={agentHook.setPermissionMode}
+              onTogglePlanMode={agentHook.togglePlanMode}
+              hasProject={hasProject}
+              activeProjectId={activeProjectId}
+              teammates={agentHook.teammates}
+              isWaitingResume={agentHook.isWaitingResume}
+              tokenUsage={agentHook.inputTokens}
+              tokenBudget={agentHook.contextWindow}
+              isCompacting={agentHook.isCompacting}
+            />
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 }

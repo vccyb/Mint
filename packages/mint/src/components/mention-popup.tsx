@@ -58,20 +58,21 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
       try {
         const endpoint = API_ENDPOINTS[type];
         const q = query || '*';
-        const res = await fetch(
-          `${endpoint}?q=${encodeURIComponent(q)}`,
-          { signal: controller.signal },
-        );
+        const res = await fetch(`${endpoint}?q=${encodeURIComponent(q)}`, {
+          signal: controller.signal,
+        });
         if (res.ok) {
           const data = await res.json();
           if (type === 'file') {
             const raw = data.results ?? [];
-            setResults(raw.map((r: { name: string; path: string; type: string }) => ({
-              type: 'file' as const,
-              label: r.name,
-              value: r.path,
-              description: r.type === 'directory' ? 'Directory' : undefined,
-            })));
+            setResults(
+              raw.map((r: { name: string; path: string; type: string }) => ({
+                type: 'file' as const,
+                label: r.name,
+                value: r.path,
+                description: r.type === 'directory' ? 'Directory' : undefined,
+              })),
+            );
           } else {
             setResults(data.results ?? []);
           }
@@ -176,15 +177,18 @@ export function MentionPopup({ type, query, anchorRect, onSelect, onClose }: Men
                 onClick={() => onSelect(item)}
                 onMouseEnter={() => setSelectedIndex(i)}
               >
-                {type === 'file' ? (() => {
-                  const { Icon, color } = getFileIcon(item.label);
-                  return <Icon className={cn('h-4 w-4 shrink-0', color)} />;
-                })() : <TypeIcon className={cn('h-4 w-4 shrink-0', config.accent)} />}
+                {type === 'file' ? (
+                  (() => {
+                    const { Icon, color } = getFileIcon(item.label);
+                    return <Icon className={cn('h-4 w-4 shrink-0', color)} />;
+                  })()
+                ) : (
+                  <TypeIcon className={cn('h-4 w-4 shrink-0', config.accent)} />
+                )}
                 <div className="min-w-0 flex-1">
-                  <div className={cn(
-                    'text-xs',
-                    i === selectedIndex ? 'font-medium' : 'font-normal',
-                  )}>
+                  <div
+                    className={cn('text-xs', i === selectedIndex ? 'font-medium' : 'font-normal')}
+                  >
                     {item.label}
                   </div>
                   {type === 'file' && item.value && (

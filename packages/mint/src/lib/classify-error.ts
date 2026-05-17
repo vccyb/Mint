@@ -66,6 +66,22 @@ export function classifyError(rawError: string, httpStatus?: number): Classified
     };
   }
 
+  // Prompt too long errors
+  if (
+    lower.includes('prompt is too long') ||
+    lower.includes('prompt_too_long') ||
+    lower.includes('input is too long') ||
+    lower.includes('context_length_exceeded') ||
+    lower.includes('maximum context length') ||
+    lower.includes('token limit') ||
+    lower.includes('exceeds the model')
+  ) {
+    return {
+      code: 'PROMPT_TOO_LONG',
+      userMessage: '上下文过长，请开启新会话或压缩对话历史',
+    };
+  }
+
   return {
     code: 'INTERNAL_ERROR',
     userMessage: rawError || '发生了未知错误',

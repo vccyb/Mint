@@ -13,8 +13,15 @@ interface TeamDetailOverlayProps {
   initialSelectedId?: string | null;
 }
 
-export function TeamDetailOverlay({ teammates, isWaitingResume, onClose, initialSelectedId }: TeamDetailOverlayProps) {
-  const [selectedTeammateId, setSelectedTeammateId] = useState<string | null>(initialSelectedId ?? null);
+export function TeamDetailOverlay({
+  teammates,
+  isWaitingResume,
+  onClose,
+  initialSelectedId,
+}: TeamDetailOverlayProps) {
+  const [selectedTeammateId, setSelectedTeammateId] = useState<string | null>(
+    initialSelectedId ?? null,
+  );
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -27,16 +34,24 @@ export function TeamDetailOverlay({ teammates, isWaitingResume, onClose, initial
   const selectedTeammate = teammates.find((t) => t.taskId === selectedTeammateId);
 
   return (
-    <div className="absolute inset-0 z-50 bg-white flex flex-col">
+    <div className="absolute inset-0 z-50 bg-card flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
-        <span className="text-[13px] font-semibold text-[#1D1D1F]">Agent 团队</span>
+        <span className="text-[13px] font-semibold text-foreground">Agent 团队</span>
         <button
           onClick={onClose}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-[#F5F5F7] text-[#6E6E73] transition-colors cursor-pointer"
+          className="flex items-center justify-center w-6 h-6 rounded hover:bg-bg-warm text-muted-foreground transition-colors cursor-pointer"
           title="关闭"
         >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -50,9 +65,17 @@ export function TeamDetailOverlay({ teammates, isWaitingResume, onClose, initial
           <TeamSummaryBar teammates={teammates} />
 
           {isWaitingResume && (
-            <div className="mx-2.5 my-2 px-3 py-2 rounded-lg bg-[#007AFF]/10 text-[11px] text-[#007AFF] flex items-center gap-2 shrink-0">
+            <div className="mx-2.5 my-2 px-3 py-2 rounded-lg bg-primary/10 text-[11px] text-primary flex items-center gap-2 shrink-0">
               <svg className="h-3 w-3 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeDasharray="32"
+                  strokeLinecap="round"
+                />
               </svg>
               正在收集结果...
             </div>
@@ -76,8 +99,17 @@ export function TeamDetailOverlay({ teammates, isWaitingResume, onClose, initial
           {selectedTeammate ? (
             <TeammateDetail teammate={selectedTeammate} now={now} />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-[#AEAEB2] gap-2">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex flex-col items-center justify-center h-full text-text-tertiary gap-2">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
                 <polyline points="10 17 15 12 10 7" />
                 <line x1="15" y1="12" x2="3" y2="12" />

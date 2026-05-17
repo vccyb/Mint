@@ -4,9 +4,7 @@ import type { RefObject } from 'react';
 import { SkillMentionComponent } from './skill-mention-component';
 import { createSuggestionConfig } from './suggestion';
 
-export function createSkillMention(
-  onPopupStateChange?: (open: boolean) => void,
-) {
+export function createSkillMention(onPopupStateChange?: (open: boolean) => void) {
   return Mention.extend({
     name: 'skillMention',
 
@@ -19,6 +17,10 @@ export function createSkillMention(
     HTMLAttributes: {
       class: 'skill-mention',
     },
-    suggestion: createSuggestionConfig('skill', undefined as unknown as RefObject<string | null | undefined>, onPopupStateChange),
+    suggestion: createSuggestionConfig(
+      'skill',
+      undefined as unknown as RefObject<string | null | undefined>,
+      onPopupStateChange,
+    ),
   });
 }

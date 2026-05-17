@@ -4,6 +4,7 @@ export type StreamErrorCode =
   | 'AUTH_ERROR'
   | 'PROVIDER_ERROR'
   | 'NETWORK_ERROR'
+  | 'PROMPT_TOO_LONG'
   | 'INTERNAL_ERROR';
 
 export interface Attachment {
@@ -78,6 +79,9 @@ export type StreamEventType =
   | 'teammate_progress'
   | 'teammate_completed'
   | 'team_waiting_resume'
+  | 'usage_update'
+  | 'compacting'
+  | 'compact_complete'
   | 'result'
   | 'error';
 
@@ -122,6 +126,12 @@ export interface StreamEventData {
   errorCode?: StreamErrorCode;
   /** Teammate state for teammate_* events */
   teammate?: import('./team').TeammateState;
+  /** Token usage data for usage_update events */
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+  contextWindow?: number;
 }
 
 export interface StreamResult {

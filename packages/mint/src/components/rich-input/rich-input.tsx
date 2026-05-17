@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useCallback,
-  useImperativeHandle,
-  forwardRef,
-} from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -47,7 +41,7 @@ function extractTextFromEditor(editor: Editor | null): string {
 
 function extractTextFromNode(node: Record<string, unknown>): string {
   if (node.type === 'text') {
-    return node.text as string ?? '';
+    return (node.text as string) ?? '';
   }
 
   // Handle mention nodes — convert to token format
@@ -105,113 +99,114 @@ function extractMentionsFromEditor(editor: Editor | null): MentionChip[] {
   return mentions;
 }
 
-export const RichInput = forwardRef<RichInputHandle, RichInputProps>(
-  function RichInput(
-    { placeholder, projectId, disabled, onSend, onUpdate, onFocus, onBlur },
-    ref,
-  ) {
-    // Track whether we're in the middle of a send to avoid double-clear
-    const sendingRef = useRef(false);
-    // Track whether a suggestion popup is currently open
-    const suggestionOpenRef = useRef(false);
-    // Store projectId in a ref so extensions can read the latest value dynamically
-    const projectIdRef = useRef(projectId);
+export const RichInput = forwardRef<RichInputHandle, RichInputProps>(function RichInput(
+  { placeholder, projectId, disabled, onSend, onUpdate, onFocus, onBlur },
+  ref,
+) {
+  // Track whether we're in the middle of a send to avoid double-clear
+  const sendingRef = useRef(false);
+  // Track whether a suggestion popup is currently open
+  const suggestionOpenRef = useRef(false);
+  // Store projectId in a ref so extensions can read the latest value dynamically
+  const projectIdRef = useRef(projectId);
 
-    // Keep ref in sync with prop
-    useEffect(() => {
-      projectIdRef.current = projectId;
-    }, [projectId]);
+  // Keep ref in sync with prop
+  useEffect(() => {
+    projectIdRef.current = projectId;
+  }, [projectId]);
 
-    const handlePopupStateChange = useCallback((open: boolean) => {
-      suggestionOpenRef.current = open;
-    }, []);
+  const handlePopupStateChange = useCallback((open: boolean) => {
+    suggestionOpenRef.current = open;
+  }, []);
 
-    const editor = useEditor({
-      extensions: [
-        StarterKit.configure({
-          heading: false,
-          blockquote: false,
-          codeBlock: false,
-          horizontalRule: false,
-          hardBreak: {},
-          listItem: false,
-          bulletList: false,
-          orderedList: false,
-        }),
-        Placeholder.configure({
-          placeholder: placeholder ?? 'Send a message...',
-        }),
-        createFileMentionWithView(projectIdRef, handlePopupStateChange),
-        createSkillMention(handlePopupStateChange),
-        createMcpMention(handlePopupStateChange),
-      ],
-      editorProps: {
-        attributes: {
-          class: 'tiptap-editor-outline-none text-[13px] leading-[20px] min-h-[28px] max-h-[160px] overflow-y-auto',
-        },
-        // Handle Enter key for sending — but NOT when suggestion popup is open
-        handleKeyDown: (view, event) => {
-          if (!editor) return false;
-          // When suggestion popup is open, let the suggestion plugin handle these keys
-          if (suggestionOpenRef.current) {
-            if (event.key === 'Enter' || event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Escape') {
-              return false;
-            }
-          }
-          if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-            event.preventDefault();
-            const text = extractTextFromEditor(editor);
-            if (text.trim()) {
-              onSend?.(text);
-              // Clear editor after send
-              sendingRef.current = true;
-              editor.commands.clearContent();
-              sendingRef.current = false;
-            }
-            return true;
-          }
-          // Shift+Tab for plan mode toggle — let parent handle it
-          if (event.key === 'Tab' && event.shiftKey) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        blockquote: false,
+        codeBlock: false,
+        horizontalRule: false,
+        hardBreak: {},
+        listItem: false,
+        bulletList: false,
+        orderedList: false,
+      }),
+      Placeholder.configure({
+        placeholder: placeholder ?? 'Send a message...',
+      }),
+      createFileMentionWithView(projectIdRef, handlePopupStateChange),
+      createSkillMention(handlePopupStateChange),
+      createMcpMention(handlePopupStateChange),
+    ],
+    editorProps: {
+      attributes: {
+        class:
+          'tiptap-editor-outline-none text-[13px] leading-[20px] min-h-[28px] max-h-[160px] overflow-y-auto',
+      },
+      // Handle Enter key for sending — but NOT when suggestion popup is open
+      handleKeyDown: (view, event) => {
+        if (!editor) return false;
+        // When suggestion popup is open, let the suggestion plugin handle these keys
+        if (suggestionOpenRef.current) {
+          if (
+            event.key === 'Enter' ||
+            event.key === 'ArrowUp' ||
+            event.key === 'ArrowDown' ||
+            event.key === 'Escape'
+          ) {
             return false;
           }
+        }
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+          event.preventDefault();
+          const text = extractTextFromEditor(editor);
+          if (text.trim()) {
+            onSend?.(text);
+            // Clear editor after send
+            sendingRef.current = true;
+            editor.commands.clearContent();
+            sendingRef.current = false;
+          }
+          return true;
+        }
+        // Shift+Tab for plan mode toggle — let parent handle it
+        if (event.key === 'Tab' && event.shiftKey) {
           return false;
-        },
+        }
+        return false;
       },
-      immediatelyRender: false,
-      onUpdate: ({ editor: ed }) => {
-        if (sendingRef.current) return;
-        const text = extractTextFromEditor(ed);
-        onUpdate?.(text, text.trim().length > 0);
-      },
-      onFocus: () => onFocus?.(),
-      onBlur: () => onBlur?.(),
-    });
+    },
+    immediatelyRender: false,
+    onUpdate: ({ editor: ed }) => {
+      if (sendingRef.current) return;
+      const text = extractTextFromEditor(ed);
+      onUpdate?.(text, text.trim().length > 0);
+    },
+    onFocus: () => onFocus?.(),
+    onBlur: () => onBlur?.(),
+  });
 
-    // Expose handle methods
-    useImperativeHandle(ref, () => ({
-      focus: () => editor?.commands.focus(),
-      getTextContent: () => extractTextFromEditor(editor),
-      getMentions: () => extractMentionsFromEditor(editor),
-      clear: () => editor?.commands.clearContent(),
-      setContent: (text: string) => {
-        editor?.commands.setContent(text ? `<p>${text}</p>` : '');
-      },
-    }));
+  // Expose handle methods
+  useImperativeHandle(ref, () => ({
+    focus: () => editor?.commands.focus(),
+    getTextContent: () => extractTextFromEditor(editor),
+    getMentions: () => extractMentionsFromEditor(editor),
+    clear: () => editor?.commands.clearContent(),
+    setContent: (text: string) => {
+      editor?.commands.setContent(text ? `<p>${text}</p>` : '');
+    },
+  }));
 
-    // Focus on mount
-    useEffect(() => {
-      if (editor && !disabled) {
-        editor.commands.focus('end');
-      }
-    }, [editor, disabled]);
+  // Focus on mount
+  useEffect(() => {
+    if (editor && !disabled) {
+      editor.commands.focus('end');
+    }
+  }, [editor, disabled]);
 
-    return (
-      <div
-        className="flex-1 min-w-0 rich-input-wrapper"
-        onClick={() => editor?.commands.focus()}
-      >
-        <EditorContent editor={editor} />
-      </div>
-    );
-  },
-);
+  return (
+    <div className="flex-1 min-w-0 rich-input-wrapper" onClick={() => editor?.commands.focus()}>
+      <EditorContent editor={editor} />
+    </div>
+  );
+});

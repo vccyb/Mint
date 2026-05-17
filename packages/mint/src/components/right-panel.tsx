@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  ReactNode,
-  useCallback,
-} from 'react';
+import { createContext, useContext, ReactNode, useCallback } from 'react';
 import { X, FolderOpen } from 'lucide-react';
 
 export type PanelState = 'hidden' | 'visible' | 'fullscreen';
@@ -28,10 +23,7 @@ interface RightPanelProps {
   width?: string;
 }
 
-export function RightPanel({
-  children,
-  width = '280px',
-}: RightPanelProps) {
+export function RightPanel({ children, width = '280px' }: RightPanelProps) {
   const { panelState, setPanelState } = useRightPanel();
 
   const close = useCallback(() => {
@@ -43,10 +35,7 @@ export function RightPanel({
   }
 
   return (
-    <div
-      className="flex flex-col min-h-0 bg-bg border-l border-border shrink-0"
-      style={{ width }}
-    >
+    <div className="flex flex-col min-h-0 bg-bg border-l border-border shrink-0" style={{ width }}>
       {/* Header bar */}
       <div className="flex items-center gap-0 px-2 pt-1.5 pb-0 border-b border-border shrink-0">
         {/* Title */}
@@ -60,7 +49,7 @@ export function RightPanel({
         {/* Close button */}
         <button
           onClick={close}
-          className="flex items-center justify-center w-[20px] h-[20px] rounded-[5px] text-[#AEAEB2] hover:text-[#6E6E73] hover:bg-bg-warm transition-colors cursor-pointer shrink-0"
+          className="flex items-center justify-center w-[20px] h-[20px] rounded-[5px] text-text-tertiary hover:text-muted-foreground hover:bg-bg-warm transition-colors cursor-pointer shrink-0"
           title="关闭面板"
         >
           <X className="h-3 w-3" />
@@ -68,9 +57,7 @@ export function RightPanel({
       </div>
 
       {/* Content area */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {children}
-      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
     </div>
   );
 }

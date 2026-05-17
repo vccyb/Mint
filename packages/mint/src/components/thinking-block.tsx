@@ -92,32 +92,32 @@ export function ThinkingBlock({ content, isStreaming, startTime }: ThinkingBlock
       : '思考完毕';
 
   return (
-    <div className="mb-2 rounded-xl border border-[rgba(0,0,0,0.08)] overflow-hidden bg-white transition-all duration-200">
+    <div className="mb-2 rounded-xl border border-border overflow-hidden bg-card transition-all duration-200">
       {/* Header */}
       <button
-        className="flex w-full items-center gap-2.5 px-4 py-3 text-xs cursor-pointer hover:bg-[#EDEDF0] transition-colors"
+        className="flex w-full items-center gap-2.5 px-4 py-3 text-xs cursor-pointer hover:bg-bg-hover transition-colors"
         onClick={() => {
           if (!isStreaming) setIsOpen(!isOpen);
         }}
       >
         {isStreaming ? (
-          <SparkleIcon className="h-4 w-4 shrink-0 text-[#007AFF] animate-pulse" />
+          <SparkleIcon className="h-4 w-4 shrink-0 text-primary animate-pulse" />
         ) : (
-          <SparkleIcon className="h-4 w-4 shrink-0 text-[#AEAEB2]" />
+          <SparkleIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
         )}
-        <span className={`font-medium text-[13px] ${
-          isStreaming ? 'text-[#1D1D1F]' : 'text-[#6E6E73]'
-        }`}>
+        <span
+          className={`font-medium text-[13px] ${isStreaming ? 'text-foreground' : 'text-muted-foreground'}`}
+        >
           {durationText}
         </span>
         {isStreaming && duration > 0 && (
-          <span className="font-mono text-[11px] text-[#007AFF] tabular-nums ml-auto">
+          <span className="font-mono text-[11px] text-primary tabular-nums ml-auto">
             {duration.toFixed(1)}s
           </span>
         )}
         {!isStreaming && <span className="flex-1" />}
         <ChevronDown
-          className={`h-3.5 w-3.5 shrink-0 text-[#AEAEB2] transition-transform duration-200 ${
+          className={`h-3.5 w-3.5 shrink-0 text-text-tertiary transition-transform duration-200 ${
             effectivelyOpen ? '' : '-rotate-90'
           }`}
         />
@@ -125,9 +125,11 @@ export function ThinkingBlock({ content, isStreaming, startTime }: ThinkingBlock
 
       {/* Expanded content */}
       {effectivelyOpen && (
-        <div className={`border-t border-[rgba(0,0,0,0.08)] bg-[#F5F5F7] px-4 py-3 pl-12 text-[13px] leading-relaxed text-[#6E6E73] ${
-          isStreaming ? 'streaming-cursor' : ''
-        }`}>
+        <div
+          className={`border-t border-border bg-bg-warm px-4 py-3 pl-12 text-[13px] leading-relaxed text-muted-foreground ${
+            isStreaming ? 'streaming-cursor' : ''
+          }`}
+        >
           <MarkdownRenderer content={content} />
         </div>
       )}

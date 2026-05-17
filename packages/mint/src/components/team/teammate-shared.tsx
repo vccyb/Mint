@@ -8,10 +8,10 @@ export const STATUS_COLORS: Record<TeammateState['status'], string> = {
 };
 
 export const STATUS_BG: Record<TeammateState['status'], string> = {
-  running: 'bg-[#007AFF]/10',
-  completed: 'bg-[#34C759]/10',
-  failed: 'bg-[#FF3B30]/10',
-  stopped: 'bg-[#FF9500]/10',
+  running: 'bg-primary/10',
+  completed: 'bg-success/10',
+  failed: 'bg-destructive/10',
+  stopped: 'bg-warning/10',
 };
 
 export const STATUS_LABEL: Record<TeammateState['status'], string> = {

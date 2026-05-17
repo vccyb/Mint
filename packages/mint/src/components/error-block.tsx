@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, ZapOff, KeyRound, WifiOff, Bot, XCircle } from 'lucide-react';
+import { AlertTriangle, ZapOff, KeyRound, WifiOff, Bot, XCircle, FileText } from 'lucide-react';
 import type { StreamErrorCode } from '@/types';
 
 interface ErrorBlockProps {
@@ -9,14 +9,17 @@ interface ErrorBlockProps {
   onRetry?: () => void;
 }
 
-const ERROR_STYLES: Record<StreamErrorCode, {
-  icon: typeof AlertTriangle;
-  bgClass: string;
-  borderClass: string;
-  textClass: string;
-  iconClass: string;
-  label: string;
-}> = {
+const ERROR_STYLES: Record<
+  StreamErrorCode,
+  {
+    icon: typeof AlertTriangle;
+    bgClass: string;
+    borderClass: string;
+    textClass: string;
+    iconClass: string;
+    label: string;
+  }
+> = {
   RATE_LIMITED: {
     icon: ZapOff,
     bgClass: 'bg-warning/10',
@@ -49,6 +52,14 @@ const ERROR_STYLES: Record<StreamErrorCode, {
     iconClass: 'text-red-500',
     label: '网络错误',
   },
+  PROMPT_TOO_LONG: {
+    icon: FileText,
+    bgClass: 'bg-warning/10',
+    borderClass: 'border-warning/20',
+    textClass: 'text-warning',
+    iconClass: 'text-warning',
+    label: '上下文过长',
+  },
   INTERNAL_ERROR: {
     icon: AlertTriangle,
     bgClass: 'bg-red-50',
@@ -69,9 +80,7 @@ export function ErrorBlock({ code, message, onRetry }: ErrorBlockProps) {
           <XCircle className={`h-4 w-4 shrink-0 ${style.iconClass}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className={`text-xs font-semibold ${style.textClass}`}>
-            {style.label}
-          </div>
+          <div className={`text-xs font-semibold ${style.textClass}`}>{style.label}</div>
           <div className="mt-1 text-xs font-mono text-red-700/80 leading-relaxed break-all">
             {message}
           </div>
@@ -80,7 +89,17 @@ export function ErrorBlock({ code, message, onRetry }: ErrorBlockProps) {
               onClick={onRetry}
               className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M1 4v6h6" />
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
               重试
             </button>
           )}

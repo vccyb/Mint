@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  MessageCircleQuestion,
-  ListTodo,
-  ListChecks,
-  ChevronDown,
-  Minimize2,
-} from 'lucide-react';
+import { MessageCircleQuestion, ListTodo, ListChecks, ChevronDown, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PermissionRequestData, AskQuestionItem, TodoItem } from '@/types';
 
@@ -37,33 +31,36 @@ export interface InteractionPanelProps {
 
 /* ─── Type Config ──────────────────────────────────── */
 
-const TYPE_CONFIG: Record<InteractionType, {
-  icon: typeof MessageCircleQuestion;
-  label: string;
-  accentBg: string;
-  accentText: string;
-  accentBorder: string;
-}> = {
+const TYPE_CONFIG: Record<
+  InteractionType,
+  {
+    icon: typeof MessageCircleQuestion;
+    label: string;
+    accentBg: string;
+    accentText: string;
+    accentBorder: string;
+  }
+> = {
   permission: {
     icon: MessageCircleQuestion,
     label: 'Agent 请求',
     accentBg: 'bg-bg-warm',
     accentText: 'text-primary',
-    accentBorder: 'border-[rgba(0,0,0,0.08)]',
+    accentBorder: 'border-border',
   },
   todo: {
     icon: ListTodo,
     label: '任务进度',
     accentBg: 'bg-bg-warm',
     accentText: 'text-text-secondary',
-    accentBorder: 'border-[rgba(0,0,0,0.08)]',
+    accentBorder: 'border-border',
   },
   plan: {
     icon: ListChecks,
     label: '执行计划',
     accentBg: 'bg-bg-warm',
     accentText: 'text-success',
-    accentBorder: 'border-[rgba(0,0,0,0.08)]',
+    accentBorder: 'border-border',
   },
 };
 
@@ -92,7 +89,7 @@ export function InteractionPanel({
         onClick={() => setCollapsed(false)}
         className={cn(
           'flex w-full items-center gap-2 rounded-xl border px-4 py-2 text-left',
-          'border-[rgba(0,0,0,0.08)] shadow-sm bg-white',
+          'border-border shadow-sm bg-card',
           'animate-fade-in cursor-pointer',
           pinned && 'mx-auto max-w-[640px]',
         )}
@@ -115,50 +112,50 @@ export function InteractionPanel({
   return (
     <div
       className={cn(
-        'rounded-xl border border-[rgba(0,0,0,0.08)] shadow-sm bg-white',
+        'rounded-xl border border-border shadow-sm bg-card',
         'overflow-hidden animate-slide-up',
         pinned && 'mx-auto max-w-[640px]',
       )}
     >
       {/* Header */}
-      <div className={cn(
-        'flex items-center gap-2 px-4 py-2.5 border-b border-[rgba(0,0,0,0.08)]',
-        config.accentBg,
-      )}>
-        <div className={cn(
-          'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md',
-          'bg-[#E8F2FF]',
-        )}>
-          <Icon className='h-3 w-3 text-[#007AFF]' />
+      <div
+        className={cn(
+          'flex items-center gap-2 px-4 py-2.5 border-b border-border',
+          config.accentBg,
+        )}
+      >
+        <div
+          className={cn(
+            'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md',
+            'bg-primary-light',
+          )}
+        >
+          <Icon className="h-3 w-3 text-primary" />
         </div>
-        <span className='text-xs font-semibold text-text'>
+        <span className="text-xs font-semibold text-text">
           {type === 'todo' ? '任务清单' : config.label}
         </span>
         {type === 'todo' && activeTodos && activeTodos.length > 0 && (
-          <span className='ml-auto text-[10px] font-semibold text-[#34C759] font-mono'>
+          <span className="ml-auto text-[10px] font-semibold text-success font-mono">
             {activeTodos.filter((t) => t.status === 'completed').length}/{activeTodos.length}
           </span>
         )}
         {type === 'permission' && permissionRequest?.toolName === 'AskUserQuestion' && (
-          <span className='ml-auto text-[10px] text-text-tertiary font-mono'>
-            AskUserQuestion
-          </span>
+          <span className="ml-auto text-[10px] text-text-tertiary font-mono">AskUserQuestion</span>
         )}
-        <div className='flex-1' />
+        <div className="flex-1" />
         <button
           onClick={() => setCollapsed(true)}
-          className='flex h-6 w-6 items-center justify-center rounded-md text-text-tertiary hover:bg-bg-hover hover:text-text transition-colors cursor-pointer'
-          aria-label='Minimize panel'
+          className="flex h-6 w-6 items-center justify-center rounded-md text-text-tertiary hover:bg-bg-hover hover:text-text transition-colors cursor-pointer"
+          aria-label="Minimize panel"
         >
-          <Minimize2 className='h-3 w-3' />
+          <Minimize2 className="h-3 w-3" />
         </button>
       </div>
 
       {/* Placeholder content — actual content rendered by child components */}
-      <div className='max-h-[40vh] overflow-y-auto'>
-        {type === 'todo' && activeTodos && (
-          <TodoPinnedContent todos={activeTodos} />
-        )}
+      <div className="max-h-[40vh] overflow-y-auto">
+        {type === 'todo' && activeTodos && <TodoPinnedContent todos={activeTodos} />}
       </div>
     </div>
   );
@@ -176,17 +173,17 @@ function TodoPinnedContent({ todos }: { todos: TodoItem[] }) {
   return (
     <>
       {/* Progress bar */}
-      <div className='px-3.5 pt-1.5'>
-        <div className='h-[3px] rounded-full bg-[#EDEDF0] overflow-hidden'>
+      <div className="px-3.5 pt-1.5">
+        <div className="h-[3px] rounded-full bg-bg-hover overflow-hidden">
           <div
-            className='h-full rounded-full bg-gradient-to-r from-[#34C759] to-[#007AFF] transition-[width] duration-500'
+            className="h-full rounded-full bg-gradient-to-r from-success to-primary transition-[width] duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
       </div>
 
       {/* Task list */}
-      <div className='px-2.5 py-1.5 space-y-px'>
+      <div className="px-2.5 py-1.5 space-y-px">
         {todos.map((todo, i) => (
           <div
             key={i}
@@ -196,30 +193,39 @@ function TodoPinnedContent({ todos }: { todos: TodoItem[] }) {
             )}
           >
             {/* Status icon */}
-            <div className='mt-[2px] shrink-0'>
+            <div className="mt-[2px] shrink-0">
               {todo.status === 'completed' ? (
-                <div className='h-4 w-4 rounded bg-[#34C759] flex items-center justify-center'>
-                  <svg width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='white' strokeWidth='3'>
-                    <path d='M20 6 9 17l-5-5' />
+                <div className="h-4 w-4 rounded bg-success flex items-center justify-center">
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="3"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
                   </svg>
                 </div>
               ) : todo.status === 'in_progress' ? (
-                <div className='h-4 w-4 rounded border-[1.5px] border-[#007AFF] flex items-center justify-center'>
-                  <div className='h-[9px] w-[9px] rounded-full border-[1.5px] border-[#007AFF] border-t-transparent animate-spin' />
+                <div className="h-4 w-4 rounded border-[1.5px] border-primary flex items-center justify-center">
+                  <div className="h-[9px] w-[9px] rounded-full border-[1.5px] border-primary border-t-transparent animate-spin" />
                 </div>
               ) : (
-                <div className='h-4 w-4 rounded border-[1.5px] border-[rgba(0,0,0,0.08)]' />
+                <div className="h-4 w-4 rounded border-[1.5px] border-border" />
               )}
             </div>
 
             {/* Text */}
-            <div className='flex-1 min-w-0'>
-              <div className={cn(
-                'text-xs',
-                todo.status === 'completed' && 'text-text-tertiary line-through',
-                todo.status === 'in_progress' && 'text-text font-medium',
-                todo.status === 'pending' && 'text-text-tertiary',
-              )}>
+            <div className="flex-1 min-w-0">
+              <div
+                className={cn(
+                  'text-xs',
+                  todo.status === 'completed' && 'text-text-tertiary line-through',
+                  todo.status === 'in_progress' && 'text-text font-medium',
+                  todo.status === 'pending' && 'text-text-tertiary',
+                )}
+              >
                 {todo.status === 'in_progress' && todo.activeForm ? todo.activeForm : todo.content}
               </div>
             </div>

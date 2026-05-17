@@ -66,7 +66,7 @@ export function ConversationMinimap({ messages }: ConversationMinimapProps) {
         expanded ? 'w-44 py-1.5 px-1' : 'w-7 py-2 px-1.5 flex flex-col items-center gap-[3px]'
       }`}
     >
-      {userMessages.map((msg, idx) => (
+      {userMessages.map((msg, idx) =>
         expanded ? (
           <button
             key={msg.id}
@@ -85,13 +85,11 @@ export function ConversationMinimap({ messages }: ConversationMinimapProps) {
             key={msg.id}
             onClick={() => scrollToMessage(msg.id)}
             className={`block h-[2px] rounded-full transition-colors cursor-pointer ${
-              idx === activeIdx
-                ? 'w-4 bg-primary'
-                : 'w-3 bg-text-tertiary/30'
+              idx === activeIdx ? 'w-4 bg-primary' : 'w-3 bg-text-tertiary/30'
             }`}
           />
-        )
-      ))}
+        ),
+      )}
     </div>
   );
 }

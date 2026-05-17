@@ -18,7 +18,7 @@ export function FileMentionComponent({ node }: NodeViewProps) {
     <NodeViewWrapper as="span" className="inline">
       <span
         className={cn(
-          'inline-flex items-center gap-0.5 text-[13px] text-[#007AFF]',
+          'inline-flex items-center gap-0.5 text-[13px] text-primary',
           'font-mono cursor-pointer hover:underline align-middle',
         )}
         title={path}

@@ -10,7 +10,12 @@ interface ChatViewProps {
   sessionKey?: string | null;
   isStreaming: boolean;
   streamStartTime?: number | null;
-  onSend: (message: string, attachments?: Attachment[], mentionedTools?: unknown[], enableThinking?: boolean) => void;
+  onSend: (
+    message: string,
+    attachments?: Attachment[],
+    mentionedTools?: unknown[],
+    enableThinking?: boolean,
+  ) => void;
   onStop?: () => void;
 }
 
@@ -33,7 +38,12 @@ export function ChatView({
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <MessageList messages={messages} isStreaming={isStreaming} streamStartTime={streamStartTime} onEditMessage={(_id, content) => setEditingContent(content)} />
+      <MessageList
+        messages={messages}
+        isStreaming={isStreaming}
+        streamStartTime={streamStartTime}
+        onEditMessage={(_id, content) => setEditingContent(content)}
+      />
       <MessageInput
         ref={inputRef}
         sessionKey={sessionKey}

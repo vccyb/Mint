@@ -9,7 +9,7 @@
 
 /* Placeholder */
 .tiptap p.is-editor-empty:first-child::before {
-  color: #AEAEB2;
+  color: var(--text-tertiary);
   content: attr(data-placeholder);
   float: left;
   height: 0;

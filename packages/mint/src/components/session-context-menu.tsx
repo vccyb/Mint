@@ -25,7 +25,9 @@ export function ContextMenu({ groups, onClose, onSelect }: ContextMenuProps) {
       ref={ref}
       className="absolute z-50 left-16 mt-8 w-40 rounded-md border border-border bg-bg shadow-elevation-2 py-1 animate-fade-in"
     >
-      <div className="px-2 py-1 text-[11px] text-text-tertiary font-heading font-medium">移动到分组</div>
+      <div className="px-2 py-1 text-[11px] text-text-tertiary font-heading font-medium">
+        移动到分组
+      </div>
       <button
         className="w-full text-left px-2 py-1.5 text-[12px] text-text-secondary hover:bg-bg-hover transition-fast cursor-pointer"
         onClick={() => onSelect(null)}

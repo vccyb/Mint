@@ -1,14 +1,47 @@
 import { MAX_EMBEDDED_TEXT_SIZE } from '@/lib/constants';
 
 const TEXT_EXTENSIONS = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-  '.py', '.rb', '.go', '.rs', '.java', '.kt',
-  '.c', '.cpp', '.h', '.hpp',
-  '.html', '.css', '.scss', '.less', '.svg',
-  '.md', '.txt', '.csv', '.json', '.xml', '.yaml', '.yml',
-  '.sh', '.bash', '.zsh', '.sql', '.graphql',
-  '.toml', '.ini', '.env', '.gitignore',
-  '.log', '.conf', '.cfg', '.dockerfile',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.py',
+  '.rb',
+  '.go',
+  '.rs',
+  '.java',
+  '.kt',
+  '.c',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.html',
+  '.css',
+  '.scss',
+  '.less',
+  '.svg',
+  '.md',
+  '.txt',
+  '.csv',
+  '.json',
+  '.xml',
+  '.yaml',
+  '.yml',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.sql',
+  '.graphql',
+  '.toml',
+  '.ini',
+  '.env',
+  '.gitignore',
+  '.log',
+  '.conf',
+  '.cfg',
+  '.dockerfile',
 ]);
 
 const PDF_EXTENSIONS = new Set(['.pdf']);
@@ -18,9 +51,16 @@ const PDF_EXTENSIONS = new Set(['.pdf']);
  */
 export function isTextFile(mimeType: string, fileName: string): boolean {
   if (mimeType.startsWith('text/')) return true;
-  if (['application/json', 'application/xml', 'application/javascript',
-    'application/typescript', 'application/x-yaml',
-  ].includes(mimeType)) return true;
+  if (
+    [
+      'application/json',
+      'application/xml',
+      'application/javascript',
+      'application/typescript',
+      'application/x-yaml',
+    ].includes(mimeType)
+  )
+    return true;
   const ext = '.' + (fileName.split('.').pop()?.toLowerCase() ?? '');
   return TEXT_EXTENSIONS.has(ext);
 }

@@ -40,8 +40,18 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 export function SessionRow({
-  session, mode, isActive, streamStatus, isCompletedUnvisited,
-  indent, onSelect, onDelete, onTogglePin, onDragStart, groups, onMoveToGroup,
+  session,
+  mode,
+  isActive,
+  streamStatus,
+  isCompletedUnvisited,
+  indent,
+  onSelect,
+  onDelete,
+  onTogglePin,
+  onDragStart,
+  groups,
+  onMoveToGroup,
 }: SessionRowProps) {
   const isStreaming = streamStatus?.isStreaming === true;
   const hasIndicator = isStreaming || isCompletedUnvisited;
@@ -51,11 +61,7 @@ export function SessionRow({
     <div
       className={`group relative flex items-center gap-2 rounded-[6px] text-[12px] cursor-pointer transition-colors ${
         indent ? 'pl-5 pr-2' : 'px-2'
-      } py-[6px] ${
-        isActive
-          ? 'bg-[#E8F2FF]'
-          : 'hover:bg-bg-hover'
-      }`}
+      } py-[6px] ${isActive ? 'bg-primary-light' : 'hover:bg-bg-hover'}`}
       onClick={() => onSelect(session.id)}
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, session.id)}
@@ -67,20 +73,12 @@ export function SessionRow({
       }}
     >
       {/* Streaming spinner or completed check */}
-      {hasIndicator && isStreaming && (
-        <div className="spinner-dot shrink-0" />
-      )}
-      {hasIndicator && !isStreaming && (
-        <Check className="h-3 w-3 text-success shrink-0" />
-      )}
+      {hasIndicator && isStreaming && <div className="spinner-dot shrink-0" />}
+      {hasIndicator && !isStreaming && <Check className="h-3 w-3 text-success shrink-0" />}
       {/* Mode icon — agent only */}
-      {!hasIndicator && mode === 'agent' && (
-        <Bot className="h-3 w-3 shrink-0 text-text-tertiary" />
-      )}
+      {!hasIndicator && mode === 'agent' && <Bot className="h-3 w-3 shrink-0 text-text-tertiary" />}
       {/* Pinned icon */}
-      {session.pinned && (
-        <Pin className="h-2.5 w-2.5 text-primary/50 shrink-0 fill-primary/20" />
-      )}
+      {session.pinned && <Pin className="h-2.5 w-2.5 text-primary/50 shrink-0 fill-primary/20" />}
       {/* Title & subtitle */}
       <div className="flex-1 min-w-0">
         <div className={`truncate ${isActive ? 'font-medium text-primary-text' : 'text-text'}`}>
@@ -134,7 +132,9 @@ export function SessionRow({
 }
 
 function ContextMenu({
-  groups, onClose, onSelect,
+  groups,
+  onClose,
+  onSelect,
 }: {
   groups: SessionGroup[];
   onClose: () => void;

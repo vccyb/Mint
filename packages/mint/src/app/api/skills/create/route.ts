@@ -16,10 +16,6 @@ export const POST = withLogging('api.skills.create', async (request) => {
     return NextResponse.json({ error: 'Skill instructions are required' }, { status: 400 });
   }
 
-  const skill = await createSkill(
-    name.trim(),
-    description?.trim() ?? '',
-    content.trim(),
-  );
+  const skill = await createSkill(name.trim(), description?.trim() ?? '', content.trim());
   return NextResponse.json({ skill });
 });

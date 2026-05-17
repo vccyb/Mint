@@ -41,7 +41,9 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
         setParentPath(data.parentPath);
         setBrowsePath(data.currentPath);
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      /* ignore */
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -90,7 +92,10 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <h2 className="text-base font-semibold text-text">新建工程</h2>
-          <button onClick={handleClose} className="text-text-tertiary hover:text-text transition-colors cursor-pointer">
+          <button
+            onClick={handleClose}
+            className="text-text-tertiary hover:text-text transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -128,7 +133,7 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
             onChange={(e) => setBrowsePath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGoToPath()}
             placeholder="输入路径后回车跳转"
-            className="hidden sm:block w-48 px-2 py-1 border border-border rounded text-xs font-mono bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+            className="hidden sm:block w-48 px-2 py-1 border border-border rounded text-xs font-mono bg-card focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -141,7 +146,7 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
               onDoubleClick={() => handleNavigate(entry.path)}
               className={`w-full flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
                 selectedPath === entry.path
-                  ? 'bg-[#E8F2FF] text-[#007AFF]'
+                  ? 'bg-primary-light text-primary'
                   : 'text-text-secondary hover:bg-bg-warm hover:text-text'
               }`}
             >
@@ -159,7 +164,9 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
           {selectedPath && (
             <div className="flex items-center gap-2 text-xs">
               <FolderOpen className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="text-text-tertiary truncate" title={selectedPath}>{selectedPath}</span>
+              <span className="text-text-tertiary truncate" title={selectedPath}>
+                {selectedPath}
+              </span>
             </div>
           )}
           <div>
@@ -169,7 +176,7 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="自动取文件夹名，可修改"
-              className="w-full px-3 py-1.5 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+              className="w-full px-3 py-1.5 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-card"
             />
           </div>
         </div>
@@ -189,9 +196,15 @@ export function NewProjectDialog({ open, onClose, onConfirm }: NewProjectDialogP
             className="px-4 py-1.5 bg-primary text-white text-sm rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isCreating ? (
-              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />创建中...</>
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                创建中...
+              </>
             ) : (
-              <><Check className="w-4 h-4" />创建</>
+              <>
+                <Check className="w-4 h-4" />
+                创建
+              </>
             )}
           </button>
         </div>

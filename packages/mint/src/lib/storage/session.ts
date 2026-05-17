@@ -23,9 +23,7 @@ export class SessionStorage {
     log.debug('Message appended', { sessionId });
   }
 
-  async read(
-    sessionId: string,
-  ): Promise<{ metadata: SessionMetadata; messages: ChatMessage[] }> {
+  async read(sessionId: string): Promise<{ metadata: SessionMetadata; messages: ChatMessage[] }> {
     const filePath = this.getFilePath(sessionId);
     const content = await fs.readFile(filePath, 'utf-8');
     const lines = content.trim().split('\n').filter(Boolean);

@@ -37,9 +37,7 @@ export function buildSkillIndexPrompt(
 ): string {
   if (skills.length === 0) return '';
 
-  const lines = skills.map(
-    (s) => `- **${s.name}**: ${s.description} → \`${s.filePath}\``,
-  );
+  const lines = skills.map((s) => `- **${s.name}**: ${s.description} → \`${s.filePath}\``);
 
   return [
     '# Available Skills',
@@ -70,10 +68,7 @@ export function isSkillRead(
 
   for (const [skillPath, info] of skillPathMap) {
     const normalizedSkillPath = skillPath.replace(/\\/g, '/');
-    if (
-      normalized === normalizedSkillPath ||
-      normalized.endsWith('/' + normalizedSkillPath)
-    ) {
+    if (normalized === normalizedSkillPath || normalized.endsWith('/' + normalizedSkillPath)) {
       return info;
     }
   }
@@ -82,9 +77,7 @@ export function isSkillRead(
   if (match) {
     const name = match[1];
     const info = skillPathMap.get(name);
-    return info
-      ? { name: info.name, description: info.description }
-      : { name, description: '' };
+    return info ? { name: info.name, description: info.description } : { name, description: '' };
   }
 
   return null;

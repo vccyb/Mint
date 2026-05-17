@@ -46,10 +46,9 @@ export function FileMentionPopup({ query, anchorRect, onSelect, onClose }: FileM
       setLoading(true);
       try {
         const q = query || '*';
-        const res = await fetch(
-          `/api/files/search?q=${encodeURIComponent(q)}`,
-          { signal: controller.signal },
-        );
+        const res = await fetch(`/api/files/search?q=${encodeURIComponent(q)}`, {
+          signal: controller.signal,
+        });
         if (res.ok) {
           const data = await res.json();
           setResults(data.results ?? []);
@@ -123,7 +122,11 @@ export function FileMentionPopup({ query, anchorRect, onSelect, onClose }: FileM
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-bg-warm">
         <Search className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
         <span className="text-xs text-text-tertiary truncate">
-          {loading ? 'Searching...' : query ? `${results.length} file${results.length !== 1 ? 's' : ''} matching "${query}"` : `${results.length} file${results.length !== 1 ? 's' : ''}`}
+          {loading
+            ? 'Searching...'
+            : query
+              ? `${results.length} file${results.length !== 1 ? 's' : ''} matching "${query}"`
+              : `${results.length} file${results.length !== 1 ? 's' : ''}`}
         </span>
       </div>
 
@@ -134,9 +137,7 @@ export function FileMentionPopup({ query, anchorRect, onSelect, onClose }: FileM
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>
         ) : results.length === 0 ? (
-          <div className="px-3 py-4 text-center text-xs text-text-tertiary">
-            No files found
-          </div>
+          <div className="px-3 py-4 text-center text-xs text-text-tertiary">No files found</div>
         ) : (
           <div ref={listRef} className="py-1">
             {results.map((item, i) => {
@@ -163,21 +164,16 @@ export function FileMentionPopup({ query, anchorRect, onSelect, onClose }: FileM
                     <File className="h-4 w-4 shrink-0 text-text-tertiary" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <span className={cn(
-                      'text-xs',
-                      i === selectedIndex ? 'font-medium' : 'font-normal',
-                    )}>
+                    <span
+                      className={cn('text-xs', i === selectedIndex ? 'font-medium' : 'font-normal')}
+                    >
                       {fileName}
                     </span>
                     {dirPath && (
-                      <span className="text-[10px] text-text-tertiary ml-1.5">
-                        {dirPath}
-                      </span>
+                      <span className="text-[10px] text-text-tertiary ml-1.5">{dirPath}</span>
                     )}
                   </div>
-                  {isDir && (
-                    <span className="text-[10px] text-text-tertiary">/</span>
-                  )}
+                  {isDir && <span className="text-[10px] text-text-tertiary">/</span>}
                 </button>
               );
             })}

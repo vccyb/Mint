@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
+import { ThemeProvider } from 'next-themes';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -11,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 const outfit = Outfit({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-body',
+  variable: '--font-sans',
 });
 
 export const metadata: Metadata = {
@@ -19,17 +20,14 @@ export const metadata: Metadata = {
   description: 'Chat with AI or let an Agent handle tasks for you',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="zh-CN"
-      className={`${plusJakartaSans.variable} ${outfit.variable}`}
-    >
-      <body className="font-sans antialiased bg-bg text-text">{children}</body>
+    <html lang="zh-CN" suppressHydrationWarning className={`${plusJakartaSans.variable} ${outfit.variable}`}>
+      <body className="font-sans antialiased bg-background text-foreground">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

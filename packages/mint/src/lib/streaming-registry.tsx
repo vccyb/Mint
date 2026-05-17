@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useContext, useRef, useCallback, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import type { Mode } from '@/types';
 import { MAX_CONCURRENT_STREAMS } from '@/lib/constants';
 
@@ -116,19 +123,9 @@ const emptyStatuses = new Map<string, StreamStatus>();
 export function useStreamStatuses(): Map<string, StreamStatus> {
   const registry = useStreamingRegistry();
 
-  const subscribe = useCallback(
-    (callback: () => void) => registry.subscribe(callback),
-    [registry],
-  );
+  const subscribe = useCallback((callback: () => void) => registry.subscribe(callback), [registry]);
 
-  const getSnapshot = useCallback(
-    () => registry.getSnapshot(),
-    [registry],
-  );
+  const getSnapshot = useCallback(() => registry.getSnapshot(), [registry]);
 
-  return useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    () => emptyStatuses,
-  );
+  return useSyncExternalStore(subscribe, getSnapshot, () => emptyStatuses);
 }

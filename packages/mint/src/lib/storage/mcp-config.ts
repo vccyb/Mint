@@ -8,7 +8,10 @@ const CONFIG_PATH = () => path.join(os.homedir(), '.mint', 'mcp-servers.json');
 async function ensureFile(): Promise<void> {
   const dir = path.dirname(CONFIG_PATH());
   await fs.mkdir(dir, { recursive: true });
-  const exists = await fs.access(CONFIG_PATH()).then(() => true, () => false);
+  const exists = await fs.access(CONFIG_PATH()).then(
+    () => true,
+    () => false,
+  );
   if (!exists) {
     await fs.writeFile(CONFIG_PATH(), '[]', 'utf-8');
   }
@@ -25,9 +28,7 @@ export async function saveMcpConfig(configs: McpServerConfig[]): Promise<void> {
   await fs.writeFile(CONFIG_PATH(), JSON.stringify(configs, null, 2), 'utf-8');
 }
 
-export async function addMcpServer(
-  config: Omit<McpServerConfig, 'id'>,
-): Promise<McpServerConfig> {
+export async function addMcpServer(config: Omit<McpServerConfig, 'id'>): Promise<McpServerConfig> {
   const configs = await loadMcpConfig();
   const newConfig: McpServerConfig = {
     ...config,

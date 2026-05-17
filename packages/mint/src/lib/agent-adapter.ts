@@ -37,7 +37,11 @@ export class AgentAdapter {
     sessionId: string,
     enqueue: (data: Uint8Array) => boolean,
   ): Parameters<typeof query>[0]['options'] {
-    log.info('Building query options', { sessionId, model: this.options.model, permissionMode: this.options.permissionMode });
+    log.info('Building query options', {
+      sessionId,
+      model: this.options.model,
+      permissionMode: this.options.permissionMode,
+    });
     const { model, permissionMode, systemPrompt, env, cwd, agents } = this.options;
     const encoder = new TextEncoder();
     const permMode = permissionMode;
@@ -69,7 +73,11 @@ export class AgentAdapter {
         options: Parameters<CanUseTool>[2],
       ) => {
         if (permMode === 'bypassPermissions') {
-          log.debug('Permission check', { toolName, behavior: 'allow', reason: 'bypassPermissions' });
+          log.debug('Permission check', {
+            toolName,
+            behavior: 'allow',
+            reason: 'bypassPermissions',
+          });
           return { behavior: 'allow' as const, updatedInput: input };
         }
         if (permMode === 'plan') {
@@ -94,7 +102,11 @@ export class AgentAdapter {
           if (options.signal) {
             options.signal.addEventListener(
               'abort',
-              () => resolvePending(requestId, { behavior: 'deny' as const, message: 'Request aborted' }),
+              () =>
+                resolvePending(requestId, {
+                  behavior: 'deny' as const,
+                  message: 'Request aborted',
+                }),
               { once: true },
             );
           }
@@ -125,7 +137,11 @@ export class AgentAdapter {
     log.info('Resuming SDK query', { sdkSessionId });
     return query({
       prompt,
-      options: { ...queryOptions, resume: sdkSessionId, abortController: this.abortController ?? undefined },
+      options: {
+        ...queryOptions,
+        resume: sdkSessionId,
+        abortController: this.abortController ?? undefined,
+      },
     });
   }
 

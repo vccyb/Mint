@@ -1,5 +1,6 @@
 import os from 'os';
 import path from 'path';
+import { promises as fs } from 'fs';
 import { getStorage } from '@/lib/storage';
 import { createSSEResponse } from '@/lib/sse';
 import { generateId } from '@/lib/utils';
@@ -13,7 +14,7 @@ import { AgentOrchestrator } from '@/lib/agent-orchestrator';
 import { resolveProjectPath } from '@/lib/path-resolver';
 import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
 import { withLogging } from '@/lib/with-logging';
-import type { ChatMessage, Attachment } from '@/types';
+import type { ChatMessage, Attachment, SessionFile } from '@/types';
 
 const orchestrator = new AgentOrchestrator();
 
@@ -21,7 +22,13 @@ export const POST = withLogging('api.agent', async (request) => {
   const log = createRequestLogger('api.agent', generateId());
 
   const {
-    message, sessionId, attachments, mentionedTools, permissionMode, planApproval, projectId,
+    message,
+    sessionId,
+    attachments,
+    mentionedTools,
+    permissionMode,
+    planApproval,
+    projectId,
   } = (await request.json()) as {
     message: string;
     sessionId?: string;
@@ -42,13 +49,15 @@ export const POST = withLogging('api.agent', async (request) => {
   const storage = getStorage();
   await storage.initialize();
   const config = await storage.readConfig();
-  const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
+  const apiKey =
+    config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
   const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? DEFAULT_BASE_URL;
   const model = config?.model ?? DEFAULT_MODEL;
 
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 
@@ -60,7 +69,11 @@ export const POST = withLogging('api.agent', async (request) => {
     await storage.createSession({
       id: sid,
       title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
-      mode: 'agent', model, createdAt: Date.now(), updatedAt: Date.now(), messageCount: 0,
+      mode: 'agent',
+      model,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messageCount: 0,
       ...(projectId && { projectId }),
     });
   }
@@ -69,7 +82,7 @@ export const POST = withLogging('api.agent', async (request) => {
   let effectiveProjectId = projectId;
   if (!effectiveProjectId && sessionId) {
     const sessions = await storage.listSessions();
-    const session = sessions.find(s => s.id === sessionId);
+    const session = sessions.find((s) => s.id === sessionId);
     effectiveProjectId = session?.projectId;
   }
 
@@ -79,12 +92,58 @@ export const POST = withLogging('api.agent', async (request) => {
     fallbackPath: process.env.MINT_CWD || process.cwd(),
   });
 
+  // --- Save image attachments to disk for agent Read tool ---
+  const savedFilePaths = new Map<string, string>();
+  if (attachments && attachments.length > 0) {
+    const imageAttachments = attachments.filter(
+      (a) => a.type.startsWith('image/') && a.content,
+    );
+    if (imageAttachments.length > 0) {
+      const uploadDir = path.join(cwd, '.mint-uploads', sid);
+      await fs.mkdir(uploadDir, { recursive: true });
+      for (const a of imageAttachments) {
+        const match = a.content!.match(/^data:[^;]+;base64,(.+)$/s);
+        if (match) {
+          const filePath = path.join(uploadDir, a.name);
+          await fs.writeFile(filePath, Buffer.from(match[1], 'base64'));
+          savedFilePaths.set(a.name, filePath);
+        }
+      }
+    }
+  }
+
   if (!planApproval) {
     const userMsg: ChatMessage = {
-      id: generateId(), role: 'user', content: message, timestamp: Date.now(),
+      id: generateId(),
+      role: 'user',
+      content: message,
+      timestamp: Date.now(),
       attachments: attachments && attachments.length > 0 ? attachments : undefined,
     };
     await storage.appendMessage(sid, userMsg);
+
+    // Sync message attachments to session files (so they appear in the file panel)
+    if (attachments && attachments.length > 0) {
+      const existingFiles = await storage.sessionFiles.listFiles(sid);
+      const existingNames = new Set(existingFiles.map((f) => f.name));
+      for (const a of attachments) {
+        if (existingNames.has(a.name)) continue;
+        const sf: SessionFile = {
+          id: `sf_${generateId()}`,
+          name: a.name,
+          type: a.type,
+          size: a.size,
+          uploadedAt: Date.now(),
+        };
+        // Strip data URL prefix for images — store raw base64 only
+        let fileContent = a.content ?? '';
+        if (a.type.startsWith('image/') && fileContent.startsWith('data:')) {
+          const base64Match = fileContent.match(/^data:[^;]+;base64,(.+)$/s);
+          if (base64Match) fileContent = base64Match[1];
+        }
+        await storage.sessionFiles.addFile(sid, sf, fileContent);
+      }
+    }
   }
 
   // --- History ---
@@ -120,7 +179,10 @@ export const POST = withLogging('api.agent', async (request) => {
       return `  <tool type="${t.type}" name="${t.value}" />`;
     });
     mentionedToolsPrompt = [
-      '<mentioned_tools>', ...lines, '</mentioned_tools>', '',
+      '<mentioned_tools>',
+      ...lines,
+      '</mentioned_tools>',
+      '',
       'The user has explicitly referenced the above tools/files. You MUST use them when processing this request.',
     ].join('\n');
   }
@@ -129,9 +191,21 @@ export const POST = withLogging('api.agent', async (request) => {
   const subAgents = buildBuiltinAgents();
   const delegationPrompt = buildDelegationPrompt(subAgents);
   const effectiveSystemPrompt = [skillIndexPrompt, mentionedToolsPrompt, delegationPrompt]
-    .filter(Boolean).join('\n\n');
+    .filter(Boolean)
+    .join('\n\n');
 
-  const permMode = (permissionMode ?? config?.permissionMode ?? 'default') as 'bypassPermissions' | 'default' | 'plan';
+  // --- Session files ---
+  const sessionFiles = await storage.sessionFiles.listFiles(sid);
+  const sessionFileContents = new Map<string, string>();
+  for (const sf of sessionFiles) {
+    const content = await storage.sessionFiles.getFileContent(sid, sf.id);
+    if (content) sessionFileContents.set(sf.id, String(content));
+  }
+
+  const permMode = (permissionMode ?? config?.permissionMode ?? 'default') as
+    | 'bypassPermissions'
+    | 'default'
+    | 'plan';
   const isPlanMode = permMode === 'plan';
 
   // --- SDK env ---
@@ -139,18 +213,28 @@ export const POST = withLogging('api.agent', async (request) => {
   // to PATH so the SDK's spawn("node", ...) always resolves correctly.
   const nodeDir = path.dirname(process.execPath);
   const sdkEnv: Record<string, string> = {
-    ...process.env as Record<string, string>,
+    ...(process.env as Record<string, string>),
     PATH: [nodeDir, process.env.PATH].filter(Boolean).join(path.delimiter),
     CLAUDE_CODE_ENABLE_TASKS: 'true',
   };
-  if (apiKey) { sdkEnv.ANTHROPIC_API_KEY = apiKey; sdkEnv.ANTHROPIC_AUTH_TOKEN = apiKey; }
-  if (baseUrl) { sdkEnv.ANTHROPIC_BASE_URL = baseUrl; }
+  if (apiKey) {
+    sdkEnv.ANTHROPIC_API_KEY = apiKey;
+    sdkEnv.ANTHROPIC_AUTH_TOKEN = apiKey;
+  }
+  if (baseUrl) {
+    sdkEnv.ANTHROPIC_BASE_URL = baseUrl;
+  }
 
   // --- Adapter ---
   const adapter = new AgentAdapter({
-    model, apiKey, baseUrl, permissionMode: permMode,
-    systemPrompt: effectiveSystemPrompt, agents: subAgents,
-    env: sdkEnv, cwd,
+    model,
+    apiKey,
+    baseUrl,
+    permissionMode: permMode,
+    systemPrompt: effectiveSystemPrompt,
+    agents: subAgents,
+    env: sdkEnv,
+    cwd,
   });
 
   // --- Stream ---
@@ -159,20 +243,40 @@ export const POST = withLogging('api.agent', async (request) => {
       let streamClosed = false;
       function safeEnqueue(data: Uint8Array): boolean {
         if (streamClosed) return false;
-        try { controller.enqueue(data); return true; } catch { streamClosed = true; return false; }
+        try {
+          controller.enqueue(data);
+          return true;
+        } catch {
+          streamClosed = true;
+          return false;
+        }
       }
 
       try {
         await orchestrator.runSession({
-          sessionId: sid, prompt: message, historyMessages,
-          attachments, isPlanMode, isNewSession,
-          adapter, enqueue: safeEnqueue, storage,
-          skillPathMap, skillsEnabled: config?.skillsEnabled ?? false,
+          sessionId: sid,
+          prompt: message,
+          historyMessages,
+          attachments,
+          isPlanMode,
+          isNewSession,
+          adapter,
+          enqueue: safeEnqueue,
+          storage,
+          skillPathMap,
+          skillsEnabled: config?.skillsEnabled ?? false,
           abortSignal: request.signal,
+          sessionFiles,
+          sessionFileContents,
+          savedFilePaths,
         });
       } finally {
         streamClosed = true;
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       }
     },
   });

@@ -4,9 +4,7 @@ import type { RefObject } from 'react';
 import { McpMentionComponent } from './mcp-mention-component';
 import { createSuggestionConfig } from './suggestion';
 
-export function createMcpMention(
-  onPopupStateChange?: (open: boolean) => void,
-) {
+export function createMcpMention(onPopupStateChange?: (open: boolean) => void) {
   return Mention.extend({
     name: 'mcpMention',
 
@@ -19,6 +17,10 @@ export function createMcpMention(
     HTMLAttributes: {
       class: 'mcp-mention',
     },
-    suggestion: createSuggestionConfig('mcp', undefined as unknown as RefObject<string | null | undefined>, onPopupStateChange),
+    suggestion: createSuggestionConfig(
+      'mcp',
+      undefined as unknown as RefObject<string | null | undefined>,
+      onPopupStateChange,
+    ),
   });
 }

@@ -8,7 +8,11 @@ interface ToolInfo {
 }
 
 const MODEL_NATIVE_TOOLS: ToolInfo[] = [
-  { name: '对话/推理', category: 'native', description: 'Multi-turn conversation and logical reasoning' },
+  {
+    name: '对话/推理',
+    category: 'native',
+    description: 'Multi-turn conversation and logical reasoning',
+  },
   { name: '代码理解', category: 'native', description: 'Code comprehension and analysis' },
   { name: '视觉理解', category: 'native', description: 'Image and visual content understanding' },
   { name: 'PDF理解', category: 'native', description: 'PDF document parsing and comprehension' },

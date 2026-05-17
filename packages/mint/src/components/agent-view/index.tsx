@@ -1,27 +1,25 @@
 'use client';
 
-import {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from 'react';
-import { PanelRight, Users } from 'lucide-react';
-import { MessageList } from './message-list';
-import { MessageInput, type MessageInputHandle } from './message-input';
-import { FilePanel } from './file-panel';
-import { FilePreviewPanel } from './file-preview';
-import { AskQuestionBanner } from './ask-question-banner';
-import { TeamDrawer } from './team/team-drawer';
-import { TeamDetailOverlay } from './team/team-detail-overlay';
-import {
-  RightPanel,
-  RightPanelContext,
-  type PanelState,
-} from './right-panel';
-import { TodoList } from './todo-list';
-import type { ChatMessage, Attachment, PermissionRequestData, TodoItem, TeammateState } from '@/types';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { PanelRight, Users, Zap } from 'lucide-react';
+import { MessageList } from '../message-list';
+import { MessageInput, type MessageInputHandle } from '../message-input';
+import { FilePanel } from '../file-panel';
+import { FilePreviewPanel } from '../file-preview';
+import { AskQuestionBanner } from '../ask-question-banner';
+import { TeamDrawer } from '../team/team-drawer';
+import { TeamDetailOverlay } from '../team/team-detail-overlay';
+import { RightPanel, RightPanelContext, type PanelState } from '../right-panel';
+import { TodoList } from '../todo-list';
+import { useResizePanels } from './use-resize-panels';
+import type {
+  ChatMessage,
+  Attachment,
+  PermissionRequestData,
+  TodoItem,
+  TeammateState,
+  SessionFile,
+} from '@/types';
 
 interface AgentViewProps {
   messages: ChatMessage[];
@@ -39,9 +37,7 @@ interface AgentViewProps {
   concurrencyLimitReached?: boolean;
   onApprovePlan?: (mode: 'auto' | 'manual') => void;
   permissionMode?: 'bypassPermissions' | 'default' | 'plan';
-  onPermissionModeChange?: (
-    mode: 'bypassPermissions' | 'default' | 'plan',
-  ) => void;
+  onPermissionModeChange?: (mode: 'bypassPermissions' | 'default' | 'plan') => void;
   onTogglePlanMode?: () => void;
   /** 当前会话是否关联了工程 */
   hasProject?: boolean;
@@ -51,6 +47,12 @@ interface AgentViewProps {
   teammates?: TeammateState[];
   /** 是否正在等待 resume */
   isWaitingResume?: boolean;
+  /** Token usage (input tokens) */
+  tokenUsage?: number;
+  /** Token budget (context window) */
+  tokenBudget?: number;
+  /** Whether context is being compacted */
+  isCompacting?: boolean;
 }
 
 export function AgentView({
@@ -71,17 +73,26 @@ export function AgentView({
   activeProjectId = null,
   teammates,
   isWaitingResume,
+  tokenUsage,
+  tokenBudget,
+  isCompacting,
 }: AgentViewProps) {
   const [panelState, setPanelState] = useState<PanelState>('visible');
   const [editingContent, setEditingContent] = useState<string>('');
-  const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
-  const [fileTreeWidth, setFileTreeWidth] = useState(220);
-  const [previewWidth, setPreviewWidth] = useState(480);
+  const [previewFile, setPreviewFile] = useState<{
+    path: string;
+    name: string;
+    isSessionFile?: boolean;
+    sessionId?: string;
+  } | null>(null);
   const [teamPanelOpen, setTeamPanelOpen] = useState(false);
   const [teamPanelFullscreen, setTeamPanelFullscreen] = useState(false);
   const [selectedTeammateId, setSelectedTeammateId] = useState<string | null>(null);
   const [dismissedTodos, setDismissedTodos] = useState(false);
+  const [sessionFilesRefreshKey, setSessionFilesRefreshKey] = useState(0);
   const inputRef = useRef<MessageInputHandle>(null);
+  const { fileTreeWidth, previewWidth, handleResizeMouseDown, handlePreviewResize } =
+    useResizePanels();
 
   const ctxValue = useMemo(
     () => ({
@@ -90,14 +101,18 @@ export function AgentView({
     }),
     [panelState],
   );
-
   // Auto-focus input when messages change
   useEffect(() => {
     inputRef.current?.focus();
   }, [messages.length]);
 
+  // Refresh session files panel when streaming ends (attachments have been synced by then)
+  useEffect(() => {
+    if (!isStreaming && messages.length > 0) {
+      setSessionFilesRefreshKey((k) => k + 1);
+    }
+  }, [isStreaming]);
   const hasPreview = previewFile !== null;
-
   const togglePanel = () => {
     if (panelState === 'hidden') {
       setPanelState('visible');
@@ -106,85 +121,71 @@ export function AgentView({
       setPreviewFile(null);
     }
   };
-
   const handleFileClick = (path: string, name: string) => {
     setPreviewFile({ path, name });
   };
-
   const handleClosePreview = () => {
     setPreviewFile(null);
   };
-
-  const handleResizeMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      const startWidth = fileTreeWidth;
-      const onMove = (ev: MouseEvent) => {
-        const delta = startX - ev.clientX;
-        setFileTreeWidth(Math.min(400, Math.max(150, startWidth + delta)));
-      };
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-    },
-    [fileTreeWidth],
-  );
-
-  const handlePreviewResize = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      const startWidth = previewWidth;
-      const onMove = (ev: MouseEvent) => {
-        const delta = startX - ev.clientX; // 向左拖 = 预览变宽
-        setPreviewWidth(Math.min(800, Math.max(200, startWidth + delta)));
-      };
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-    },
-    [previewWidth],
-  );
-
   // Close preview when session changes
   useEffect(() => {
     setPreviewFile(null);
     setDismissedTodos(false);
   }, [sessionKey]);
-
   // Compute latest todos for pinned TodoList above input (Codex style)
-  const latestTodoMsg = [...messages].reverse().find(
-    (m) => m.role === 'assistant' && !m.isPlanMode && m.todos && m.todos.length > 0,
-  );
+  const latestTodoMsg = [...messages]
+    .reverse()
+    .find((m) => m.role === 'assistant' && !m.isPlanMode && m.todos && m.todos.length > 0);
   const latestTodos = latestTodoMsg?.todos;
-  const hasActiveTodos = !!latestTodos && latestTodos.some((t: TodoItem) => t.status === 'in_progress');
-
+  const hasActiveTodos =
+    !!latestTodos && latestTodos.some((t: TodoItem) => t.status === 'in_progress');
   return (
     <RightPanelContext.Provider value={ctxValue}>
       <div className="relative flex flex-1 flex-col min-h-0">
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-border/80 bg-white/55 px-6 py-3 shrink-0 backdrop-blur">
+        <div className="flex items-center gap-2 border-b border-border/80 bg-card/55 px-6 py-3 shrink-0 backdrop-blur">
           <div className="pill bg-primary-light text-primary-text">Agent</div>
-          <span className="text-xs text-text-tertiary">
-            具备读写文件与执行命令能力
-          </span>
+          <span className="text-xs text-text-tertiary">具备读写文件与执行命令能力</span>
           <div className="flex-1" />
+          {/* Context usage badge */}
+          {tokenUsage !== undefined && tokenBudget !== undefined && tokenUsage > 0 && (
+            <button
+              onClick={() => {
+                if (isStreaming && !isCompacting) return;
+                // Send /compact command via the input
+                onSend('/compact');
+              }}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                isCompacting
+                  ? 'text-warning animate-pulse'
+                  : tokenUsage / tokenBudget > 0.775
+                    ? 'text-destructive hover:bg-red-50'
+                    : 'text-text-tertiary hover:text-muted-foreground hover:bg-bg-warm'
+              }`}
+              title={
+                isCompacting
+                  ? 'Compacting context...'
+                  : `Context: ${tokenUsage.toLocaleString()} / ${(tokenBudget / 1000).toFixed(0)}K tokens`
+              }
+            >
+              <Zap className="h-3 w-3" />
+              {isCompacting
+                ? 'Compressing...'
+                : `${Math.round((tokenUsage / tokenBudget) * 100)}%`}
+            </button>
+          )}
           {/* Teams button */}
           <button
-            onClick={() => { setTeamPanelOpen(!teamPanelOpen); setTeamPanelFullscreen(false); }}
+            onClick={() => {
+              setTeamPanelOpen(!teamPanelOpen);
+              setTeamPanelFullscreen(false);
+            }}
             className={`relative flex items-center justify-center w-[28px] h-[28px] rounded-[6px] transition-colors cursor-pointer ${
               teamPanelOpen
-                ? 'bg-[#E8F2FF] text-[#007AFF]'
+                ? 'bg-primary-light text-primary'
                 : teammates && teammates.length > 0
-                  ? 'text-[#007AFF]'
-                  : 'text-[#AEAEB2] hover:text-[#6E6E73] hover:bg-bg-warm'
+                  ? 'text-primary'
+                  : 'text-text-tertiary hover:text-muted-foreground hover:bg-bg-warm'
             }`}
             title="Agent Teams"
           >
@@ -200,60 +201,60 @@ export function AgentView({
             onClick={togglePanel}
             className={`flex items-center justify-center w-[28px] h-[28px] rounded-[6px] transition-colors cursor-pointer ${
               panelState !== 'hidden'
-                ? 'bg-[#E8F2FF] text-[#007AFF]'
-                : 'text-[#AEAEB2] hover:text-[#6E6E73] hover:bg-bg-warm'
+                ? 'bg-primary-light text-primary'
+                : 'text-text-tertiary hover:text-muted-foreground hover:bg-bg-warm'
             }`}
             title={panelState === 'hidden' ? '打开侧栏' : '关闭侧栏'}
           >
             <PanelRight className="h-4 w-4" />
           </button>
         </div>
-
         {/* Body: Chat + File Panel + Preview Panel */}
         <div className="flex flex-1 min-h-0">
           {/* Chat area */}
           <div className="flex flex-col flex-1 min-h-0 min-w-0">
-              <MessageList
-                messages={messages}
-                isStreaming={isStreaming}
-                streamStartTime={streamStartTime}
-                onEditMessage={(_id, content) =>
-                  setEditingContent(content)
-                }
-                onApprovePlan={onApprovePlan}
-                hideLastTodoAndPlan={hasActiveTodos}
-                teammates={teammates}
-                isWaitingResume={isWaitingResume}
-                onViewTeam={() => { setTeamPanelOpen(true); setTeamPanelFullscreen(false); }}
-                onFileClick={(path) => {
-                  const name = path.split('/').pop() ?? path;
-                  handleFileClick(path, name);
-                }}
-              />
-              {hasActiveTodos && !pendingPermission && !dismissedTodos && (
-                <div className="px-6 py-2">
-                  <div className="mx-auto max-w-[640px]">
-                    <TodoList
-                      todos={latestTodos!}
-                      pinned
-                      onDismiss={() => setDismissedTodos(true)}
-                      teamCount={teammates?.filter(t => t.status === 'running').length}
-                    />
-                  </div>
+            <MessageList
+              messages={messages}
+              isStreaming={isStreaming}
+              streamStartTime={streamStartTime}
+              onEditMessage={(_id, content) => setEditingContent(content)}
+              onApprovePlan={onApprovePlan}
+              hideLastTodoAndPlan={hasActiveTodos}
+              teammates={teammates}
+              isWaitingResume={isWaitingResume}
+              onViewTeam={() => {
+                setTeamPanelOpen(true);
+                setTeamPanelFullscreen(false);
+              }}
+              onFileClick={(path) => {
+                const name = path.split('/').pop() ?? path;
+                handleFileClick(path, name);
+              }}
+            />
+            {hasActiveTodos && !pendingPermission && !dismissedTodos && (
+              <div className="px-6 py-2">
+                <div className="mx-auto max-w-[640px]">
+                  <TodoList
+                    todos={latestTodos!}
+                    pinned
+                    onDismiss={() => setDismissedTodos(true)}
+                    teamCount={teammates?.filter((t) => t.status === 'running').length}
+                  />
                 </div>
-              )}
-              {pendingPermission && onPermissionDecision && (
-                <div className="px-6 py-2">
-                  <div className="mx-auto max-w-[640px]">
-                    <AskQuestionBanner
-                      request={pendingPermission}
-                      onDecision={onPermissionDecision}
-                      pinned
-                    />
-                  </div>
+              </div>
+            )}
+            {pendingPermission && onPermissionDecision && (
+              <div className="px-6 py-2">
+                <div className="mx-auto max-w-[640px]">
+                  <AskQuestionBanner
+                    request={pendingPermission}
+                    onDecision={onPermissionDecision}
+                    pinned
+                  />
                 </div>
-              )}
-              <div className="pb-3">
+              </div>
+            )}
+            <div className="pb-3">
               <MessageInput
                 ref={inputRef}
                 sessionKey={sessionKey}
@@ -270,9 +271,11 @@ export function AgentView({
                 inputDisabled={hasActiveTodos && !pendingPermission}
                 mode="agent"
                 projectId={activeProjectId}
+                tokenUsage={tokenUsage}
+                tokenBudget={tokenBudget}
               />
-              </div>
             </div>
+          </div>
 
           {/* Resize handle between chat and file tree */}
           {panelState !== 'hidden' && (
@@ -289,6 +292,16 @@ export function AgentView({
               projectId={activeProjectId}
               selectedFile={previewFile?.path}
               onFileClick={handleFileClick}
+              sessionId={sessionKey}
+              onSessionFileClick={(file: SessionFile) => {
+                setPreviewFile({
+                  path: file.id,
+                  name: file.name,
+                  isSessionFile: true,
+                  sessionId: sessionKey ?? undefined,
+                });
+              }}
+              sessionFilesRefreshKey={sessionFilesRefreshKey}
             />
           </RightPanel>
 
@@ -311,6 +324,8 @@ export function AgentView({
                 fileName={previewFile.name}
                 projectId={activeProjectId}
                 onClose={handleClosePreview}
+                sessionFileId={previewFile.isSessionFile ? previewFile.path : undefined}
+                sessionId={previewFile.isSessionFile ? previewFile.sessionId : undefined}
               />
             </div>
           )}
@@ -334,7 +349,11 @@ export function AgentView({
               teammates={teammates ?? []}
               isWaitingResume={isWaitingResume ?? false}
               initialSelectedId={selectedTeammateId}
-              onClose={() => { setTeamPanelOpen(false); setTeamPanelFullscreen(false); setSelectedTeammateId(null); }}
+              onClose={() => {
+                setTeamPanelOpen(false);
+                setTeamPanelFullscreen(false);
+                setSelectedTeammateId(null);
+              }}
             />
           )}
         </div>

@@ -45,16 +45,17 @@ export const POST = withLogging('api.mcp.test', async (request) => {
     });
 
     // Send JSON-RPC initialize request
-    const initRequest = JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2024-11-05',
-        capabilities: {},
-        clientInfo: { name: 'mint', version: '1.0.0' },
-      },
-    }) + '\n';
+    const initRequest =
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'mint', version: '1.0.0' },
+        },
+      }) + '\n';
 
     try {
       proc.stdin.write(initRequest);
@@ -64,12 +65,13 @@ export const POST = withLogging('api.mcp.test', async (request) => {
 
     // After a short delay, send tools/list
     setTimeout(() => {
-      const toolsRequest = JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/list',
-        params: {},
-      }) + '\n';
+      const toolsRequest =
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/list',
+          params: {},
+        }) + '\n';
       try {
         proc.stdin.write(toolsRequest);
       } catch {

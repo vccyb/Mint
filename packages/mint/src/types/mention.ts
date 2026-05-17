@@ -28,7 +28,11 @@ export function extractMentions(content: string): MentionChip[] {
   let match;
   while ((match = regex.exec(content)) !== null) {
     if (match[2]) {
-      mentions.push({ type: 'file', label: match[2].split('/').pop() ?? match[2], value: match[2] });
+      mentions.push({
+        type: 'file',
+        label: match[2].split('/').pop() ?? match[2],
+        value: match[2],
+      });
     } else if (match[3]) {
       mentions.push({ type: 'skill', label: match[3], value: match[3] });
     } else if (match[4]) {

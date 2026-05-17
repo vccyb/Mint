@@ -15,15 +15,46 @@ export const THINKING_BUDGET_TOKENS = 10000;
 export const MAX_ATTACHMENT_SIZE = 1024 * 1024; // 1 MB
 export const MAX_EMBEDDED_TEXT_SIZE = 100 * 1024; // 100 KB — max text content embedded in prompts
 export const ALLOWED_FILE_TYPES = [
-  'text/*', 'image/*',
+  'text/*',
+  'image/*',
   '.pdf',
-  '.md', '.txt', '.csv', '.json', '.xml', '.yaml', '.yml',
-  '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
-  '.py', '.rb', '.go', '.rs', '.java', '.kt',
-  '.c', '.cpp', '.h', '.hpp',
-  '.html', '.css', '.scss', '.less', '.svg',
-  '.sh', '.bash', '.zsh', '.sql', '.graphql',
-  '.toml', '.ini', '.env', '.gitignore',
+  '.md',
+  '.txt',
+  '.csv',
+  '.json',
+  '.xml',
+  '.yaml',
+  '.yml',
+  '.js',
+  '.jsx',
+  '.ts',
+  '.tsx',
+  '.mjs',
+  '.cjs',
+  '.py',
+  '.rb',
+  '.go',
+  '.rs',
+  '.java',
+  '.kt',
+  '.c',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.html',
+  '.css',
+  '.scss',
+  '.less',
+  '.svg',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.sql',
+  '.graphql',
+  '.toml',
+  '.ini',
+  '.env',
+  '.gitignore',
 ].join(',');
 
 // ── Agent Orchestration ──────────────────────────────────────────────
@@ -34,13 +65,22 @@ export const GLOBAL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 // ── Streaming Concurrency ────────────────────────────────────────────
 export const MAX_CONCURRENT_STREAMS = 5;
 
+// ── Speech-to-Text ──────────────────────────────────────────────────
+export const DEFAULT_STT_MODEL = 'whisper-1';
+
 // ── Permissions ──────────────────────────────────────────────────────
 export const PERMISSION_TIMEOUT_MS = 60_000; // 1 minute
 
 // ── Read-Only Tools (allowed without explicit permission) ────────────
 export const READ_ONLY_TOOLS: string[] = [
-  'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch',
-  'TaskOutput', 'Agent', 'TodoWrite',
+  'Read',
+  'Glob',
+  'Grep',
+  'WebSearch',
+  'WebFetch',
+  'TaskOutput',
+  'Agent',
+  'TodoWrite',
   'mcp__pencil__get_editor_state',
   'mcp__pencil__batch_get',
 ];

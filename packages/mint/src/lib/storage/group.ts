@@ -46,7 +46,10 @@ export class GroupStorage {
     return group;
   }
 
-  async updateGroup(groupId: string, partial: Partial<Pick<SessionGroup, 'name' | 'sessionIds'>>): Promise<void> {
+  async updateGroup(
+    groupId: string,
+    partial: Partial<Pick<SessionGroup, 'name' | 'sessionIds'>>,
+  ): Promise<void> {
     const groups = await this.read();
     const idx = groups.findIndex((g) => g.id === groupId);
     if (idx === -1) return;

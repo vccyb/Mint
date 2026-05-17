@@ -82,12 +82,14 @@ export function ProviderTab() {
       {/* Info box */}
       <div className="rounded border border-border bg-bg-warm px-3 py-2.5 mb-4 max-w-lg">
         <p className="text-xs text-text-secondary leading-relaxed">
-          Mint uses the <span className="font-mono font-medium text-text">Anthropic Messages API</span> format.
-          Any provider with an Anthropic-compatible endpoint can be used here
-          (e.g. Zhipu GLM, OpenRouter, or direct Anthropic API).
+          Mint uses the{' '}
+          <span className="font-mono font-medium text-text">Anthropic Messages API</span> format.
+          Any provider with an Anthropic-compatible endpoint can be used here (e.g. Zhipu GLM,
+          OpenRouter, or direct Anthropic API).
         </p>
         <p className="text-[10px] text-text-tertiary mt-1.5">
-          Configured values take priority over environment variables (ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL).
+          Configured values take priority over environment variables (ANTHROPIC_API_KEY,
+          ANTHROPIC_BASE_URL).
         </p>
       </div>
 
@@ -138,7 +140,12 @@ export function ProviderTab() {
           <label className="block text-xs font-medium text-text mb-1">Permission Mode</label>
           <select
             value={config.permissionMode ?? 'bypassPermissions'}
-            onChange={(e) => setConfig((c) => ({ ...c, permissionMode: e.target.value as ProviderConfig['permissionMode'] }))}
+            onChange={(e) =>
+              setConfig((c) => ({
+                ...c,
+                permissionMode: e.target.value as ProviderConfig['permissionMode'],
+              }))
+            }
             className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary"
           >
             <option value="bypassPermissions">Bypass (auto-approve all)</option>
@@ -146,7 +153,8 @@ export function ProviderTab() {
             <option value="plan">Plan mode (read-only, no edits)</option>
           </select>
           <p className="text-[10px] text-text-tertiary mt-1">
-            Controls how the agent requests permission to use tools. &quot;Bypass&quot; auto-approves everything.
+            Controls how the agent requests permission to use tools. &quot;Bypass&quot;
+            auto-approves everything.
           </p>
         </div>
 

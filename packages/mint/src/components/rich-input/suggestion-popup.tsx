@@ -61,16 +61,14 @@ export const SuggestionPopup = forwardRef<SuggestionPopupRef, SuggestionPopupPro
     }));
 
     return (
-      <div className="z-50 rounded-xl border border-border bg-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] overflow-hidden">
+      <div className="z-50 rounded-xl border border-border bg-card shadow-[0_4px_16px_rgba(0,0,0,0.12)] overflow-hidden">
         <div ref={listRef} className="max-h-64 overflow-y-auto py-1 min-w-[240px]">
           {loading && items.length === 0 ? (
             <div className="flex items-center justify-center py-6 text-text-tertiary">
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : items.length === 0 ? (
-            <div className="px-3 py-4 text-center text-xs text-text-tertiary">
-              No results
-            </div>
+            <div className="px-3 py-4 text-center text-xs text-text-tertiary">No results</div>
           ) : (
             items.map((item, i) => (
               <button
@@ -78,16 +76,18 @@ export const SuggestionPopup = forwardRef<SuggestionPopupRef, SuggestionPopupPro
                 className={cn(
                   'flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors cursor-pointer',
                   i === selectedIndex
-                    ? 'bg-[#E8F2FF] text-text font-medium'
+                    ? 'bg-primary-light text-text font-medium'
                     : 'text-text-secondary hover:bg-bg-warm hover:text-text',
                 )}
                 onClick={() => command({ id: item.value, label: item.label })}
                 onMouseEnter={() => setSelectedIndex(i)}
               >
-                {type === 'file' ? (() => {
-                  const { Icon, color } = getFileIcon(item.label);
-                  return <Icon className={cn('h-4 w-4 shrink-0', color)} />;
-                })() : null}
+                {type === 'file'
+                  ? (() => {
+                      const { Icon, color } = getFileIcon(item.label);
+                      return <Icon className={cn('h-4 w-4 shrink-0', color)} />;
+                    })()
+                  : null}
                 <div className="min-w-0 flex-1">
                   <div className="text-xs truncate">{item.label}</div>
                   {type === 'file' && item.value && (

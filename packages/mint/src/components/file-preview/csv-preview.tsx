@@ -65,7 +65,10 @@ export function CsvPreview({ content }: CsvPreviewProps) {
         <thead>
           <tr className="bg-bg-warm border-b border-border">
             {Array.from({ length: maxCols }).map((_, i) => (
-              <th key={i} className="px-3 py-2 text-left font-medium text-text-secondary border-r border-border/50 last:border-r-0">
+              <th
+                key={i}
+                className="px-3 py-2 text-left font-medium text-text-secondary border-r border-border/50 last:border-r-0"
+              >
                 {header[i] ?? ''}
               </th>
             ))}
@@ -75,7 +78,10 @@ export function CsvPreview({ content }: CsvPreviewProps) {
           {body.map((row, ri) => (
             <tr key={ri} className="border-b border-border/30 hover:bg-bg-warm/50">
               {Array.from({ length: maxCols }).map((_, ci) => (
-                <td key={ci} className="px-3 py-1.5 text-text border-r border-border/30 last:border-r-0">
+                <td
+                  key={ci}
+                  className="px-3 py-1.5 text-text border-r border-border/30 last:border-r-0"
+                >
                   {row[ci] ?? ''}
                 </td>
               ))}

@@ -13,8 +13,14 @@ type PreviewType = 'code' | 'image' | 'html' | 'markdown' | 'csv' | 'binary';
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp']);
 const IMAGE_MIME: Record<string, string> = {
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  svg: 'image/svg+xml', webp: 'image/webp', ico: 'image/x-icon', bmp: 'image/bmp',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  webp: 'image/webp',
+  ico: 'image/x-icon',
+  bmp: 'image/bmp',
 };
 
 function getPreviewType(filename: string): PreviewType {
@@ -28,11 +34,16 @@ function getPreviewType(filename: string): PreviewType {
 
 function getTypeIcon(type: PreviewType) {
   switch (type) {
-    case 'image': return ImageIcon;
-    case 'html': return FileCode;
-    case 'markdown': return FileText;
-    case 'csv': return FileSpreadsheet;
-    default: return File;
+    case 'image':
+      return ImageIcon;
+    case 'html':
+      return FileCode;
+    case 'markdown':
+      return FileText;
+    case 'csv':
+      return FileSpreadsheet;
+    default:
+      return File;
   }
 }
 
@@ -41,9 +52,19 @@ interface FilePreviewPanelProps {
   fileName: string;
   projectId: string | null;
   onClose: () => void;
+  /** If set, fetch content from session files API instead of workspace files API */
+  sessionFileId?: string;
+  sessionId?: string;
 }
 
-export function FilePreviewPanel({ filePath, fileName, projectId, onClose }: FilePreviewPanelProps) {
+export function FilePreviewPanel({
+  filePath,
+  fileName,
+  projectId,
+  onClose,
+  sessionFileId,
+  sessionId,
+}: FilePreviewPanelProps) {
   const [content, setContent] = useState<string | null>(null);
   const [encoding, setEncoding] = useState<string>('text');
   const [mimeType, setMimeType] = useState<string>('');
@@ -53,18 +74,27 @@ export function FilePreviewPanel({ filePath, fileName, projectId, onClose }: Fil
   const [error, setError] = useState<string | null>(null);
 
   const previewType = getPreviewType(fileName);
+  const isSessionFile = !!sessionFileId && !!sessionId;
 
   const fetchContent = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ path: filePath });
-      if (projectId) params.set('projectId', projectId);
-      const res = await fetch(`/api/files/content?${params}`);
+      let res: Response;
+      if (isSessionFile) {
+        const params = new URLSearchParams({
+          sessionId: sessionId!,
+          fileId: sessionFileId!,
+        });
+        res = await fetch(`/api/sessions/files/content?${params}`);
+      } else {
+        const params = new URLSearchParams({ path: filePath });
+        if (projectId) params.set('projectId', projectId);
+        res = await fetch(`/api/files/content?${params}`);
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: 'Failed to load' }));
         if (res.status === 415) {
-          // Binary file — show placeholder
           setContent(null);
           setEncoding('binary');
         } else {
@@ -75,7 +105,7 @@ export function FilePreviewPanel({ filePath, fileName, projectId, onClose }: Fil
       const data = await res.json();
       setContent(data.content);
       setEncoding(data.encoding ?? 'text');
-      setMimeType(data.mimeType ?? '');
+      setMimeType(data.mimeType ?? data.type ?? '');
       setFileSize(data.size);
       setLanguage(data.language ?? '');
     } catch {
@@ -83,7 +113,7 @@ export function FilePreviewPanel({ filePath, fileName, projectId, onClose }: Fil
     } finally {
       setLoading(false);
     }
-  }, [filePath, projectId]);
+  }, [filePath, projectId, isSessionFile, sessionId, sessionFileId]);
 
   useEffect(() => {
     fetchContent();
@@ -147,9 +177,20 @@ export function FilePreviewPanel({ filePath, fileName, projectId, onClose }: Fil
           <CodePreview content={content} filename={fileName} />
         )}
 
-        {!loading && !error && content != null && previewType === 'image' && encoding === 'base64' && (
-          <ImagePreview content={content} mimeType={mimeType || IMAGE_MIME[fileName.split('.').pop()?.toLowerCase() ?? ''] || 'image/png'} />
-        )}
+        {!loading &&
+          !error &&
+          content != null &&
+          previewType === 'image' &&
+          encoding === 'base64' && (
+            <ImagePreview
+              content={content}
+              mimeType={
+                mimeType ||
+                IMAGE_MIME[fileName.split('.').pop()?.toLowerCase() ?? ''] ||
+                'image/png'
+              }
+            />
+          )}
 
         {!loading && !error && content != null && previewType === 'html' && (
           <HtmlPreview content={content} />
@@ -169,7 +210,16 @@ export function FilePreviewPanel({ filePath, fileName, projectId, onClose }: Fil
 
 function FileWarning2Icon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
       <path d="M14 2v4a2 2 0 0 0 2 2h4" />
       <path d="M12 18v-6" />

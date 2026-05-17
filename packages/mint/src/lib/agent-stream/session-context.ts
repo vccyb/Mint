@@ -37,10 +37,10 @@ export class SessionStreamState {
   // --- bridge data: content-handler → teammate-handler ---
   // Maps tool_use_id (from content-handler) to data for use by
   // teammate-handler when task_started arrives with the real task_id.
-  pendingTaskDescriptions: Map<string, string> = new Map();   // toolUseId → description
-  pendingTaskStartTimes: Map<string, number> = new Map();     // toolUseId → startTime
-  pendingTaskToTaskId: Map<string, string> = new Map();       // toolUseId → taskId
-  pendingTaskInputs: Map<string, string> = new Map();         // toolUseId → full prompt
+  pendingTaskDescriptions: Map<string, string> = new Map(); // toolUseId → description
+  pendingTaskStartTimes: Map<string, number> = new Map(); // toolUseId → startTime
+  pendingTaskToTaskId: Map<string, string> = new Map(); // toolUseId → taskId
+  pendingTaskInputs: Map<string, string> = new Map(); // toolUseId → full prompt
 
   // --- SDK session ---
   capturedSdkSessionId: string | null = null;

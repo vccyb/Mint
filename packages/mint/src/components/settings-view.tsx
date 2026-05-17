@@ -1,15 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  ArrowLeft,
-  Wrench,
-  Loader2,
-  AlertCircle,
-  Settings2,
-  Sparkles,
-  Plug,
-} from 'lucide-react';
+import { ArrowLeft, Wrench, Loader2, AlertCircle, Settings2, Sparkles, Plug } from 'lucide-react';
 import { ProviderTab } from './settings/provider-tab';
 import { SkillsTab } from './settings/skills-tab';
 import { McpTab } from './settings/mcp-tab';
@@ -110,9 +102,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           {activeTab === 'tools' && (
             <div>
               <h2 className="text-sm font-semibold text-text">Available Tools</h2>
-              <p className="text-xs text-text-tertiary mt-0.5 mb-4">
-                Tools available to the agent
-              </p>
+              <p className="text-xs text-text-tertiary mt-0.5 mb-4">Tools available to the agent</p>
 
               {loading && (
                 <div className="flex items-center gap-2 text-text-tertiary py-8 justify-center">
@@ -131,13 +121,25 @@ export function SettingsView({ onBack }: SettingsViewProps) {
               {!loading && !error && (
                 <div className="space-y-6">
                   {nativeTools.length > 0 && (
-                    <ToolGroup title="Model-Native" tools={nativeTools} badgeClass="text-success bg-success/10" />
+                    <ToolGroup
+                      title="Model-Native"
+                      tools={nativeTools}
+                      badgeClass="text-success bg-success/10"
+                    />
                   )}
                   {sdkTools.length > 0 && (
-                    <ToolGroup title="SDK Built-in Tools" tools={sdkTools} badgeClass="text-primary bg-primary/10" />
+                    <ToolGroup
+                      title="SDK Built-in Tools"
+                      tools={sdkTools}
+                      badgeClass="text-primary bg-primary/10"
+                    />
                   )}
                   {mcpTools.length > 0 && (
-                    <ToolGroup title="MCP Tools" tools={mcpTools} badgeClass="text-warning bg-warning/10" />
+                    <ToolGroup
+                      title="MCP Tools"
+                      tools={mcpTools}
+                      badgeClass="text-warning bg-warning/10"
+                    />
                   )}
                   {mcpTools.length === 0 && (
                     <p className="text-xs text-text-tertiary italic">
@@ -169,16 +171,12 @@ function ToolGroup({
 }) {
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">
-        {title}
-      </h3>
+      <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">{title}</h3>
       <div className="space-y-2">
         {tools.map((tool) => (
           <div key={tool.name} className="rounded border border-border bg-bg px-3 py-2.5">
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-sm font-mono font-semibold text-text">
-                {tool.name}
-              </span>
+              <span className="text-sm font-mono font-semibold text-text">{tool.name}</span>
               <span className={`pill text-[10px] font-semibold ${badgeClass}`}>
                 {tool.category === 'native' ? 'NATIVE' : tool.category === 'sdk' ? 'SDK' : 'MCP'}
               </span>

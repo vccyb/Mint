@@ -7,7 +7,11 @@ import type { SessionStreamState } from './session-context';
  * Handle SDK user messages: tool_result blocks.
  * Detects teammate completion via Task/Agent tool results.
  */
-export function handleUserMessage(msg: any, state: SessionStreamState, enqueue: (data: Uint8Array) => boolean): void {
+export function handleUserMessage(
+  msg: any,
+  state: SessionStreamState,
+  enqueue: (data: Uint8Array) => boolean,
+): void {
   const sid = state.sessionId;
   const enc = new TextEncoder();
 
@@ -22,9 +26,7 @@ export function handleUserMessage(msg: any, state: SessionStreamState, enqueue: 
       }
 
       const resultStr =
-        typeof block.content === 'string'
-          ? block.content
-          : JSON.stringify(block.content);
+        typeof block.content === 'string' ? block.content : JSON.stringify(block.content);
       const isErr = block.is_error ?? false;
 
       // Handle Task/Agent tool results
@@ -34,7 +36,8 @@ export function handleUserMessage(msg: any, state: SessionStreamState, enqueue: 
         state.startedTaskIds.delete(block.tool_use_id);
 
         const mappedTaskId = state.pendingTaskToTaskId.get(block.tool_use_id) ?? block.tool_use_id;
-        const existingIdx = state.teammateIndexMap.get(mappedTaskId) ?? state.teammateIndexMap.get(block.tool_use_id);
+        const existingIdx =
+          state.teammateIndexMap.get(mappedTaskId) ?? state.teammateIndexMap.get(block.tool_use_id);
 
         if (existingIdx !== undefined) {
           const cleanText = parseToolResult(resultStr);
@@ -49,23 +52,50 @@ export function handleUserMessage(msg: any, state: SessionStreamState, enqueue: 
 
           // Only emit teammate_completed if not already done via task_notification
           if (stillActive) {
-            const originalStart = state.teammateStartTimes.get(mappedTaskId) ?? state.teammateStartTimes.get(block.tool_use_id) ?? Date.now();
-            const originalDesc = state.teammateDescriptions.get(mappedTaskId) ?? state.teammateDescriptions.get(block.tool_use_id) ?? '';
-            const originalPrompt = state.teammatePrompts.get(mappedTaskId) ?? state.teammatePrompts.get(block.tool_use_id);
-            const history = state.teammateToolHistories.get(mappedTaskId) ?? state.teammateToolHistories.get(block.tool_use_id) ?? [];
+            const originalStart =
+              state.teammateStartTimes.get(mappedTaskId) ??
+              state.teammateStartTimes.get(block.tool_use_id) ??
+              Date.now();
+            const originalDesc =
+              state.teammateDescriptions.get(mappedTaskId) ??
+              state.teammateDescriptions.get(block.tool_use_id) ??
+              '';
+            const originalPrompt =
+              state.teammatePrompts.get(mappedTaskId) ??
+              state.teammatePrompts.get(block.tool_use_id);
+            const history =
+              state.teammateToolHistories.get(mappedTaskId) ??
+              state.teammateToolHistories.get(block.tool_use_id) ??
+              [];
 
             const teammate: TeammateState = {
-              taskId: mappedTaskId, description: originalDesc, prompt: originalPrompt,
-              index: existingIdx, status: isErr ? 'failed' : 'completed',
-              summary, toolHistory: [...history],
-              startedAt: originalStart, endedAt: Date.now(),
+              taskId: mappedTaskId,
+              description: originalDesc,
+              prompt: originalPrompt,
+              index: existingIdx,
+              status: isErr ? 'failed' : 'completed',
+              summary,
+              toolHistory: [...history],
+              startedAt: originalStart,
+              endedAt: Date.now(),
             };
 
-            const completedEvent: StreamEventData = { type: 'teammate_completed', data: '', sessionId: sid, teammate };
+            const completedEvent: StreamEventData = {
+              type: 'teammate_completed',
+              data: '',
+              sessionId: sid,
+              teammate,
+            };
             enqueue(enc.encode(encodeSSE(completedEvent)));
-            state.log.info('Teammate completed via tool result', { toolUseId: block.tool_use_id, isErr });
+            state.log.info('Teammate completed via tool result', {
+              toolUseId: block.tool_use_id,
+              isErr,
+            });
           } else {
-            state.log.info('Skipping duplicate teammate_completed (already done via task_notification)', { toolUseId: block.tool_use_id });
+            state.log.info(
+              'Skipping duplicate teammate_completed (already done via task_notification)',
+              { toolUseId: block.tool_use_id },
+            );
           }
         }
       }
@@ -76,7 +106,12 @@ export function handleUserMessage(msg: any, state: SessionStreamState, enqueue: 
         tc.status = isErr ? 'error' : 'completed';
       }
 
-      const toolResultEvent: StreamEventData = { type: 'tool_result', data: resultStr, sessionId: sid, toolId: block.tool_use_id };
+      const toolResultEvent: StreamEventData = {
+        type: 'tool_result',
+        data: resultStr,
+        sessionId: sid,
+        toolId: block.tool_use_id,
+      };
       enqueue(enc.encode(encodeSSE(toolResultEvent)));
     }
   }

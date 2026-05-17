@@ -13,7 +13,7 @@ export default function nextConfig(phase: string): NextConfig {
   }
 
   return {
-    serverExternalPackages: ['@anthropic-ai/claude-agent-sdk'],
+    serverExternalPackages: ['@anthropic-ai/claude-agent-sdk', 'ws'],
     // Keep development artifacts separate from production build output so
     // `next dev` does not corrupt a previously built `.next` directory.
     ...(phase === PHASE_DEVELOPMENT_SERVER ? { distDir: '.next-dev' } : {}),

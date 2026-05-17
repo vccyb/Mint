@@ -12,6 +12,8 @@ export interface AppConfig {
   baseUrl?: string;
   skillsEnabled?: boolean;
   permissionMode?: 'bypassPermissions' | 'default' | 'plan';
+  sttApiKey?: string;
+  sttResourceId?: string;
 }
 
 const DEFAULT_CONFIG: AppConfig = {

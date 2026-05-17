@@ -41,10 +41,10 @@ function StreamingIndicator({ startTime }: { startTime: number | null }) {
 
   return (
     <div className="px-6 py-3">
-      <div className="mx-auto w-[80%] flex items-center gap-2 text-xs text-[#AEAEB2]">
-        <Loader2 className="h-3 w-3 animate-spin text-[#007AFF]" />
+      <div className="mx-auto w-[80%] flex items-center gap-2 text-xs text-text-tertiary">
+        <Loader2 className="h-3 w-3 animate-spin text-primary" />
         <span>正在思考...</span>
-        <span className="font-mono text-[10px] bg-[#F5F5F7] rounded px-1.5 py-0.5">
+        <span className="font-mono text-[10px] bg-bg-warm rounded px-1.5 py-0.5">
           {fmt(elapsed)}
         </span>
       </div>
@@ -62,22 +62,20 @@ function EmptyState() {
   return (
     <div className="flex flex-1 items-center justify-center">
       <div className="text-center max-w-xs">
-        <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F2FF] text-[#007AFF]">
+        <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-light text-primary">
           <Sparkles className="h-5 w-5" />
         </div>
-        <p className="text-sm font-medium text-[#1D1D1F]">开始对话</p>
-        <p className="text-xs text-[#AEAEB2] mt-1 mb-4">
-          输入消息开始与 Mint 对话
-        </p>
+        <p className="text-sm font-medium text-foreground">开始对话</p>
+        <p className="text-xs text-text-tertiary mt-1 mb-4">输入消息开始与 Mint 对话</p>
         <div className="space-y-1.5">
           {shortcuts.map((s) => (
-            <div key={s.key} className="flex items-center gap-2 text-xs text-[#AEAEB2]">
-              <kbd className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-[rgba(0,0,0,0.08)] bg-[#F5F5F7] px-1.5 font-mono text-[10px] font-semibold text-[#6E6E73]">
+            <div key={s.key} className="flex items-center gap-2 text-xs text-text-tertiary">
+              <kbd className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-border bg-bg-warm px-1.5 font-mono text-[10px] font-semibold text-muted-foreground">
                 {s.key}
               </kbd>
               <span>{s.label}</span>
-              <span className="text-[#AEAEB2]/60">&mdash;</span>
-              <span className="text-[#AEAEB2]/60">{s.desc}</span>
+              <span className="text-text-tertiary/60">&mdash;</span>
+              <span className="text-text-tertiary/60">{s.desc}</span>
             </div>
           ))}
         </div>
@@ -86,7 +84,18 @@ function EmptyState() {
   );
 }
 
-export function MessageList({ messages, isStreaming, streamStartTime, onEditMessage, onApprovePlan, hideLastTodoAndPlan, teammates, isWaitingResume, onViewTeam, onFileClick }: MessageListProps) {
+export function MessageList({
+  messages,
+  isStreaming,
+  streamStartTime,
+  onEditMessage,
+  onApprovePlan,
+  hideLastTodoAndPlan,
+  teammates,
+  isWaitingResume,
+  onViewTeam,
+  onFileClick,
+}: MessageListProps) {
   if (messages.length === 0) {
     return <EmptyState />;
   }
@@ -116,20 +125,29 @@ export function MessageList({ messages, isStreaming, streamStartTime, onEditMess
           )}
           {teammates && teammates.length > 0 && hideLastTodoAndPlan && (
             <div className="px-6 py-1.5">
-              <div className="mx-auto max-w-[640px] flex items-center gap-2 h-[28px] px-3 rounded-lg bg-[#F5F5F7]/60 text-[10px] text-[#6E6E73]">
+              <div className="mx-auto max-w-[640px] flex items-center gap-2 h-[28px] px-3 rounded-lg bg-bg-warm/60 text-[10px] text-muted-foreground">
                 <div className="flex items-center -space-x-1">
                   {teammates.slice(0, 3).map((tm) => {
                     const colors = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55'];
                     const color = colors[tm.index % colors.length];
                     return (
-                      <div key={tm.taskId} className="w-3.5 h-3.5 rounded-full ring-1 ring-white" style={{ backgroundColor: color }} />
+                      <div
+                        key={tm.taskId}
+                        className="w-3.5 h-3.5 rounded-full ring-1 ring-white"
+                        style={{ backgroundColor: color }}
+                      />
                     );
                   })}
                 </div>
-                <span>{teammates.filter(t => t.status === 'running').length > 0
-                  ? `${teammates.filter(t => t.status === 'running').length} agents 运行中`
-                  : `${teammates.length} agents 已完成`}</span>
-                <button onClick={onViewTeam} className="ml-auto text-[#007AFF] hover:text-[#0066CC] cursor-pointer">
+                <span>
+                  {teammates.filter((t) => t.status === 'running').length > 0
+                    ? `${teammates.filter((t) => t.status === 'running').length} agents 运行中`
+                    : `${teammates.length} agents 已完成`}
+                </span>
+                <button
+                  onClick={onViewTeam}
+                  className="ml-auto text-primary hover:text-primary-hover cursor-pointer"
+                >
                   查看 →
                 </button>
               </div>

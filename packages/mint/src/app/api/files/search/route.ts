@@ -5,16 +5,51 @@ import { resolveProjectPath } from '@/lib/path-resolver';
 import { withLogging } from '@/lib/with-logging';
 
 const IGNORE = new Set([
-  'node_modules', '.git', '.next', '.DS_Store', 'dist', '.turbo',
-  '__pycache__', '.cache', '.data', '.claude',
+  'node_modules',
+  '.git',
+  '.next',
+  '.DS_Store',
+  'dist',
+  '.turbo',
+  '__pycache__',
+  '.cache',
+  '.data',
+  '.claude',
 ]);
 
 const BINARY_EXTENSIONS = new Set([
-  '.mp3', '.mp4', '.wav', '.zip', '.tar', '.gz', '.rar', '.7z',
-  '.woff', '.woff2', '.ttf', '.eot', '.otf',
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.exe', '.dll', '.so', '.dylib', '.bin', '.dat',
-  '.sqlite', '.db', '.pyc', '.class', '.jar', '.wasm',
+  '.mp3',
+  '.mp4',
+  '.wav',
+  '.zip',
+  '.tar',
+  '.gz',
+  '.rar',
+  '.7z',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.otf',
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  '.bin',
+  '.dat',
+  '.sqlite',
+  '.db',
+  '.pyc',
+  '.class',
+  '.jar',
+  '.wasm',
 ]);
 
 const MAX_RESULTS = 20;
@@ -42,7 +77,7 @@ async function searchFiles(
     return;
   }
 
-  const lowerQuery = (query === '*' || !query) ? '' : query.toLowerCase();
+  const lowerQuery = query === '*' || !query ? '' : query.toLowerCase();
 
   for (const entry of entries) {
     if (results.length >= MAX_RESULTS) break;

@@ -41,24 +41,28 @@ function CodeBlockWithCopy({ children, className }: { children: ReactNode; class
   return (
     <div className="my-3 rounded-lg overflow-hidden shadow-elevation-1">
       {/* Header bar: language label + copy button */}
-      <div className="flex items-center justify-between bg-[#F5F5F7] px-3 py-1.5">
-        <span className="text-[10px] font-semibold text-[#6E6E73] font-mono uppercase tracking-wider">
+      <div className="flex items-center justify-between bg-bg-warm px-3 py-1.5">
+        <span className="text-[10px] font-semibold text-muted-foreground font-mono uppercase tracking-wider">
           {lang || 'code'}
         </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 text-[#AEAEB2] hover:text-[#6E6E73] transition-colors text-[10px] cursor-pointer"
+          className="flex items-center gap-1 text-text-tertiary hover:text-muted-foreground transition-colors text-[10px] cursor-pointer"
         >
           {copied ? (
-            <><Check className="h-3 w-3" /> Copied!</>
+            <>
+              <Check className="h-3 w-3" /> Copied!
+            </>
           ) : (
-            <><ClipboardIcon /> 复制</>
+            <>
+              <ClipboardIcon /> 复制
+            </>
           )}
         </button>
       </div>
       {/* Code body: light background */}
-      <pre className="overflow-x-auto bg-white p-4 text-sm leading-relaxed !mt-0">
-        <code className={`${className ?? ''} text-[#1D1D1F] font-mono`}>{children}</code>
+      <pre className="overflow-x-auto bg-card p-4 text-sm leading-relaxed !mt-0">
+        <code className={`${className ?? ''} text-foreground font-mono`}>{children}</code>
       </pre>
     </div>
   );
@@ -78,7 +82,7 @@ const markdownComponents: Partial<Components> = {
       );
     }
     return (
-      <pre className="overflow-x-auto rounded-lg bg-white p-4 text-sm leading-relaxed my-3 text-[#1D1D1F]">
+      <pre className="overflow-x-auto rounded-lg bg-card p-4 text-sm leading-relaxed my-3 text-foreground">
         {children}
       </pre>
     );
@@ -113,9 +117,7 @@ const markdownComponents: Partial<Components> = {
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto my-3">
-      <table className="w-full text-sm border-collapse border border-gray-200">
-        {children}
-      </table>
+      <table className="w-full text-sm border-collapse border border-gray-200">{children}</table>
     </div>
   ),
   th: ({ children }) => (
@@ -123,9 +125,7 @@ const markdownComponents: Partial<Components> = {
       {children}
     </th>
   ),
-  td: ({ children }) => (
-    <td className="border border-gray-200 px-3 py-1.5 text-sm">{children}</td>
-  ),
+  td: ({ children }) => <td className="border border-gray-200 px-3 py-1.5 text-sm">{children}</td>,
   ul: ({ children }) => <ul className="my-2 ml-5 list-disc space-y-0.5">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 ml-5 list-decimal space-y-0.5">{children}</ol>,
   blockquote: ({ children }) => (

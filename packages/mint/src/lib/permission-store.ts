@@ -52,10 +52,7 @@ export function addPending(
   });
 }
 
-export function resolvePending(
-  requestId: string,
-  result: PermissionResult,
-): boolean {
+export function resolvePending(requestId: string, result: PermissionResult): boolean {
   const store = getStore();
   const entry = store.get(requestId);
   if (!entry) return false;

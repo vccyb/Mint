@@ -24,8 +24,8 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
             className={cn(
               'px-3.5 py-1 text-[11px] font-medium transition-all duration-150 cursor-pointer',
               mode === value
-                ? 'rounded-[7px] bg-[#E8F2FF] text-[#007AFF]'
-                : 'text-[#AEAEB2] hover:text-[#6E6E73]',
+                ? 'rounded-[7px] bg-primary-light text-primary'
+                : 'text-text-tertiary hover:text-muted-foreground',
             )}
           >
             {label}

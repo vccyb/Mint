@@ -17,9 +17,7 @@ export function SessionSearch({ value, onChange }: SessionSearchProps) {
 
   return (
     <div className="px-2.5 pb-1.5">
-      <div
-        className="flex items-center gap-1.5 rounded-[6px] border border-border bg-bg px-2 py-[5px] transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
-      >
+      <div className="flex items-center gap-1.5 rounded-[6px] border border-border bg-bg px-2 py-[5px] transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
         <svg
           width="11"
           height="11"

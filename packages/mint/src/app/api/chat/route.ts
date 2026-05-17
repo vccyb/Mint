@@ -3,9 +3,14 @@ import { encodeSSE, createSSEResponse } from '@/lib/sse';
 import { generateId } from '@/lib/utils';
 import { createRequestLogger } from '@/lib/logger';
 import { classifyError } from '@/lib/classify-error';
-import { MAX_ATTACHMENT_SIZE, MAX_TOKENS, THINKING_BUDGET_TOKENS, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
-import { truncateContent, parseDataUrl, extractPdfText } from '@/lib/attachment-utils';
+import {
+  MAX_TOKENS,
+  THINKING_BUDGET_TOKENS,
+  DEFAULT_MODEL,
+  DEFAULT_BASE_URL,
+} from '@/lib/constants';
 import { withLogging } from '@/lib/with-logging';
+import { buildApiMessages } from './message-builder';
 import type { ChatMessage, StreamEventData, Attachment } from '@/types';
 
 export const POST = withLogging('api.chat', async (request) => {
@@ -22,7 +27,8 @@ export const POST = withLogging('api.chat', async (request) => {
   await storage.initialize();
 
   const config = await storage.readConfig();
-  const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
+  const apiKey =
+    config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
   const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? DEFAULT_BASE_URL;
   const model = config?.model ?? DEFAULT_MODEL;
 
@@ -61,56 +67,7 @@ export const POST = withLogging('api.chat', async (request) => {
 
   // Build messages array for API — reload session (now includes userMsg)
   const session = await storage.readSession(sid);
-  const apiMessages: Array<{ role: string; content: unknown }> = [];
-  for (const m of session.messages) {
-    // Build multi-modal content blocks for messages with attachments
-    if (m.role === 'user' && m.attachments && m.attachments.length > 0) {
-      const contentBlocks: Array<Record<string, unknown>> = [];
-
-      for (const att of m.attachments) {
-        if (att.size > MAX_ATTACHMENT_SIZE) continue;
-
-        if (att.type.startsWith('image/') && att.content) {
-          const parsed = parseDataUrl(att.content);
-          if (parsed) {
-            contentBlocks.push({
-              type: 'image',
-              source: { type: 'base64', media_type: parsed.mediaType, data: parsed.base64Data },
-            });
-          }
-        } else if (att.type === 'application/pdf' && att.content) {
-          // PDF: extract text server-side (following Proma's pattern)
-          const pdfText = await extractPdfText(att.content);
-          if (pdfText) {
-            contentBlocks.push({
-              type: 'text',
-              text: `[File: ${att.name}]\n<file name="${att.name}">\n${truncateContent(pdfText)}\n</file>`,
-            });
-          } else {
-            contentBlocks.push({
-              type: 'text',
-              text: `[File: ${att.name}] (PDF text extraction failed)`,
-            });
-          }
-        } else if (att.content) {
-          contentBlocks.push({
-            type: 'text',
-            text: `[File: ${att.name}]\n\`\`\`\n${truncateContent(att.content)}\n\`\`\``,
-          });
-        } else {
-          contentBlocks.push({
-            type: 'text',
-            text: `[File: ${att.name}] (binary file, content not available)`,
-          });
-        }
-      }
-
-      contentBlocks.push({ type: 'text', text: m.content });
-      apiMessages.push({ role: m.role, content: contentBlocks });
-    } else {
-      apiMessages.push({ role: m.role, content: m.content });
-    }
-  }
+  const apiMessages = await buildApiMessages(session.messages);
 
   if (!apiKey) {
     log.warn('API key not configured');
@@ -132,7 +89,9 @@ export const POST = withLogging('api.chat', async (request) => {
     max_tokens: MAX_TOKENS,
     messages: apiMessages,
     stream: true,
-    ...(enableThinking ? { thinking: { type: 'enabled' as const, budget_tokens: THINKING_BUDGET_TOKENS } } : {}),
+    ...(enableThinking
+      ? { thinking: { type: 'enabled' as const, budget_tokens: THINKING_BUDGET_TOKENS } }
+      : {}),
   });
 
   let apiResponse = await fetch(`${baseUrl}/v1/messages`, {
@@ -148,11 +107,19 @@ export const POST = withLogging('api.chat', async (request) => {
   // Fallback: if thinking param is rejected, retry without it
   if (!apiResponse.ok) {
     const errorText = await apiResponse.text();
-    log.warn('Provider API error', { status: apiResponse.status, snippet: errorText.slice(0, 200) });
+    log.warn('Provider API error', {
+      status: apiResponse.status,
+      snippet: errorText.slice(0, 200),
+    });
     const isThinkingError = errorText.includes('thinking') || errorText.includes('unsupported');
     if (!isThinkingError) {
       const classified = classifyError(errorText, apiResponse.status);
-      const errorEvent: StreamEventData = { type: 'error', data: classified.userMessage, sessionId: sid, errorCode: classified.code };
+      const errorEvent: StreamEventData = {
+        type: 'error',
+        data: classified.userMessage,
+        sessionId: sid,
+        errorCode: classified.code,
+      };
       return createSSEResponse(
         new ReadableStream({
           start(controller) {
@@ -175,9 +142,17 @@ export const POST = withLogging('api.chat', async (request) => {
 
   if (!apiResponse.ok) {
     const errorText = await apiResponse.text();
-    log.error('Provider API error after retry', { status: apiResponse.status, snippet: errorText.slice(0, 200) });
+    log.error('Provider API error after retry', {
+      status: apiResponse.status,
+      snippet: errorText.slice(0, 200),
+    });
     const classified = classifyError(errorText, apiResponse.status);
-    const errorEvent: StreamEventData = { type: 'error', data: classified.userMessage, sessionId: sid, errorCode: classified.code };
+    const errorEvent: StreamEventData = {
+      type: 'error',
+      data: classified.userMessage,
+      sessionId: sid,
+      errorCode: classified.code,
+    };
     return createSSEResponse(
       new ReadableStream({
         start(controller) {
@@ -231,10 +206,7 @@ export const POST = withLogging('api.chat', async (request) => {
             try {
               const event = JSON.parse(raw);
               if (eventName === 'error') {
-                const message =
-                  event?.error?.message ??
-                  event?.message ??
-                  'Provider stream error';
+                const message = event?.error?.message ?? event?.message ?? 'Provider stream error';
                 const classified = classifyError(message);
                 const errorEvent: StreamEventData = {
                   type: 'error',
@@ -275,7 +247,12 @@ export const POST = withLogging('api.chat', async (request) => {
         const errMsg = error instanceof Error ? error.message : 'Stream error';
         log.error('Stream read error', { error: errMsg });
         const classified = classifyError(errMsg);
-        const errorEvent: StreamEventData = { type: 'error', data: classified.userMessage, sessionId: sid, errorCode: classified.code };
+        const errorEvent: StreamEventData = {
+          type: 'error',
+          data: classified.userMessage,
+          sessionId: sid,
+          errorCode: classified.code,
+        };
         controller.enqueue(encoder.encode(encodeSSE(errorEvent)));
       }
 
@@ -305,7 +282,10 @@ export const POST = withLogging('api.chat', async (request) => {
       }
 
       // Send result
-      log.info('Chat stream completed', { contentLength: fullContent.length, hasThinking: !!fullThinking });
+      log.info('Chat stream completed', {
+        contentLength: fullContent.length,
+        hasThinking: !!fullThinking,
+      });
       const resultEvent: StreamEventData = {
         type: 'result',
         data: JSON.stringify({ role: 'assistant', content: fullContent }),

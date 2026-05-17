@@ -11,9 +11,7 @@ import type { SubAgentDefinition } from '@/types';
 /**
  * 构建SubAgent委托策略系统提示词。
  */
-export function buildDelegationPrompt(
-  agents: Record<string, SubAgentDefinition>,
-): string {
+export function buildDelegationPrompt(agents: Record<string, SubAgentDefinition>): string {
   const agentList = Object.entries(agents);
   if (agentList.length === 0) return '';
 

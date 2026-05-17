@@ -9,11 +9,7 @@ const ScrollArea = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     const containerRef = (ref as React.RefObject<HTMLDivElement>) ?? innerRef;
 
     return (
-      <div
-        ref={containerRef}
-        className={cn('overflow-y-auto', className)}
-        {...props}
-      >
+      <div ref={containerRef} className={cn('overflow-y-auto', className)} {...props}>
         {children}
       </div>
     );

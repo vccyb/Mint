@@ -24,16 +24,27 @@ export function TeamPanel({ teammates, isWaitingResume }: TeamPanelProps) {
 
   if (!hasTeammates) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-[#AEAEB2] gap-3 p-6">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className="flex flex-col items-center justify-center h-full text-text-tertiary gap-3 p-6">
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M12 17v5" />
           <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76" />
           <circle cx="12" cy="7" r="4" />
         </svg>
         <div className="text-center">
-          <div className="text-[11px] font-medium text-[#6E6E73] mb-1">Agent 团队</div>
-          <div className="text-[10px] text-[#AEAEB2] leading-relaxed">
-            创建团队任务以查看<br />多代理协作进度
+          <div className="text-[11px] font-medium text-muted-foreground mb-1">Agent 团队</div>
+          <div className="text-[10px] text-text-tertiary leading-relaxed">
+            创建团队任务以查看
+            <br />
+            多代理协作进度
           </div>
         </div>
       </div>
@@ -45,9 +56,17 @@ export function TeamPanel({ teammates, isWaitingResume }: TeamPanelProps) {
       <TeamSummaryBar teammates={teammates} compact />
 
       {isWaitingResume && (
-        <div className="mx-2.5 my-2 px-3 py-2 rounded-lg bg-[#007AFF]/10 text-[11px] text-[#007AFF] flex items-center gap-2 shrink-0">
+        <div className="mx-2.5 my-2 px-3 py-2 rounded-lg bg-primary/10 text-[11px] text-primary flex items-center gap-2 shrink-0">
           <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeDasharray="32"
+              strokeLinecap="round"
+            />
           </svg>
           正在收集结果...
         </div>
@@ -55,12 +74,7 @@ export function TeamPanel({ teammates, isWaitingResume }: TeamPanelProps) {
 
       <div className="py-1.5">
         {teammates.map((tm) => (
-          <TeammateCard
-            key={tm.taskId}
-            teammate={tm}
-            now={now}
-            compact
-          />
+          <TeammateCard key={tm.taskId} teammate={tm} now={now} compact />
         ))}
       </div>
     </div>

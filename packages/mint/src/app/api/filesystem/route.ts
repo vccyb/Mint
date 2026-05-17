@@ -11,9 +11,22 @@ interface DirEntry {
 }
 
 const SKIP = new Set([
-  'node_modules', '.git', '.next', '.cache', '.DS_Store', '.Trash',
-  'Library', 'System', '.Trash', '.DocumentRevisions-V100', '.Spotlight-V100',
-  '.fseventsd', '.TemporaryItems', '.vol', 'Applications', 'Volumes',
+  'node_modules',
+  '.git',
+  '.next',
+  '.cache',
+  '.DS_Store',
+  '.Trash',
+  'Library',
+  'System',
+  '.Trash',
+  '.DocumentRevisions-V100',
+  '.Spotlight-V100',
+  '.fseventsd',
+  '.TemporaryItems',
+  '.vol',
+  'Applications',
+  'Volumes',
 ]);
 
 export const GET = withLogging('api.filesystem', async (request) => {

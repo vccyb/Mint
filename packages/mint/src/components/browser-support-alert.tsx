@@ -45,7 +45,8 @@ export function BrowserSupportAlert({ onClose }: BrowserSupportAlertProps) {
               </div>
             </div>
             <p className="text-[10px] text-text-tertiary mt-3">
-              <strong>说明:</strong> 本应用使用 File System Access API 实现文件夹选择，这是现代 Web 标准。Safari 正在实现此功能，请关注后续版本更新。
+              <strong>说明:</strong> 本应用使用 File System Access API 实现文件夹选择，这是现代 Web
+              标准。Safari 正在实现此功能，请关注后续版本更新。
             </p>
           </div>
           <button

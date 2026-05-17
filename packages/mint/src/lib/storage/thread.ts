@@ -62,10 +62,7 @@ export class ThreadStorage {
     await fs.mkdir(threadDir, { recursive: true });
 
     // 保存元数据
-    await fs.writeFile(
-      this.getMetadataPath(newThread.id),
-      JSON.stringify(newThread, null, 2),
-    );
+    await fs.writeFile(this.getMetadataPath(newThread.id), JSON.stringify(newThread, null, 2));
 
     // 创建空消息文件
     await fs.writeFile(this.getMessagesPath(newThread.id), '');
@@ -80,10 +77,7 @@ export class ThreadStorage {
     if (!thread) throw new Error(`Thread not found: ${threadId}`);
 
     const updated = { ...thread, ...partial, updatedAt: Date.now() };
-    await fs.writeFile(
-      this.getMetadataPath(threadId),
-      JSON.stringify(updated, null, 2),
-    );
+    await fs.writeFile(this.getMetadataPath(threadId), JSON.stringify(updated, null, 2));
     log.debug('Thread updated', { threadId, fields: Object.keys(partial) });
   }
 

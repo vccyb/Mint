@@ -9,10 +9,52 @@ const log = createLogger('lib.content-handler');
 
 /**
  * Handle SDK stream_event messages: text deltas, thinking deltas,
- * tool use start/input/complete.
+ * tool use start/input/complete, and usage data.
  */
-export function handleStreamEvent(event: any, state: SessionStreamState, enqueue: (data: Uint8Array) => boolean): void {
+export function handleStreamEvent(
+  event: any,
+  state: SessionStreamState,
+  enqueue: (data: Uint8Array) => boolean,
+): void {
   const sid = state.sessionId;
+  const enc = new TextEncoder();
+
+  // Usage from message_start (input tokens for this turn)
+  if (event.type === 'message_start' && event.message?.usage) {
+    const usage = event.message.usage;
+    const inputTokens =
+      (usage.input_tokens ?? 0) +
+      (usage.cache_read_input_tokens ?? 0) +
+      (usage.cache_creation_input_tokens ?? 0);
+    if (inputTokens > 0) {
+      const usageEvent: StreamEventData = {
+        type: 'usage_update',
+        data: '',
+        sessionId: sid,
+        inputTokens,
+        outputTokens: usage.output_tokens,
+        cacheReadTokens: usage.cache_read_input_tokens,
+        cacheCreationTokens: usage.cache_creation_input_tokens,
+      };
+      enqueue(enc.encode(encodeSSE(usageEvent)));
+    }
+  }
+
+  // Usage from message_delta (output tokens for this turn)
+  if (event.type === 'message_delta' && event.usage) {
+    const usage = event.usage;
+    const outputTokens = usage.output_tokens;
+    if (outputTokens) {
+      const usageEvent: StreamEventData = {
+        type: 'usage_update',
+        data: '',
+        sessionId: sid,
+        inputTokens: 0,
+        outputTokens,
+      };
+      enqueue(enc.encode(encodeSSE(usageEvent)));
+    }
+  }
 
   // Text streaming
   if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
@@ -26,7 +68,12 @@ export function handleStreamEvent(event: any, state: SessionStreamState, enqueue
   if (event.type === 'content_block_delta' && event.delta?.type === 'thinking_delta') {
     const text = event.delta.thinking ?? '';
     state.thinkingContent += text;
-    const thinkingEvent: StreamEventData = { type: 'thinking', data: '', sessionId: sid, thinkingDelta: text };
+    const thinkingEvent: StreamEventData = {
+      type: 'thinking',
+      data: '',
+      sessionId: sid,
+      thinkingDelta: text,
+    };
     enqueue(new TextEncoder().encode(encodeSSE(thinkingEvent)));
   }
 
@@ -48,7 +95,10 @@ export function handleStreamEvent(event: any, state: SessionStreamState, enqueue
   }
 }
 
-function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Array) => boolean): void {
+function handleToolComplete(
+  state: SessionStreamState,
+  enqueue: (data: Uint8Array) => boolean,
+): void {
   const sid = state.sessionId;
   const toolId = state.currentToolId!;
   const toolName = state.currentToolName!;
@@ -57,7 +107,11 @@ function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Arra
   try {
     parsedArgs = JSON.parse(state.currentToolInput || '{}');
   } catch {
-    log.warn('Failed to parse tool args', { toolName, toolId, rawInput: (state.currentToolInput || '').slice(0, 200) });
+    log.warn('Failed to parse tool args', {
+      toolName,
+      toolId,
+      rawInput: (state.currentToolInput || '').slice(0, 200),
+    });
     parsedArgs = {};
   }
 
@@ -70,9 +124,12 @@ function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Arra
   } else if (toolName === 'Task' || toolName === 'Agent') {
     const taskDescription = extractTaskDescription(parsedArgs);
     const startTime = Date.now();
-    const promptStr = typeof parsedArgs.prompt === 'string' ? parsedArgs.prompt
-      : typeof parsedArgs.description === 'string' ? parsedArgs.description
-      : '';
+    const promptStr =
+      typeof parsedArgs.prompt === 'string'
+        ? parsedArgs.prompt
+        : typeof parsedArgs.description === 'string'
+          ? parsedArgs.description
+          : '';
 
     // Bridge data for future SDK upgrade (task_started path)
     state.pendingTaskDescriptions.set(toolId, taskDescription);
@@ -93,17 +150,35 @@ function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Arra
 
     const taskType = toolName === 'Task' ? 'local_agent' : 'subagent';
     const teammate: TeammateState = {
-      taskId: toolId, toolUseId: toolId, description: taskDescription,
+      taskId: toolId,
+      toolUseId: toolId,
+      description: taskDescription,
       prompt: promptStr || undefined,
-      taskType, index: idx, status: 'running', toolHistory: [], startedAt: startTime,
+      taskType,
+      index: idx,
+      status: 'running',
+      toolHistory: [],
+      startedAt: startTime,
     };
-    const teammateEvent: StreamEventData = { type: 'teammate_started', data: '', sessionId: sid, teammate };
+    const teammateEvent: StreamEventData = {
+      type: 'teammate_started',
+      data: '',
+      sessionId: sid,
+      teammate,
+    };
     enqueue(new TextEncoder().encode(encodeSSE(teammateEvent)));
     state.log.info('Teammate started via tool call', { toolName, taskId: toolId });
 
     // Also track as a normal tool call
     state.toolCalls.push({ id: toolId, name: toolName, args: parsedArgs, status: 'running' });
-    const toolEvent: StreamEventData = { type: 'tool_start', data: '', sessionId: sid, toolName, toolId, toolArgs: parsedArgs };
+    const toolEvent: StreamEventData = {
+      type: 'tool_start',
+      data: '',
+      sessionId: sid,
+      toolName,
+      toolId,
+      toolArgs: parsedArgs,
+    };
     enqueue(new TextEncoder().encode(encodeSSE(toolEvent)));
   } else {
     state.toolCalls.push({ id: toolId, name: toolName, args: parsedArgs, status: 'running' });
@@ -112,13 +187,31 @@ function handleToolComplete(state: SessionStreamState, enqueue: (data: Uint8Arra
     if (state.skillsEnabled) {
       const matched = isSkillRead(toolName, parsedArgs, state.skillPathMap);
       if (matched) {
-        state.skillLoads.push({ id: generateId(), name: matched.name, description: matched.description, status: 'loaded' });
-        const skillLoadEvent: StreamEventData = { type: 'skill_load', data: '', sessionId: sid, skillName: matched.name, skillDescription: matched.description };
+        state.skillLoads.push({
+          id: generateId(),
+          name: matched.name,
+          description: matched.description,
+          status: 'loaded',
+        });
+        const skillLoadEvent: StreamEventData = {
+          type: 'skill_load',
+          data: '',
+          sessionId: sid,
+          skillName: matched.name,
+          skillDescription: matched.description,
+        };
         enqueue(new TextEncoder().encode(encodeSSE(skillLoadEvent)));
       }
     }
 
-    const toolEvent: StreamEventData = { type: 'tool_start', data: '', sessionId: sid, toolName, toolId, toolArgs: parsedArgs };
+    const toolEvent: StreamEventData = {
+      type: 'tool_start',
+      data: '',
+      sessionId: sid,
+      toolName,
+      toolId,
+      toolArgs: parsedArgs,
+    };
     enqueue(new TextEncoder().encode(encodeSSE(toolEvent)));
   }
 

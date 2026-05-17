@@ -50,12 +50,7 @@ export async function findTeamLeadInboxPath(
         const config: TeamConfig = JSON.parse(configRaw);
 
         if (config.leadSessionId === sdkSessionId) {
-          const inboxPath = path.join(
-            CLAUDE_TEAMS_DIR,
-            dir.name,
-            'inboxes',
-            'team-lead.json',
-          );
+          const inboxPath = path.join(CLAUDE_TEAMS_DIR, dir.name, 'inboxes', 'team-lead.json');
           if (fs.existsSync(inboxPath)) {
             return { inboxPath, teamName: dir.name };
           }
@@ -82,17 +77,10 @@ export function readUnreadMessages(inboxPath: string): InboxMessage[] {
   try {
     const raw = fs.readFileSync(inboxPath, 'utf-8');
     const messages: InboxMessage[] = JSON.parse(raw);
-    const SYSTEM_TYPES = [
-      'idle_notification',
-      'shutdown_request',
-      'shutdown_approved',
-    ];
+    const SYSTEM_TYPES = ['idle_notification', 'shutdown_request', 'shutdown_approved'];
 
     return messages.filter(
-      (msg) =>
-        !msg.read &&
-        msg.text &&
-        !SYSTEM_TYPES.includes(msg.parsedType ?? ''),
+      (msg) => !msg.read && msg.text && !SYSTEM_TYPES.includes(msg.parsedType ?? ''),
     );
   } catch {
     return [];
@@ -137,9 +125,7 @@ export function markInboxAsRead(inboxPath: string): void {
  * Format unread inbox messages into a resume prompt for the lead agent.
  */
 export function formatInboxPrompt(messages: InboxMessage[]): string {
-  const workerResults = messages
-    .map((msg) => `**来自 ${msg.from}**: ${msg.text}`)
-    .join('\n\n');
+  const workerResults = messages.map((msg) => `**来自 ${msg.from}**: ${msg.text}`).join('\n\n');
 
   return [
     '[系统通知] 你的工作者 Agent 已完成任务，以下是他们发送的完整工作结果：',
@@ -205,12 +191,7 @@ function findTeamLeadInboxPathSync(
         const config: TeamConfig = JSON.parse(configRaw);
 
         if (config.leadSessionId === sdkSessionId) {
-          const inboxPath = path.join(
-            CLAUDE_TEAMS_DIR,
-            dir.name,
-            'inboxes',
-            'team-lead.json',
-          );
+          const inboxPath = path.join(CLAUDE_TEAMS_DIR, dir.name, 'inboxes', 'team-lead.json');
           if (fs.existsSync(inboxPath)) {
             return { inboxPath, teamName: dir.name };
           }
@@ -234,10 +215,7 @@ export function formatSummaryFallbackPrompt(
   summaries: Array<{ taskId: string; summary: string; status?: string }>,
 ): string {
   const lines = summaries
-    .map(
-      (s, i) =>
-        `**Worker ${i + 1} (${s.status ?? 'completed'})**: ${s.summary}`,
-    )
+    .map((s, i) => `**Worker ${i + 1} (${s.status ?? 'completed'})**: ${s.summary}`)
     .join('\n\n');
 
   return [

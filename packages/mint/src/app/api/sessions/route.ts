@@ -21,7 +21,11 @@ export const GET = withLogging('api.sessions', async (request) => {
 
 export const POST = withLogging('api.sessions', async (request) => {
   const body = await request.json();
-  const { mode = 'chat', projectId, title } = body as {
+  const {
+    mode = 'chat',
+    projectId,
+    title,
+  } = body as {
     mode?: Mode;
     projectId?: string;
     title?: string;

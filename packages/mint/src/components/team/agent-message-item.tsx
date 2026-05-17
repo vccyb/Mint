@@ -35,19 +35,13 @@ export function AgentMessageItem({
         <div className="flex-1 min-w-0">
           {/* Header row: agent name + timestamp */}
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xs font-semibold text-[#1D1D1F]">
-              {agentName}
-            </span>
-            <span className="text-xs text-[#AEAEB2]">&middot;</span>
-            <span className="text-xs text-[#AEAEB2]">
-              {formatMessageTime(timestamp)}
-            </span>
+            <span className="text-xs font-semibold text-foreground">{agentName}</span>
+            <span className="text-xs text-text-tertiary">&middot;</span>
+            <span className="text-xs text-text-tertiary">{formatMessageTime(timestamp)}</span>
           </div>
 
           {/* Message body */}
-          <div className="text-sm leading-relaxed text-[#1D1D1F]">
-            {children}
-          </div>
+          <div className="text-sm leading-relaxed text-foreground">{children}</div>
         </div>
       </div>
     </div>

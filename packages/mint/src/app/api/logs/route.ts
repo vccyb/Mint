@@ -41,7 +41,11 @@ export async function GET(request: NextRequest) {
         .split('\n')
         .filter(Boolean)
         .map((line, i) => {
-          try { return JSON.parse(line); } catch { return null; }
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
         })
         .filter(Boolean) as LogEntry[];
       return NextResponse.json({ entries, total: entries.length });

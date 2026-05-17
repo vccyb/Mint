@@ -43,7 +43,10 @@ export function AcceptPlanDropdown({ onApprove }: AcceptPlanDropdownProps) {
       {open && (
         <div className="absolute bottom-full left-0 mb-1 w-56 rounded-md border border-border bg-bg shadow-elevation-2 z-[60] overflow-hidden">
           <button
-            onClick={() => { onApprove('auto'); setOpen(false); }}
+            onClick={() => {
+              onApprove('auto');
+              setOpen(false);
+            }}
             className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-bg-warm transition-colors"
           >
             <Send className="h-3.5 w-3.5 shrink-0 mt-0.5 text-success" />
@@ -53,7 +56,10 @@ export function AcceptPlanDropdown({ onApprove }: AcceptPlanDropdownProps) {
             </div>
           </button>
           <button
-            onClick={() => { onApprove('manual'); setOpen(false); }}
+            onClick={() => {
+              onApprove('manual');
+              setOpen(false);
+            }}
             className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-bg-warm transition-colors"
           >
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-success" />

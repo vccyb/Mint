@@ -69,10 +69,7 @@ interface ActivityGroup {
   tools: ToolCallInfo[];
 }
 
-function groupActivities(
-  skillLoads: SkillLoadInfo[],
-  toolCalls: ToolCallInfo[],
-): ActivityGroup[] {
+function groupActivities(skillLoads: SkillLoadInfo[], toolCalls: ToolCallInfo[]): ActivityGroup[] {
   if (skillLoads.length === 0) {
     return [{ skill: null, tools: toolCalls }];
   }
@@ -108,33 +105,37 @@ function ToolRow({ tool }: { tool: ToolCallInfo }) {
   return (
     <div>
       <div
-        className="flex items-center gap-1.5 py-1 text-xs hover:bg-[#EDEDF0] rounded-lg px-2 cursor-pointer transition-colors duration-150"
+        className="flex items-center gap-1.5 py-1 text-xs hover:bg-bg-hover rounded-lg px-2 cursor-pointer transition-colors duration-150"
         onClick={() => setExpanded(!expanded)}
       >
-        <Icon className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
-        <span className="shrink-0 font-semibold text-[#1D1D1F] font-mono text-[11px]">{tool.name}</span>
-        <span className="text-[#AEAEB2]">&middot;</span>
-        <span className="flex-1 truncate text-[#6E6E73] font-mono text-[11px]">
+        <Icon className="h-3 w-3 shrink-0 text-text-tertiary" />
+        <span className="shrink-0 font-semibold text-foreground font-mono text-[11px]">
+          {tool.name}
+        </span>
+        <span className="text-text-tertiary">&middot;</span>
+        <span className="flex-1 truncate text-muted-foreground font-mono text-[11px]">
           {getToolSummary(tool)}
         </span>
         {elapsed && !isRunning && (
-          <span className="text-[10px] text-[#AEAEB2] font-mono tabular-nums shrink-0">
+          <span className="text-[10px] text-text-tertiary font-mono tabular-nums shrink-0">
             {elapsed}
           </span>
         )}
         {isRunning ? (
-          <div className="h-3 w-3 shrink-0 rounded-full border-2 border-[#007AFF] border-t-transparent animate-spin" />
+          <div className="h-3 w-3 shrink-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         ) : isError ? (
-          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
+          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
         ) : (
-          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34C759]" />
+          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
         )}
       </div>
       {expanded && (
-        <div className="ml-5 mr-2 mb-1 space-y-1.5 border-l border-[rgba(0,0,0,0.08)] pl-3">
+        <div className="ml-5 mr-2 mb-1 space-y-1.5 border-l border-border pl-3">
           {tool.result && (
-            <pre className="bg-[#F5F5F7] rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
-              {tool.result.length > 3000 ? tool.result.slice(0, 3000) + '\n... (truncated)' : tool.result}
+            <pre className="bg-bg-warm rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
+              {tool.result.length > 3000
+                ? tool.result.slice(0, 3000) + '\n... (truncated)'
+                : tool.result}
             </pre>
           )}
         </div>
@@ -146,9 +147,9 @@ function ToolRow({ tool }: { tool: ToolCallInfo }) {
 function SkillGroupHeader({ skill }: { skill: SkillLoadInfo }) {
   return (
     <div className="flex items-center gap-2 py-1 px-2 text-xs">
-      <Zap className="h-3.5 w-3.5 shrink-0 text-[#FF9500]" />
-      <span className="font-medium text-[#6E6E73] font-mono">{skill.name}</span>
-      <span className="text-[10px] text-[#34C759] shrink-0">loaded</span>
+      <Zap className="h-3.5 w-3.5 shrink-0 text-warning" />
+      <span className="font-medium text-muted-foreground font-mono">{skill.name}</span>
+      <span className="text-[10px] text-success shrink-0">loaded</span>
     </div>
   );
 }
@@ -219,29 +220,29 @@ export function ActivityPanel({ toolCalls, skillLoads, isStreaming }: ActivityPa
   ).size;
 
   return (
-    <div className="mt-2 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white overflow-hidden">
+    <div className="mt-2 rounded-xl border border-border bg-card overflow-hidden">
       {/* Summary header */}
       <button
         onClick={handleToggle}
-        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[#6E6E73] hover:bg-[#EDEDF0] transition-colors text-left cursor-pointer"
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-bg-hover transition-colors text-left cursor-pointer"
       >
         {expanded ? (
-          <ChevronDown className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
+          <ChevronDown className="h-3 w-3 shrink-0 text-text-tertiary" />
         ) : (
-          <ChevronRight className="h-3 w-3 shrink-0 text-[#AEAEB2]" />
+          <ChevronRight className="h-3 w-3 shrink-0 text-text-tertiary" />
         )}
         <span className="truncate font-medium">{summary}</span>
         {!isStreaming && completedCount > 0 && (
-          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-[#34C759] bg-[#34C759]/10 shrink-0">
+          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-success bg-success/10 shrink-0">
             已完成
           </span>
         )}
-        {hasRunning && <Loader2 className="h-3 w-3 animate-spin text-[#007AFF] shrink-0" />}
+        {hasRunning && <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />}
       </button>
 
       {/* Expanded content */}
       {expanded && (
-        <div className="border-t border-[rgba(0,0,0,0.08)]">
+        <div className="border-t border-border">
           {groups.map((group, gi) => (
             <div key={gi} className="px-1 py-1">
               {group.skill && <SkillGroupHeader skill={group.skill} />}
@@ -254,7 +255,7 @@ export function ActivityPanel({ toolCalls, skillLoads, isStreaming }: ActivityPa
           ))}
           {/* Summary bar at bottom */}
           {!isStreaming && (
-            <div className="border-t border-[rgba(0,0,0,0.08)] px-3 py-1.5 text-[10px] text-[#AEAEB2]">
+            <div className="border-t border-border px-3 py-1.5 text-[10px] text-text-tertiary">
               {completedCount} 个工具已完成
               {modifiedFiles > 0 && ` · 修改 ${modifiedFiles} 个文件`}
             </div>

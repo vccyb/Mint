@@ -19,23 +19,20 @@ interface PermissionModeSelectorProps {
   shortcutLabel?: string;
 }
 
-export function PermissionModeSelector({
-  mode,
-  onModeChange,
-}: PermissionModeSelectorProps) {
+export function PermissionModeSelector({ mode, onModeChange }: PermissionModeSelectorProps) {
   return (
-    <div className='inline-flex items-center rounded-lg border border-[rgba(0,0,0,0.08)] bg-[#F5F5F7] p-[2px]'>
+    <div className="inline-flex items-center rounded-lg border border-border bg-bg-warm p-[2px]">
       {MODES.map((m) => {
         const isActive = m === mode;
         return (
           <button
             key={m}
-            type='button'
+            type="button"
             onClick={() => onModeChange(m)}
             className={cn(
               'rounded-md px-2 py-0.5 text-[10px] transition-colors cursor-pointer',
               isActive
-                ? 'bg-[#E8F2FF] text-[#007AFF] font-medium'
+                ? 'bg-primary-light text-primary font-medium'
                 : 'text-gray-400 hover:text-text-secondary',
             )}
           >

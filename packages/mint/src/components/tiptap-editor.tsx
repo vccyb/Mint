@@ -11,7 +11,13 @@ interface TiptapEditorProps {
   placeholder?: string;
   disabled?: boolean;
   onSend?: (markdown: string) => void;
-  onKeyDown?: (e: { key: string; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }) => void;
+  onKeyDown?: (e: {
+    key: string;
+    shiftKey: boolean;
+    ctrlKey: boolean;
+    metaKey: boolean;
+    preventDefault: () => void;
+  }) => void;
   onInputChange?: (value: string) => void;
   className?: string;
 }

@@ -79,6 +79,25 @@ export interface TeamWaitingResumeEvent extends BaseEvent {
   type: 'team_waiting_resume';
 }
 
+// ─── Context window events ───
+
+export interface UsageUpdateEvent extends BaseEvent {
+  type: 'usage_update';
+  inputTokens: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+  contextWindow?: number;
+}
+
+export interface CompactingEvent extends BaseEvent {
+  type: 'compacting';
+}
+
+export interface CompactCompleteEvent extends BaseEvent {
+  type: 'compact_complete';
+}
+
 // ─── Terminal events ───
 
 export interface ResultEvent extends BaseEvent {
@@ -108,5 +127,8 @@ export type StreamEvent =
   | TeammateProgressEvent
   | TeammateCompletedEvent
   | TeamWaitingResumeEvent
+  | UsageUpdateEvent
+  | CompactingEvent
+  | CompactCompleteEvent
   | ResultEvent
   | ErrorEvent;

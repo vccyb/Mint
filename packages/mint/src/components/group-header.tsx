@@ -14,15 +14,24 @@ interface GroupHeaderProps {
 }
 
 export function GroupHeader({
-  group, isCollapsed, onToggle, onRename, onDelete, onDrop,
+  group,
+  isCollapsed,
+  onToggle,
+  onRename,
+  onDelete,
+  onDrop,
 }: GroupHeaderProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(group.name);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setDraft(group.name); }, [group.name]);
-  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  useEffect(() => {
+    setDraft(group.name);
+  }, [group.name]);
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
 
   const handleSave = () => {
     setEditing(false);
@@ -41,7 +50,10 @@ export function GroupHeader({
           onBlur={handleSave}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') { setDraft(group.name); setEditing(false); }
+            if (e.key === 'Escape') {
+              setDraft(group.name);
+              setEditing(false);
+            }
           }}
           className="bg-transparent border-b border-primary outline-none text-[11px] text-text-secondary w-full"
         />
@@ -55,7 +67,10 @@ export function GroupHeader({
         dragOver ? 'bg-primary-light/50' : ''
       }`}
       onClick={onToggle}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -73,14 +88,20 @@ export function GroupHeader({
       <span className="text-[10px] opacity-60 normal-case">{group.sessionIds.length}</span>
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditing(true);
+          }}
           className="text-text-tertiary hover:text-primary"
           aria-label="Rename group"
         >
           <FolderInput className="h-2.5 w-2.5" />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           className="text-text-tertiary hover:text-red-500"
           aria-label="Delete group"
         >

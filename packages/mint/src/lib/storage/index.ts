@@ -8,6 +8,7 @@ import { GroupStorage } from './group';
 import { ensureSkillsDirs } from './skills';
 import { ProjectStorage } from './project';
 import { ThreadStorage } from './thread';
+import { SessionFileStorage } from './session-files';
 
 export class FileSystemStorage implements StorageAdapter {
   public readonly config: ConfigStorage;
@@ -15,6 +16,7 @@ export class FileSystemStorage implements StorageAdapter {
   public readonly groups: GroupStorage;
   public readonly projects: ProjectStorage;
   public readonly threads: ThreadStorage;
+  public readonly sessionFiles: SessionFileStorage;
 
   constructor(
     private dataDir: string,
@@ -25,6 +27,7 @@ export class FileSystemStorage implements StorageAdapter {
     this.groups = new GroupStorage(dataDir);
     this.projects = new ProjectStorage(dataDir);
     this.threads = new ThreadStorage(dataDir);
+    this.sessionFiles = new SessionFileStorage(path.join(dataDir, 'session-files'));
   }
 
   async initialize(): Promise<void> {
@@ -33,6 +36,7 @@ export class FileSystemStorage implements StorageAdapter {
     await ensureSkillsDirs();
     await this.projects.initialize();
     await this.threads.initialize();
+    await this.sessionFiles.initialize();
   }
 
   async createSession(metadata: SessionMetadata): Promise<void> {
@@ -43,7 +47,9 @@ export class FileSystemStorage implements StorageAdapter {
     return this.sessions.append(sessionId, message);
   }
 
-  async readSession(sessionId: string): Promise<{ metadata: SessionMetadata; messages: ChatMessage[] }> {
+  async readSession(
+    sessionId: string,
+  ): Promise<{ metadata: SessionMetadata; messages: ChatMessage[] }> {
     return this.sessions.read(sessionId);
   }
 
@@ -52,7 +58,8 @@ export class FileSystemStorage implements StorageAdapter {
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    return this.sessions.delete(sessionId);
+    await this.sessions.delete(sessionId);
+    await this.sessionFiles.deleteAllFiles(sessionId);
   }
 
   async updateSessionMetadata(sessionId: string, partial: Partial<SessionMetadata>): Promise<void> {
