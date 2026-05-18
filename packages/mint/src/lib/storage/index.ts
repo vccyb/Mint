@@ -66,6 +66,10 @@ export class FileSystemStorage implements StorageAdapter {
     return this.sessions.updateMetadata(sessionId, partial);
   }
 
+  async truncateAfterMessage(sessionId: string, messageId: string): Promise<number> {
+    return this.sessions.truncateAfterMessage(sessionId, messageId);
+  }
+
   async readConfig(): Promise<AppConfig | null> {
     return this.config.read();
   }

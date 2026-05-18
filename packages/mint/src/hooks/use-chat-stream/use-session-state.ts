@@ -83,6 +83,7 @@ export interface SessionStateReturn {
   loadSession: (id: string) => Promise<void>;
   clearSession: () => void;
   stopStreaming: () => void;
+  forkFromMessage: (messageId: string) => Promise<void>;
 }
 
 export function useSessionState(
@@ -305,5 +306,6 @@ export function useSessionState(
     loadSession: ops.loadSession,
     clearSession: ops.clearSession,
     stopStreaming: ops.stopStreaming,
+    forkFromMessage: ops.forkFromMessage,
   };
 }

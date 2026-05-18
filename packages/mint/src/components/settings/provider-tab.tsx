@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface ProviderConfig {
@@ -9,6 +10,7 @@ interface ProviderConfig {
   apiKey?: string;
   baseUrl?: string;
   permissionMode?: 'bypassPermissions' | 'default' | 'plan';
+  systemPrompt?: string;
 }
 
 export function ProviderTab() {
@@ -16,6 +18,11 @@ export function ProviderTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string) => {
+    if (type === 'success') toast.success(text);
+    else toast.error(text);
+  };
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -28,6 +35,7 @@ export function ProviderTab() {
         apiKey: data.apiKey ?? '',
         baseUrl: data.baseUrl ?? '',
         permissionMode: data.permissionMode ?? 'bypassPermissions',
+        systemPrompt: data.systemPrompt ?? '',
       });
     } catch {
       setMessage({ type: 'error', text: 'Failed to load config' });
@@ -52,12 +60,15 @@ export function ProviderTab() {
           apiKey: config.apiKey || undefined,
           baseUrl: config.baseUrl || undefined,
           permissionMode: config.permissionMode || 'bypassPermissions',
+          systemPrompt: config.systemPrompt || undefined,
         }),
       });
       if (!res.ok) throw new Error('Failed to save');
       setMessage({ type: 'success', text: 'Settings saved successfully' });
+      toast.success('设置已保存');
     } catch {
       setMessage({ type: 'error', text: 'Failed to save settings' });
+      toast.error('保存失败，请重试');
     } finally {
       setSaving(false);
     }
@@ -157,6 +168,24 @@ export function ProviderTab() {
             auto-approves everything.
           </p>
         </div>
+
+        <details className="group">
+          <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text transition-colors">
+            System Prompt（高级）
+          </summary>
+          <div className="mt-2">
+            <textarea
+              value={config.systemPrompt ?? ''}
+              onChange={(e) => setConfig((c) => ({ ...c, systemPrompt: e.target.value }))}
+              placeholder="自定义系统提示词，会注入到每次 Agent 对话的开头..."
+              rows={4}
+              className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary resize-y font-mono text-xs leading-relaxed"
+            />
+            <p className="text-[10px] text-text-tertiary mt-1">
+              留空则使用默认系统提示词。适合设置角色、约束条件、输出格式等。
+            </p>
+          </div>
+        </details>
 
         <button
           onClick={handleSave}

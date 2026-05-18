@@ -95,6 +95,27 @@ export class SessionStorage {
     log.debug('Session deleted', { sessionId });
   }
 
+  /**
+   * Truncate all messages at and after the given message ID.
+   * Returns the remaining message count.
+   */
+  async truncateAfterMessage(sessionId: string, messageId: string): Promise<number> {
+    const { metadata, messages } = await this.read(sessionId);
+    const index = messages.findIndex((m) => m.id === messageId);
+    if (index < 0) {
+      throw new Error(`Message ${messageId} not found in session ${sessionId}`);
+    }
+    const kept = messages.slice(0, index);
+    const filePath = this.getFilePath(sessionId);
+    const lines: string[] = [JSON.stringify({ type: 'metadata', metadata: { ...metadata, messageCount: kept.length, updatedAt: Date.now() } })];
+    for (const msg of kept) {
+      lines.push(JSON.stringify({ type: 'message', message: msg }));
+    }
+    await fs.writeFile(filePath, lines.join('\n') + '\n');
+    log.debug('Session truncated', { sessionId, fromMessageId: messageId, keptCount: kept.length });
+    return kept.length;
+  }
+
   private getFilePath(sessionId: string): string {
     return path.join(this.sessionsDir, `${sessionId}.jsonl`);
   }

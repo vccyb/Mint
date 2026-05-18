@@ -12,6 +12,7 @@ import { buildSkillIndexPrompt } from '@/lib/agent-stream';
 import { AgentAdapter } from '@/lib/agent-adapter';
 import { AgentOrchestrator } from '@/lib/agent-orchestrator';
 import { resolveProjectPath } from '@/lib/path-resolver';
+import { readProjectContext } from '@/lib/read-project-context';
 import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
 import { withLogging } from '@/lib/with-logging';
 import type { ChatMessage, Attachment, SessionFile } from '@/types';
@@ -187,10 +188,23 @@ export const POST = withLogging('api.agent', async (request) => {
     ].join('\n');
   }
 
+  // --- Project context (MINT.md) ---
+  let projectContextPrompt = '';
+  const projectContext = await readProjectContext(cwd);
+  if (projectContext) {
+    projectContextPrompt = `<project_context>\n${projectContext}\n</project_context>`;
+  }
+
   // --- SubAgents & delegation prompt ---
   const subAgents = buildBuiltinAgents();
   const delegationPrompt = buildDelegationPrompt(subAgents);
-  const effectiveSystemPrompt = [skillIndexPrompt, mentionedToolsPrompt, delegationPrompt]
+  const effectiveSystemPrompt = [
+    config?.systemPrompt,
+    projectContextPrompt,
+    skillIndexPrompt,
+    mentionedToolsPrompt,
+    delegationPrompt,
+  ]
     .filter(Boolean)
     .join('\n\n');
 

@@ -89,6 +89,7 @@ export const POST = withLogging('api.chat', async (request) => {
     max_tokens: MAX_TOKENS,
     messages: apiMessages,
     stream: true,
+    ...(config?.systemPrompt ? { system: config.systemPrompt } : {}),
     ...(enableThinking
       ? { thinking: { type: 'enabled' as const, budget_tokens: THINKING_BUDGET_TOKENS } }
       : {}),

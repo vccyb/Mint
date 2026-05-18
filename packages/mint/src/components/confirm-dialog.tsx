@@ -41,11 +41,11 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fadeIn_150ms_ease-out]"
       onClick={onCancel}
     >
       <div
-        className="bg-bg rounded-xl border border-border shadow-elevation-3 max-w-sm p-6"
+        className="bg-bg rounded-xl border border-border shadow-elevation-3 max-w-sm p-6 animate-[scaleIn_200ms_ease-out]"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-sm font-semibold text-text mb-1">{title}</h3>

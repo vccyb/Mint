@@ -171,5 +171,42 @@ export function useSessionOperations(deps: SessionOperationsDeps) {
     setActiveSessionKey(nextDraftKey);
   }, [messagesMap, mode]);
 
-  return { loadSession, stopStreaming, clearSession };
+  const forkFromMessage = useCallback(
+    async (messageId: string) => {
+      const sid = activeSessionKeyRef.current;
+      if (isDraftSessionKey(sid)) return;
+
+      // Truncate server-side
+      const res = await fetch(`/api/sessions/${sid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fork', messageId }),
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      // Update local messages: keep only messages before the fork point
+      updateMessagesForSession(sid, (prev) => {
+        const idx = prev.findIndex((m) => m.id === messageId);
+        if (idx < 0) return prev;
+        return prev.slice(0, idx);
+      });
+
+      // Also clear teammates and pending state from this point
+      setTeammatesMap((prev) => {
+        const next = new Map(prev);
+        next.delete(sid);
+        return next;
+      });
+      setPendingPermissions((prev) => {
+        const next = new Map(prev);
+        next.delete(sid);
+        return next;
+      });
+    },
+    [updateMessagesForSession, setTeammatesMap, setPendingPermissions],
+  );
+
+  return { loadSession, stopStreaming, clearSession, forkFromMessage };
 }

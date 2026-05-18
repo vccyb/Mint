@@ -17,6 +17,7 @@ interface ChatViewProps {
     enableThinking?: boolean,
   ) => void;
   onStop?: () => void;
+  onForkMessage?: (messageId: string) => Promise<void>;
 }
 
 export function ChatView({
@@ -26,9 +27,11 @@ export function ChatView({
   streamStartTime,
   onSend,
   onStop,
+  onForkMessage,
 }: ChatViewProps) {
   const inputRef = useRef<MessageInputHandle>(null);
   const [editingContent, setEditingContent] = useState<string>('');
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
 
   // Auto-focus input when messages change
@@ -36,18 +39,30 @@ export function ChatView({
     inputRef.current?.focus();
   }, [messages.length]);
 
+  const handleSend: typeof onSend = async (message, attachments, mentionedTools, enableThinking) => {
+    if (editingMessageId && onForkMessage) {
+      await onForkMessage(editingMessageId);
+      setEditingMessageId(null);
+    }
+    setEditingContent('');
+    onSend(message, attachments, mentionedTools, enableThinking);
+  };
+
   return (
     <div className="flex flex-1 flex-col min-h-0">
       <MessageList
         messages={messages}
         isStreaming={isStreaming}
         streamStartTime={streamStartTime}
-        onEditMessage={(_id, content) => setEditingContent(content)}
+        onEditMessage={(id, content) => {
+          setEditingContent(content);
+          setEditingMessageId(id);
+        }}
       />
       <MessageInput
         ref={inputRef}
         sessionKey={sessionKey}
-        onSend={onSend}
+        onSend={handleSend}
         onStop={onStop}
         isStreaming={isStreaming}
         externalValue={editingContent}

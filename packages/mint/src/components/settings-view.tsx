@@ -81,10 +81,10 @@ export function SettingsView({ onBack }: SettingsViewProps) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 cursor-pointer ${
                     activeTab === tab.id
-                      ? 'border-l-2 border-l-primary bg-primary-light text-primary-text'
-                      : 'text-text-secondary hover:bg-bg-hover'
+                      ? 'bg-primary/6 text-primary font-semibold'
+                      : 'text-text-tertiary hover:bg-bg-hover hover:text-text-secondary'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -96,7 +96,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto max-w-2xl">
           {activeTab === 'provider' && <ProviderTab />}
 
           {activeTab === 'tools' && (
@@ -174,7 +174,7 @@ function ToolGroup({
       <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">{title}</h3>
       <div className="space-y-2">
         {tools.map((tool) => (
-          <div key={tool.name} className="rounded border border-border bg-bg px-3 py-2.5">
+          <div key={tool.name} className="rounded-lg border border-border bg-bg px-3 py-2.5 hover:border-border-hover transition-colors">
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-sm font-mono font-semibold text-text">{tool.name}</span>
               <span className={`pill text-[10px] font-semibold ${badgeClass}`}>

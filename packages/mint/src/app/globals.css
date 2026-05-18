@@ -65,6 +65,10 @@
 
   /* 环境变量 */
   --radius: 0.5rem;
+  --sidebar-width: 240px;
+  --transition-fast: 120ms;
+  --transition-normal: 200ms;
+  --transition-slow: 350ms;
   --scrollbar-thumb: rgba(0, 0, 0, 0.12);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.22);
   --glass-bg: rgba(255, 255, 255, 0.8);
@@ -74,37 +78,37 @@
 
 /* ─── Dark Theme ───────────────────────────────────────────── */
 .dark {
-  --background: #09090b;
+  --background: #0a0a0c;
   --foreground: #fafafa;
-  --card: #111113;
+  --card: #12121a;
   --card-foreground: #fafafa;
-  --popover: #111113;
+  --popover: #12121a;
   --popover-foreground: #fafafa;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
   --secondary: #1c1c1e;
   --secondary-foreground: #fafafa;
   --muted: #1c1c1e;
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: #b4b4be;
   --accent: #1e3a5f;
   --accent-foreground: #93c5fd;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #27272a;
-  --input: #27272a;
+  --border: #1f1f28;
+  --input: #1f1f28;
   --ring: #3b82f6;
   --chart-1: #3b82f6;
   --chart-2: #22c55e;
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
   --chart-5: #a1a1aa;
-  --sidebar: #0f0f11;
+  --sidebar: #0e0e14;
   --sidebar-foreground: #fafafa;
   --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1e3a5f;
   --sidebar-accent-foreground: #93c5fd;
-  --sidebar-border: #27272a;
+  --sidebar-border: #1f1f28;
   --sidebar-ring: #3b82f6;
 
   /* Mint 扩展 */
@@ -116,15 +120,15 @@
   --primary-light: #1e3a5f;
   --bg-warm: #1c1c1e;
   --bg-hover: #2a2a2d;
-  --text-tertiary: #71717a;
-  --border-hover: #3f3f46;
-  --code-bg: #0d0d0f;
+  --text-tertiary: #8888a0;
+  --border-hover: #2e2e3a;
+  --code-bg: #0d0d14;
   --tooltip: #fafafa;
   --tooltip-foreground: #09090b;
 
   --scrollbar-thumb: rgba(255, 255, 255, 0.12);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
-  --glass-bg: rgba(9, 9, 11, 0.8);
+  --glass-bg: rgba(9, 9, 11, 0.85);
   --gradient-start: rgba(59, 130, 246, 0.06);
   --gradient-end: #09090b;
 }
@@ -218,18 +222,33 @@
 
   /* Scrollbar — minimal, Notion-style */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
-    border-radius: 3px;
+    border-radius: 10px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  /* Selection & focus */
+  ::selection {
+    background: var(--primary);
+    color: white;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+    border-radius: var(--radius-sm);
   }
 }
 
@@ -309,4 +328,47 @@
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+/* Elevation shadows */
+@utility shadow-elevation-1 {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+@utility shadow-elevation-2 {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+@utility shadow-elevation-3 {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Transition speeds */
+@utility transition-fast {
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease);
+}
+@utility transition-normal {
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease);
+}
+
+/* Skeleton shimmer loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@utility skeleton {
+  background: linear-gradient(90deg, var(--muted) 25%, var(--bg-hover) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Dialog entry animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }

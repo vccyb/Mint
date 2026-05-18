@@ -29,7 +29,7 @@ export function VoiceMicButton({
     <button
       onClick={onClick}
       className={cn(
-        'relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors cursor-pointer',
+        'relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer',
         isRecording
           ? 'text-red-500'
           : isConnecting

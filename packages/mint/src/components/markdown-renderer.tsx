@@ -41,7 +41,7 @@ function CodeBlockWithCopy({ children, className }: { children: ReactNode; class
   return (
     <div className="my-3 rounded-lg overflow-hidden shadow-elevation-1">
       {/* Header bar: language label + copy button */}
-      <div className="flex items-center justify-between bg-bg-warm px-3 py-1.5">
+      <div className="flex items-center justify-between bg-bg-warm/80 backdrop-blur-sm px-3 py-1.5">
         <span className="text-[10px] font-semibold text-muted-foreground font-mono uppercase tracking-wider">
           {lang || 'code'}
         </span>
@@ -117,19 +117,19 @@ const markdownComponents: Partial<Components> = {
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto my-3">
-      <table className="w-full text-sm border-collapse border border-gray-200">{children}</table>
+      <table className="w-full text-sm border-collapse border border-border">{children}</table>
     </div>
   ),
   th: ({ children }) => (
-    <th className="border border-gray-200 bg-gray-50 px-3 py-1.5 text-left text-xs font-semibold">
+    <th className="border border-border bg-bg-warm px-3 py-1.5 text-left text-xs font-semibold">
       {children}
     </th>
   ),
-  td: ({ children }) => <td className="border border-gray-200 px-3 py-1.5 text-sm">{children}</td>,
+  td: ({ children }) => <td className="border border-border px-3 py-1.5 text-sm even:bg-bg-warm/50">{children}</td>,
   ul: ({ children }) => <ul className="my-2 ml-5 list-disc space-y-0.5">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 ml-5 list-decimal space-y-0.5">{children}</ol>,
   blockquote: ({ children }) => (
-    <blockquote className="my-2 border-l-4 border-gray-300 pl-4 text-gray-600">
+    <blockquote className="my-2 border-l-4 border-primary/20 pl-4 text-muted-foreground">
       {children}
     </blockquote>
   ),

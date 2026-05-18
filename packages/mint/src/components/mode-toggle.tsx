@@ -16,15 +16,15 @@ const modes: { value: Mode; label: string }[] = [
 export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
   return (
     <div className="flex justify-center px-3 pt-3 pb-2">
-      <div className="inline-flex overflow-hidden rounded-[8px] border border-border bg-bg">
+      <div className="inline-flex overflow-hidden rounded-[10px] border border-border bg-bg">
         {modes.map(({ value, label }) => (
           <button
             key={value}
             onClick={() => onModeChange(value)}
             className={cn(
-              'px-3.5 py-1 text-[11px] font-medium transition-all duration-150 cursor-pointer',
+              'px-3.5 py-1 text-[11px] font-medium transition-all duration-200 cursor-pointer',
               mode === value
-                ? 'rounded-[7px] bg-primary-light text-primary'
+                ? 'rounded-[9px] bg-primary-light text-primary shadow-sm'
                 : 'text-text-tertiary hover:text-muted-foreground',
             )}
           >

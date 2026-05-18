@@ -30,26 +30,26 @@ const ERROR_STYLES: Record<
   },
   AUTH_ERROR: {
     icon: KeyRound,
-    bgClass: 'bg-red-50',
-    borderClass: 'border-red-200',
-    textClass: 'text-red-600',
-    iconClass: 'text-red-500',
+    bgClass: 'bg-destructive/8',
+    borderClass: 'border-destructive/20',
+    textClass: 'text-destructive',
+    iconClass: 'text-destructive',
     label: '认证错误',
   },
   PROVIDER_ERROR: {
     icon: Bot,
-    bgClass: 'bg-red-50',
-    borderClass: 'border-red-200',
-    textClass: 'text-red-600',
-    iconClass: 'text-red-500',
+    bgClass: 'bg-destructive/8',
+    borderClass: 'border-destructive/20',
+    textClass: 'text-destructive',
+    iconClass: 'text-destructive',
     label: '服务错误',
   },
   NETWORK_ERROR: {
     icon: WifiOff,
-    bgClass: 'bg-red-50',
-    borderClass: 'border-red-200',
-    textClass: 'text-red-600',
-    iconClass: 'text-red-500',
+    bgClass: 'bg-destructive/8',
+    borderClass: 'border-destructive/20',
+    textClass: 'text-destructive',
+    iconClass: 'text-destructive',
     label: '网络错误',
   },
   PROMPT_TOO_LONG: {
@@ -62,10 +62,10 @@ const ERROR_STYLES: Record<
   },
   INTERNAL_ERROR: {
     icon: AlertTriangle,
-    bgClass: 'bg-red-50',
-    borderClass: 'border-red-200',
-    textClass: 'text-red-600',
-    iconClass: 'text-red-500',
+    bgClass: 'bg-destructive/8',
+    borderClass: 'border-destructive/20',
+    textClass: 'text-destructive',
+    iconClass: 'text-destructive',
     label: '内部错误',
   },
 };
@@ -81,13 +81,13 @@ export function ErrorBlock({ code, message, onRetry }: ErrorBlockProps) {
         </div>
         <div className="min-w-0 flex-1">
           <div className={`text-xs font-semibold ${style.textClass}`}>{style.label}</div>
-          <div className="mt-1 text-xs font-mono text-red-700/80 leading-relaxed break-all">
+          <div className="mt-1 text-xs font-mono text-destructive/80 leading-relaxed break-all">
             {message}
           </div>
           {onRetry && (
             <button
               onClick={onRetry}
-              className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-medium text-destructive border border-destructive/20 hover:bg-destructive/8 transition-colors cursor-pointer"
             >
               <svg
                 width="12"

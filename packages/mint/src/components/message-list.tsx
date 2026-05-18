@@ -59,14 +59,32 @@ function EmptyState() {
     { key: '#', label: 'MCP 工具', desc: '调用外部工具' },
   ];
 
+  const quickActions = [
+    { title: '编写代码', desc: '让 Mint 创建或修改文件' },
+    { title: '调试问题', desc: '粘贴错误信息，获取修复建议' },
+  ];
+
   return (
     <div className="flex flex-1 items-center justify-center">
-      <div className="text-center max-w-xs">
-        <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-light text-primary">
-          <Sparkles className="h-5 w-5" />
+      <div className="text-center max-w-sm">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8 text-primary shadow-whisper-sm">
+          <Sparkles className="h-7 w-7" />
         </div>
-        <p className="text-sm font-medium text-foreground">开始对话</p>
-        <p className="text-xs text-text-tertiary mt-1 mb-4">输入消息开始与 Mint 对话</p>
+        <p className="text-base font-semibold text-foreground">开始对话</p>
+        <p className="text-xs text-text-tertiary mt-1 mb-5">输入消息开始与 Mint 对话</p>
+
+        <div className="space-y-1.5 mb-5">
+          {quickActions.map((action) => (
+            <div
+              key={action.title}
+              className="w-full text-left px-3 py-2 rounded-lg border border-border hover:bg-bg-hover hover:border-border-hover text-xs text-text-secondary transition-colors duration-150 cursor-default"
+            >
+              <span className="font-medium text-foreground">{action.title}</span>
+              <span className="block mt-0.5 text-text-tertiary">{action.desc}</span>
+            </div>
+          ))}
+        </div>
+
         <div className="space-y-1.5">
           {shortcuts.map((s) => (
             <div key={s.key} className="flex items-center gap-2 text-xs text-text-tertiary">

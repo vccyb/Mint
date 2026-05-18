@@ -14,6 +14,7 @@ import {
   ChevronRight,
   FilePlus,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { ToolCallInfo, SkillLoadInfo } from '@/types';
 
 function getToolIcon(name: string) {
@@ -130,7 +131,7 @@ function ToolRow({ tool }: { tool: ToolCallInfo }) {
         )}
       </div>
       {expanded && (
-        <div className="ml-5 mr-2 mb-1 space-y-1.5 border-l border-border pl-3">
+        <div className={cn('ml-5 mr-2 mb-1 space-y-1.5 border-l pl-3', isError ? 'border-l-destructive/30' : 'border-l-border')}>
           {tool.result && (
             <pre className="bg-bg-warm rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
               {tool.result.length > 3000
@@ -238,6 +239,14 @@ export function ActivityPanel({ toolCalls, skillLoads, isStreaming }: ActivityPa
           </span>
         )}
         {hasRunning && <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />}
+        {hasRunning && toolCalls.length > 0 && (
+          <div className="flex-1 h-[2px] bg-bg-hover rounded-full overflow-hidden min-w-[40px]">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${(completedCount / toolCalls.length) * 100}%` }}
+            />
+          </div>
+        )}
       </button>
 
       {/* Expanded content */}

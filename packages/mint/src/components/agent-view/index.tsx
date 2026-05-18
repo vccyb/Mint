@@ -28,6 +28,7 @@ interface AgentViewProps {
   streamStartTime?: number | null;
   onSend: (message: string, attachments?: Attachment[]) => void;
   onStop?: () => void;
+  onForkMessage?: (messageId: string) => Promise<void>;
   pendingPermission?: PermissionRequestData | null;
   onPermissionDecision?: (
     requestId: string,
@@ -62,6 +63,7 @@ export function AgentView({
   streamStartTime,
   onSend,
   onStop,
+  onForkMessage,
   pendingPermission,
   onPermissionDecision,
   concurrencyLimitReached,
@@ -79,6 +81,7 @@ export function AgentView({
 }: AgentViewProps) {
   const [panelState, setPanelState] = useState<PanelState>('visible');
   const [editingContent, setEditingContent] = useState<string>('');
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<{
     path: string;
     name: string;
@@ -139,6 +142,16 @@ export function AgentView({
   const latestTodos = latestTodoMsg?.todos;
   const hasActiveTodos =
     !!latestTodos && latestTodos.some((t: TodoItem) => t.status === 'in_progress');
+
+  const handleAgentSend: typeof onSend = async (message, attachments) => {
+    if (editingMessageId && onForkMessage) {
+      await onForkMessage(editingMessageId);
+      setEditingMessageId(null);
+    }
+    setEditingContent('');
+    onSend(message, attachments);
+  };
+
   return (
     <RightPanelContext.Provider value={ctxValue}>
       <div className="relative flex flex-1 flex-col min-h-0">
@@ -217,7 +230,10 @@ export function AgentView({
               messages={messages}
               isStreaming={isStreaming}
               streamStartTime={streamStartTime}
-              onEditMessage={(_id, content) => setEditingContent(content)}
+              onEditMessage={(id, content) => {
+                setEditingContent(content);
+                setEditingMessageId(id);
+              }}
               onApprovePlan={onApprovePlan}
               hideLastTodoAndPlan={hasActiveTodos}
               teammates={teammates}
@@ -258,7 +274,7 @@ export function AgentView({
               <MessageInput
                 ref={inputRef}
                 sessionKey={sessionKey}
-                onSend={onSend}
+                onSend={handleAgentSend}
                 onStop={onStop}
                 isStreaming={isStreaming}
                 placeholder="描述一个任务给 Agent 执行..."

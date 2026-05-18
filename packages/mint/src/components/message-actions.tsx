@@ -32,9 +32,11 @@ export function MessageActions({ content, isUser, onEdit }: MessageActionsProps)
         <button
           onClick={onEdit}
           className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-text-tertiary hover:bg-bg-warm hover:text-text transition-colors cursor-pointer"
-          aria-label="Edit message"
+          aria-label="Edit and resend"
+          title="编辑并重新发送"
         >
           <Pencil className="h-3 w-3" />
+          <span className="hidden sm:inline">编辑重发</span>
         </button>
       )}
     </div>

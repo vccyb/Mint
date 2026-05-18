@@ -39,6 +39,7 @@ interface UseChatStreamReturn {
   inputTokens: number;
   contextWindow: number;
   isCompacting: boolean;
+  forkFromMessage: (messageId: string) => Promise<void>;
 }
 
 export function useChatStream(
@@ -128,5 +129,6 @@ export function useChatStream(
     inputTokens: state.inputTokens,
     contextWindow: state.contextWindow,
     isCompacting: state.isCompacting,
+    forkFromMessage: state.forkFromMessage,
   };
 }

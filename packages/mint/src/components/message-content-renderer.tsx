@@ -52,7 +52,7 @@ export function renderUserContent(content: string, onFileClick?: (path: string) 
         <span
           key={i}
           title={`/${skillMatch[1]}`}
-          className="inline-flex items-center gap-0.5 px-0.5 text-[12px] font-mono text-purple-600 align-middle"
+          className="inline-flex items-center gap-0.5 px-0.5 text-[12px] font-mono text-[#AF52DE] align-middle"
         >
           <Zap className="h-3 w-3" />
           {skillMatch[1]}
@@ -65,7 +65,7 @@ export function renderUserContent(content: string, onFileClick?: (path: string) 
         <span
           key={i}
           title={`#${mcpMatch[1]}`}
-          className="inline-flex items-center gap-0.5 px-0.5 text-[12px] font-mono text-green-600 align-middle"
+          className="inline-flex items-center gap-0.5 px-0.5 text-[12px] font-mono text-[#34C759] align-middle"
         >
           <Wrench className="h-3 w-3" />
           {mcpMatch[1]}

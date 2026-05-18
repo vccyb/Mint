@@ -73,7 +73,7 @@ export function ProjectSidebar({
   );
 
   return (
-    <div className="flex h-full w-[200px] min-w-[200px] flex-col border-r border-border bg-bg-warm">
+    <div className="flex h-full w-[240px] min-w-[240px] flex-col border-r border-border bg-bg-warm">
       <ModeToggle mode={mode} onModeChange={onModeChange} />
       <div className="flex items-center justify-between px-3 py-1.5">
         <span className="text-[12px] font-semibold text-text-secondary">Agent 工程</span>

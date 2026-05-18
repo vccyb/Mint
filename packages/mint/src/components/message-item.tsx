@@ -116,7 +116,7 @@ export function MessageItem({
       <div className={cn('mx-auto w-[80%] flex gap-3', isUser && 'flex-row-reverse')}>
         {/* Avatar */}
         {isUser ? (
-          <div className="w-6 h-6 rounded-md bg-primary-light text-primary text-xs font-semibold flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-md bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
             U
           </div>
         ) : (
@@ -132,8 +132,8 @@ export function MessageItem({
             >
               {isUser ? 'You' : 'Mint'}
             </span>
-            <span className="text-xs text-text-tertiary">&middot;</span>
-            <span className="text-xs text-text-tertiary">
+            <span className="text-xs text-text-tertiary/60">&middot;</span>
+            <span className="text-xs text-text-tertiary/60">
               {formatMessageTime(message.timestamp)}
             </span>
           </div>
@@ -141,7 +141,7 @@ export function MessageItem({
           {/* Message body */}
           {isUser ? (
             <div className="max-w-[460px]">
-              <div className="bg-bg-warm text-foreground px-3.5 py-2.5 rounded-xl text-sm leading-relaxed">
+              <div className="bg-primary/[0.06] text-foreground px-3.5 py-2.5 rounded-2xl rounded-br-md text-sm leading-relaxed">
                 {renderUserContent(message.content, onFileClick)}
               </div>
             </div>
@@ -160,7 +160,7 @@ export function MessageItem({
               {!message.isPlanMode && !message.errorInfo && (
                 <div
                   className={cn(
-                    'text-sm leading-relaxed text-foreground',
+                    'pl-3 border-l-2 border-l-primary/10 text-sm leading-relaxed text-foreground',
                     message.isStreaming && 'streaming-cursor',
                   )}
                 >

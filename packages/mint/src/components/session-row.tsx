@@ -59,9 +59,9 @@ export function SessionRow({
 
   return (
     <div
-      className={`group relative flex items-center gap-2 rounded-[6px] text-[12px] cursor-pointer transition-colors ${
+      className={`group relative flex items-center gap-2 rounded-[6px] text-[12px] cursor-pointer transition-colors duration-150 ${
         indent ? 'pl-5 pr-2' : 'px-2'
-      } py-[6px] ${isActive ? 'bg-primary-light' : 'hover:bg-bg-hover'}`}
+      } py-[6px] ${isActive ? 'bg-primary/8 border-l-2 border-l-primary' : 'hover:bg-bg-hover/80'}`}
       onClick={() => onSelect(session.id)}
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, session.id)}
