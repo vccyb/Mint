@@ -10,6 +10,7 @@ import { LogsView } from './logs-view';
 import { InlineEdit } from './inline-edit';
 import { ThemeToggle } from './theme-toggle';
 import { WelcomeScreen } from './welcome-screen';
+import { UpdateBanner } from './update-banner';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { StreamingRegistryProvider, useStreamingRegistry } from '@/lib/streaming-registry';
 import { BrowserSupportAlert } from './browser-support-alert';
@@ -20,24 +21,42 @@ function MintAppInner() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showBrowserAlert, setShowBrowserAlert] = useState(true);
-  const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
+  const [depsReady, setDepsReady] = useState<boolean | null>(null);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const registry = useStreamingRegistry();
 
-  // Check config on mount
+  // Check system deps on mount
   useEffect(() => {
     const api = (window as any).electronAPI;
-    api.readConfig().then((config: Record<string, unknown>) => {
-      setIsConfigured(Boolean(config?.apiKey));
+    api.checkSystemDeps().then((deps: Record<string, { installed: boolean }>) => {
+      setDepsReady(Object.values(deps).every((d) => d.installed));
     }).catch(() => {
-      setIsConfigured(false);
+      setDepsReady(false);
     });
   }, []);
 
-  const handleWelcomeSave = async (config: { model: string; apiKey: string; baseUrl: string }) => {
+  // Listen for menu actions (Cmd+, for settings, etc.)
+  useEffect(() => {
     const api = (window as any).electronAPI;
-    await api.updateConfig(config);
-    setIsConfigured(true);
-  };
+    const cleanup = api.onMenuAction((action: string) => {
+      if (action === 'open-settings') {
+        setShowSettings(true);
+      }
+    });
+    return cleanup;
+  }, []);
+
+  // Listen for update status
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    const cleanup = api.onUpdateStatus((status: { type: string }) => {
+      if (status.type === 'downloaded') {
+        setUpdateDownloaded(true);
+      }
+    });
+    return cleanup;
+  }, []);
+
   const chatHook = useChatStream('chat', registry, null);
   const agentHook = useChatStream('agent', registry, null);
   const [sidebarKey, setSidebarKey] = useState(0);
@@ -192,8 +211,18 @@ function MintAppInner() {
     }
   }, [activeHook.isStreaming, activeHook.sessionId, activeHook.messages, sessionMap, refreshSidebar]);
 
-  // Show welcome screen while checking config or if not configured
-  if (isConfigured === null) {
+  // Notify main process about streaming state (for system notifications)
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (activeHook.isStreaming) {
+      api.notifyStreamStarted?.();
+    } else if (prevStreamingRef.current) {
+      api.notifyStreamEnded?.();
+    }
+  }, [activeHook.isStreaming]);
+
+  // Show welcome screen while checking deps or if deps missing
+  if (depsReady === null) {
     return (
       <div className="flex h-screen items-center justify-center bg-bg">
         <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent spinner" />
@@ -201,13 +230,14 @@ function MintAppInner() {
     );
   }
 
-  if (!isConfigured) {
-    return <WelcomeScreen onSave={handleWelcomeSave} />;
+  if (!depsReady) {
+    return <WelcomeScreen onContinue={() => setDepsReady(true)} />;
   }
 
   return (
     <>
       {mode === 'agent' && <BrowserSupportAlert onClose={() => setShowBrowserAlert(false)} />}
+      {updateDownloaded && <UpdateBanner onDismiss={() => setUpdateDownloaded(false)} />}
 
       <div className="flex h-screen overflow-hidden bg-bg">
         {/* Sidebar - 不同模式使用不同的侧边栏 */}
@@ -309,7 +339,7 @@ function MintAppInner() {
               sessionTitle={sessionTitle}
             />
           ) : showSettings ? (
-            <SettingsView onBack={() => setShowSettings(false)} />
+            <SettingsView onBack={() => setShowSettings(false)} onResetConfig={() => setDepsReady(false)} />
           ) : mode === 'chat' ? (
             <ChatView
               messages={chatHook.messages}

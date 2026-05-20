@@ -76,6 +76,9 @@ const api = {
   sttChunk: (input: { sessionId?: string; audio?: string; isLast?: boolean }) => ipcRenderer.invoke('stt:chunk', input),
   sttClose: (sessionId?: string) => ipcRenderer.invoke('stt:close', sessionId),
 
+  // System deps
+  checkSystemDeps: () => ipcRenderer.invoke('system:checkDeps'),
+
   // Chat 流式
   chatSend: (input: Record<string, unknown>) => ipcRenderer.invoke('chat:send', input),
   chatAbort: (sessionId: string) => ipcRenderer.invoke('chat:abort', sessionId),
@@ -94,6 +97,26 @@ const api = {
     const handler = (_: unknown, event: unknown) => callback(event);
     ipcRenderer.on('agent:stream', handler);
     return () => ipcRenderer.removeListener('agent:stream', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
+  },
+
+  // Notifications — renderer tells main process about streaming state
+  notifyStreamStarted: () => ipcRenderer.invoke('notification:streamStarted'),
+  notifyStreamEnded: () => ipcRenderer.invoke('notification:streamEnded'),
+
+  // Auto-update
+  checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  downloadAndInstallUpdate: () => ipcRenderer.invoke('update:downloadAndInstall'),
+  onUpdateStatus: (callback: (status: unknown) => void) => {
+    const handler = (_: unknown, status: unknown) => callback(status);
+    ipcRenderer.on('update:onStatus', handler);
+    return () => ipcRenderer.removeListener('update:onStatus', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
+  },
+
+  // Menu actions — main process sends menu events to renderer
+  onMenuAction: (callback: (action: string) => void) => {
+    const handler = (_: unknown, action: string) => callback(action);
+    ipcRenderer.on('menu:onAction', handler);
+    return () => ipcRenderer.removeListener('menu:onAction', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
   },
 };
 

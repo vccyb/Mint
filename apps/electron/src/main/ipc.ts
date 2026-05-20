@@ -22,8 +22,13 @@ import {
   FILESYSTEM_IPC,
   FILES_IPC,
   STT_IPC,
+  SYSTEM_IPC,
+  NOTIFICATION_IPC,
+  UPDATE_IPC,
 } from '../types/ipc-channels';
 import type { Mode } from '../../types';
+import { onStreamStarted, onStreamEnded } from './stream-notifier';
+import { checkForUpdates, downloadAndInstallUpdate, onUpdateStatus } from './updater';
 
 const log = createLogger('ipc');
 
@@ -490,6 +495,49 @@ export function registerIpcHandlers() {
   ipcMain.handle(STT_IPC.CLOSE, async (_, _sessionId?: string) => {
     // TODO: Close STT session
     return { ok: true };
+  });
+
+  // ─── System Deps Check ───
+  ipcMain.handle(SYSTEM_IPC.CHECK_DEPS, async () => {
+    const cp = await import('child_process');
+    const results: Record<string, { installed: boolean; version?: string }> = {};
+    for (const cmd of ['node', 'git']) {
+      try {
+        // Use login shell to inherit user's full PATH (brew, nvm, etc.)
+        const ver = cp.execSync(`/bin/zsh -l -c "${cmd} --version"`, { timeout: 8000, encoding: 'utf-8' }).trim();
+        results[cmd] = { installed: true, version: ver };
+      } catch {
+        results[cmd] = { installed: false };
+      }
+    }
+    return results;
+  });
+
+  // ─── Notifications ───
+  ipcMain.handle(NOTIFICATION_IPC.STREAM_STARTED, async () => {
+    onStreamStarted();
+    return { ok: true };
+  });
+
+  ipcMain.handle(NOTIFICATION_IPC.STREAM_ENDED, async () => {
+    onStreamEnded();
+    return { ok: true };
+  });
+
+  // ─── Auto-Update ───
+  ipcMain.handle(UPDATE_IPC.CHECK, async () => {
+    return checkForUpdates();
+  });
+
+  ipcMain.handle(UPDATE_IPC.DOWNLOAD_AND_INSTALL, async () => {
+    return downloadAndInstallUpdate();
+  });
+
+  onUpdateStatus((status) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win) {
+      win.webContents.send(UPDATE_IPC.ON_STATUS, status);
+    }
   });
 
   log.info('IPC handlers registered');

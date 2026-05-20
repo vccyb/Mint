@@ -96,3 +96,22 @@ export const SESSION_FILES_IPC = {
   GET_CONTENT: 'sessionFiles:getContent',
   DELETE: 'sessionFiles:delete',
 } as const;
+
+export const SYSTEM_IPC = {
+  CHECK_DEPS: 'system:checkDeps',
+} as const;
+
+export const NOTIFICATION_IPC = {
+  STREAM_STARTED: 'notification:streamStarted',
+  STREAM_ENDED: 'notification:streamEnded',
+} as const;
+
+export const UPDATE_IPC = {
+  CHECK: 'update:check',
+  DOWNLOAD_AND_INSTALL: 'update:downloadAndInstall',
+  ON_STATUS: 'update:onStatus',
+} as const;
+
+export const MENU_IPC = {
+  ON_ACTION: 'menu:onAction',
+} as const;

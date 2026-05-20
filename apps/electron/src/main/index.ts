@@ -1,6 +1,12 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'path';
 import { registerIpcHandlers } from './ipc';
+import { buildApplicationMenu } from './menu';
+import { setupAutoUpdater } from './updater';
+import { setMainWindow } from './stream-notifier';
+import { createLogger } from './lib/logger';
+
+const log = createLogger('main');
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -24,6 +30,9 @@ function createWindow() {
     visualEffectState: 'active',
   });
 
+  // Share window reference with stream notifier
+  setMainWindow(mainWindow);
+
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
   } else {
@@ -45,7 +54,16 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    setMainWindow(null);
   });
+
+  // Build application menu
+  buildApplicationMenu(mainWindow);
+
+  // Setup auto-updater (production only)
+  if (!isDev) {
+    setupAutoUpdater(mainWindow);
+  }
 }
 
 app.whenReady().then(() => {
