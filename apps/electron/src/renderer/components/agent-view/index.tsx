@@ -53,6 +53,7 @@ interface AgentViewProps {
   tokenBudget?: number;
   /** Whether context is being compacted */
   isCompacting?: boolean;
+  onOpenSettings?: () => void;
 }
 
 export function AgentView({
@@ -77,6 +78,7 @@ export function AgentView({
   tokenUsage,
   tokenBudget,
   isCompacting,
+  onOpenSettings,
 }: AgentViewProps) {
   const [panelState, setPanelState] = useState<PanelState>('visible');
   const [editingContent, setEditingContent] = useState<string>('');
@@ -229,6 +231,7 @@ export function AgentView({
               messages={messages}
               isStreaming={isStreaming}
               streamStartTime={streamStartTime}
+              onOpenSettings={onOpenSettings}
               onEditMessage={(id, content) => {
                 setEditingContent(content);
                 setEditingMessageId(id);

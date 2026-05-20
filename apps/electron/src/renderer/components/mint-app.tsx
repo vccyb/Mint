@@ -9,6 +9,7 @@ import { SettingsView } from './settings-view';
 import { LogsView } from './logs-view';
 import { InlineEdit } from './inline-edit';
 import { ThemeToggle } from './theme-toggle';
+import { WelcomeScreen } from './welcome-screen';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { StreamingRegistryProvider, useStreamingRegistry } from '@/lib/streaming-registry';
 import { BrowserSupportAlert } from './browser-support-alert';
@@ -19,7 +20,24 @@ function MintAppInner() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showBrowserAlert, setShowBrowserAlert] = useState(true);
+  const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
   const registry = useStreamingRegistry();
+
+  // Check config on mount
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    api.readConfig().then((config: Record<string, unknown>) => {
+      setIsConfigured(Boolean(config?.apiKey));
+    }).catch(() => {
+      setIsConfigured(false);
+    });
+  }, []);
+
+  const handleWelcomeSave = async (config: { model: string; apiKey: string; baseUrl: string }) => {
+    const api = (window as any).electronAPI;
+    await api.updateConfig(config);
+    setIsConfigured(true);
+  };
   const chatHook = useChatStream('chat', registry, null);
   const agentHook = useChatStream('agent', registry, null);
   const [sidebarKey, setSidebarKey] = useState(0);
@@ -174,9 +192,21 @@ function MintAppInner() {
     }
   }, [activeHook.isStreaming, activeHook.sessionId, activeHook.messages, sessionMap, refreshSidebar]);
 
+  // Show welcome screen while checking config or if not configured
+  if (isConfigured === null) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg">
+        <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent spinner" />
+      </div>
+    );
+  }
+
+  if (!isConfigured) {
+    return <WelcomeScreen onSave={handleWelcomeSave} />;
+  }
+
   return (
     <>
-      {/* Safari 浏览器提示 */}
       {mode === 'agent' && <BrowserSupportAlert onClose={() => setShowBrowserAlert(false)} />}
 
       <div className="flex h-screen overflow-hidden bg-bg">
@@ -289,6 +319,7 @@ function MintAppInner() {
               onSend={chatHook.sendMessage}
               onStop={chatHook.stopStreaming}
               onForkMessage={chatHook.forkFromMessage}
+              onOpenSettings={() => setShowSettings(true)}
             />
           ) : (
             <AgentView
@@ -313,6 +344,7 @@ function MintAppInner() {
               tokenUsage={agentHook.inputTokens}
               tokenBudget={agentHook.contextWindow}
               isCompacting={agentHook.isCompacting}
+              onOpenSettings={() => setShowSettings(true)}
             />
           )}
         </div>

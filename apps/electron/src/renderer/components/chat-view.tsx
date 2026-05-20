@@ -17,6 +17,7 @@ interface ChatViewProps {
   ) => void;
   onStop?: () => void;
   onForkMessage?: (messageId: string) => Promise<void>;
+  onOpenSettings?: () => void;
 }
 
 export function ChatView({
@@ -27,6 +28,7 @@ export function ChatView({
   onSend,
   onStop,
   onForkMessage,
+  onOpenSettings,
 }: ChatViewProps) {
   const inputRef = useRef<MessageInputHandle>(null);
   const [editingContent, setEditingContent] = useState<string>('');
@@ -53,6 +55,7 @@ export function ChatView({
         messages={messages}
         isStreaming={isStreaming}
         streamStartTime={streamStartTime}
+        onOpenSettings={onOpenSettings}
         onEditMessage={(id, content) => {
           setEditingContent(content);
           setEditingMessageId(id);

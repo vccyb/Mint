@@ -18,6 +18,7 @@ interface MessageListProps {
   isWaitingResume?: boolean;
   onViewTeam?: () => void;
   onFileClick?: (path: string) => void;
+  onOpenSettings?: () => void;
 }
 
 function StreamingIndicator({ startTime }: { startTime: number | null }) {
@@ -112,6 +113,7 @@ export function MessageList({
   isWaitingResume,
   onViewTeam,
   onFileClick,
+  onOpenSettings,
 }: MessageListProps) {
   if (messages.length === 0) {
     return <EmptyState />;
@@ -131,6 +133,7 @@ export function MessageList({
               onApprovePlan={onApprovePlan}
               hideTodoAndPlan={hideLastTodoAndPlan && index === messages.length - 1}
               onFileClick={onFileClick}
+              onOpenSettings={onOpenSettings}
             />
           ))}
           {teammates && teammates.length > 0 && !hideLastTodoAndPlan && (

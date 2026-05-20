@@ -25,6 +25,7 @@ interface MessageItemProps {
   onApprovePlan?: (mode: 'auto' | 'manual') => void;
   hideTodoAndPlan?: boolean;
   onFileClick?: (path: string) => void;
+  onOpenSettings?: () => void;
 }
 
 export function MessageItem({
@@ -35,6 +36,7 @@ export function MessageItem({
   onApprovePlan,
   hideTodoAndPlan,
   onFileClick,
+  onOpenSettings,
 }: MessageItemProps) {
   if (message.role === 'question') {
     return (
@@ -154,7 +156,7 @@ export function MessageItem({
                 />
               )}
               {message.errorInfo && (
-                <ErrorBlock code={message.errorInfo.code} message={message.errorInfo.message} />
+                <ErrorBlock code={message.errorInfo.code} message={message.errorInfo.message} onOpenSettings={onOpenSettings} />
               )}
               {!message.isPlanMode && !message.errorInfo && (
                 <div
