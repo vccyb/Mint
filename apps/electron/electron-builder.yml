@@ -71,3 +71,9 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+
+# 发布配置
+publish:
+  provider: github
+  owner: vccyb
+  repo: Mint

@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.5.0-blue" alt="version" />
-  <img src="https://img.shields.io/badge/Next.js-15-black" alt="Next.js" />
+  <img src="https://img.shields.io/badge/version-v0.7.0-blue" alt="version" />
+  <img src="https://img.shields.io/badge/Electron-35-blue" alt="Electron" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license" />
 </p>
 
@@ -8,19 +8,22 @@
 
 <p align="center">
   <strong>自托管 AI Chat + Autonomous Coding Agent</strong><br/>
-  在你的项目目录中启动，让 AI 助手连接你的文件系统，对话或自主完成任务。
+  桌面客户端 + Web 版，让 AI 助手连接你的文件系统，对话或自主完成任务。
 </p>
 
 ---
 
 ## Mint 是什么？
 
-Mint 是一个基于 Next.js 15 的 Web 应用，提供两种核心模式：
+Mint 提供两种使用方式：
 
-- **Chat 模式** — 类 ChatGPT 的对话界面，直接流式调用 Anthropic 兼容 API，支持图片/PDF/文本附件和扩展思维（Extended Thinking）
-- **Agent 模式** — 基于 Claude Agent SDK 的自主编程代理，可以读写文件、执行命令、搜索代码、运行子代理并行处理复杂任务
+- **桌面客户端（推荐）** — 基于 Electron 的原生桌面应用，直接访问本地文件系统，无需启动 Web 服务
+- **Web 版** — 基于 Next.js 15 的浏览器应用，通过 `mint start` 启动
 
-在任意项目目录执行 `mint start`，Mint 会启动一个 Web UI，将 AI 代理连接到你的本地文件系统，实现完整的读写执行能力。
+两种模式共享核心功能：
+
+- **Chat 模式** — 类 ChatGPT 的对话界面，流式调用 Anthropic 兼容 API，支持附件和 Extended Thinking
+- **Agent 模式** — 基于 Claude Agent SDK 的自主编程代理，读写文件、执行命令、并行子代理
 
 ## 功能特性
 
@@ -43,8 +46,6 @@ Mint 是一个基于 Next.js 15 的 Web 应用，提供两种核心模式：
 - **implementer** — 代码编写与修改
 - **test-engineer** — 测试编写与执行
 
-Lead Agent 通过 `run_in_background: true` 分发任务，结果通过 inbox 系统收集并自动恢复，支持并发控制、自动重试（3 次指数退避）和全局超时（10 分钟）。
-
 ### 权限系统
 
 三种模式可配置：
@@ -57,7 +58,6 @@ Lead Agent 通过 `run_in_background: true` 分发任务，结果通过 inbox �
 
 - 项目绑定本地文件系统路径
 - 文件树浏览器（展开/折叠/搜索）
-- 变更文件视图（git status 风格）
 - 文件预览（代码高亮、Markdown、图片）
 - 可拖拽调整面板大小
 
@@ -71,34 +71,45 @@ Agent 模式使用 TipTap 富文本编辑器：
 | `/` | Skill | 引用技能 |
 | `#` | MCP | 引用 MCP 工具 |
 
-### Skills 系统
+### 语音输入
 
-技能是带 YAML 前置信息的 Markdown 文件，注入到代理的系统提示中：
+集成豆包 ASR，支持实时语音转文字输入。
 
-- 内置技能：brainstorming、writing-plans、executing-plans、skill-creator 等
-- 用户技能：`~/.mint/skills/` 目录，支持 UI 端 CRUD
-- 支持搜索、启用/禁用、在线编辑
+### 主题切换
 
-### MCP 集成
+支持亮色/暗色主题，圆形扩散动画切换（View Transition API）。
 
-- 通过 Settings UI 配置外部 MCP 服务器
-- 支持命令行启动、环境变量配置
-- 连接测试 + 延迟测量 + 工具发现
+## 下载安装
 
-### 日志 & 可观测性
+从 [GitHub Releases](https://github.com/vccyb/Mint/releases) 下载最新版本：
 
-- 结构化日志（级别、服务名、作用域）
-- 会话感知：日志视图自动过滤当前会话
-- 实时刷新 + 导出
+| 平台 | 文件 |
+|------|------|
+| macOS (Apple Silicon) | `Mint-{version}-arm64.dmg` |
+| macOS (Intel) | `Mint-{version}-x64.dmg` |
+
+下载 DMG 后，拖拽 Mint 到 Applications 文件夹即可。
 
 ## 快速开始
 
-### 安装
+### 桌面客户端
+
+1. 从 [Releases](https://github.com/vccyb/Mint/releases) 下载并安装
+2. 打开 Mint，在 Settings 页面配置 API Key
+3. 创建新会话，开始使用
+
+### 从源码运行
 
 ```bash
 git clone https://github.com/vccyb/Mint.git
 cd Mint
 pnpm install
+
+# 桌面客户端开发模式
+cd apps/electron && pnpm dev
+
+# 或 Web 版
+cd packages/mint && pnpm dev
 ```
 
 ### 配置
@@ -111,33 +122,19 @@ pnpm install
 
 配置存储在 `~/.mint/config.json`。
 
-### 启动
-
-```bash
-# 生产模式（推荐）
-cd packages/mint
-pnpm build && pnpm start
-
-# 或使用 CLI
-mint start --port=3000
-```
-
-打开浏览器访问 `http://localhost:3000`。
-
 ## 架构概览
 
 ```
 ┌─────────────────────────────────────────────┐
-│                   Web UI                     │
-│  React 19 · Tailwind CSS · TipTap Editor    │
+│              Electron Desktop App            │
+│  React 19 · Tailwind CSS 4 · TipTap 3      │
 ├──────────────────┬──────────────────────────┤
 │    Chat Mode     │       Agent Mode          │
 │  Messages API    │   Claude Agent SDK        │
 │  Multi-modal     │   AgentOrchestrator       │
 │  SSE Streaming   │   Sub-agents · Watchdog   │
 ├──────────────────┴──────────────────────────┤
-│              Next.js API Routes              │
-│     withLogging · SSE · Permission Flow      │
+│              IPC Layer (Main ↔ Renderer)     │
 ├──────────────────────────────────────────────┤
 │              Storage Layer                   │
 │  JSONL Sessions · JSON Config · File-based   │
@@ -151,62 +148,37 @@ mint start --port=3000
 
 | 分类 | 技术 |
 |------|------|
-| 框架 | Next.js 15 (App Router) |
+| 桌面框架 | Electron 35 |
 | 前端 | React 19, TypeScript 5.7+ |
 | 样式 | Tailwind CSS 4, Notion 风格设计系统 |
+| 构建 | esbuild (main) + Vite (renderer) |
 | Agent SDK | `@anthropic-ai/claude-agent-sdk` |
 | 富文本 | TipTap 3 (mention extension) |
-| Markdown | react-markdown, remark-gfm, rehype-highlight |
-| PDF 解析 | pdf-parse |
+| 状态管理 | Jotai |
 | 图标 | lucide-react |
-| 字体 | Plus Jakarta Sans, Outfit |
 | 存储 | File-based JSONL + JSON |
 | 包管理 | pnpm workspaces |
 
 ## 项目结构
 
 ```
-packages/
-├── mint/          ← 主应用（Next.js 15）
-│   ├── bin/             CLI 入口
-│   ├── src/app/         API 路由（30+ endpoints）
-│   ├── src/components/  React 组件
-│   ├── src/lib/         核心逻辑（agent, storage, streaming）
-│   ├── src/hooks/       自定义 Hooks
-│   └── mint-skills/     内置技能
-├── server/        ← 后端服务（占位）
-├── shared/        ← 共享类型
-├── web/           ← 前端（占位）
-├── linting/       ← 架构约束 Linter
-└── tools/         ← 开发工具
+├── apps/
+│   └── electron/        ← 桌面客户端（Electron）
+│       ├── src/main/         主进程（IPC, storage, agent, chat）
+│       ├── src/preload/      预加载桥接
+│       ├── src/renderer/     渲染进程（React UI）
+│       └── electron-builder.yml
+├── packages/
+│   ├── mint/            ← Web 版（Next.js 15）
+│   ├── shared/          ← 共享类型
+│   ├── server/          ← 后端服务
+│   ├── web/             ← 前端
+│   ├── linting/         ← 架构约束 Linter
+│   └── tools/           ← 开发工具
+└── .github/workflows/   ← CI/CD
+    ├── ci.yml                PR/push 构建 + lint
+    └── release.yml           Tag 触发自动发布
 ```
-
-## API 路由
-
-| 路由 | 功能 |
-|------|------|
-| `POST /api/chat` | Chat 模式流式对话 |
-| `POST /api/agent` | Agent 模式流式执行 |
-| `POST /api/agent/answer` | 权限审批 |
-| `GET/POST /api/sessions` | 会话管理 |
-| `GET /api/files` | 文件树浏览 |
-| `GET /api/files/content` | 文件内容读取 |
-| `GET /api/files/changes` | 变更文件列表 |
-| `GET/POST /api/skills` | 技能管理 |
-| `GET/POST /api/mcp/config` | MCP 服务器配置 |
-| `GET /api/logs` | 结构化日志 |
-
-## 配置参考
-
-所有用户数据存储在 `~/.mint/` 目录：
-
-| 文件 | 用途 |
-|------|------|
-| `config.json` | API 密钥、模型、Base URL、权限模式 |
-| `sessions/*.jsonl` | 会话元数据和消息（append-only） |
-| `skills/` | 用户创建的技能 |
-| `mcp-servers.json` | MCP 服务器配置 |
-| `projects/*.json` | 项目元数据 |
 
 ## 开发
 
@@ -214,23 +186,36 @@ packages/
 # 安装依赖
 pnpm install
 
-# 开发模式
+# 桌面客户端开发
+cd apps/electron && pnpm dev
+
+# Web 版开发
 cd packages/mint && pnpm dev
 
-# 生产构建
-cd packages/mint && pnpm build && pnpm start
+# 构建桌面客户端
+cd apps/electron && pnpm build && pnpm dist:mac
 
 # 代码检查
 pnpm lint
-
-# 架构约束检查
-pnpm lint:arch
 ```
+
+## 发布流程
+
+推 tag 自动触发 GitHub Actions 构建并发布到 Releases：
+
+```bash
+git tag v0.x.0
+git push origin v0.x.0
+```
+
+自动构建 macOS DMG（arm64 + x64）并上传。
 
 ## 版本历史
 
 | 版本 | 主要变更 |
 |------|---------|
+| v0.7.0 | Electron 桌面客户端、IPC 全面审计修复、主题动画、CI/CD 自动发布 |
+| v0.6.0 | 语音输入（豆包 ASR）、模块化重构、UX 改进 |
 | v0.5.0 | AOP 日志重构、附件修复、Rich Input、多模态 Chat |
 | v0.4.0 | Agent Teams 稳定性、TodoList、侧边栏 UX |
 | v0.3.0 | Hydration 修复、可调整面板、文件图标和搜索 |
