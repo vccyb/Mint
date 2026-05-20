@@ -1,9 +1,6 @@
 'use client';
 
-import {
-  MessageCircleQuestion,
-  CheckCircle2,
-} from 'lucide-react';
+import { MessageCircleQuestion, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getFileIcon } from '@/lib/file-icons';
 import { MintAvatar, renderUserContent } from './message-content-renderer';
@@ -128,7 +125,10 @@ export function MessageItem({
           {/* Header row: name + timestamp */}
           <div className={cn('flex items-center gap-1.5 mb-1', isUser && 'flex-row-reverse')}>
             <span
-              className={cn('text-xs font-semibold', isUser ? 'text-foreground' : 'text-foreground')}
+              className={cn(
+                'text-xs font-semibold',
+                isUser ? 'text-foreground' : 'text-foreground',
+              )}
             >
               {isUser ? 'You' : 'Mint'}
             </span>

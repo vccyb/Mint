@@ -188,7 +188,13 @@ function MintAppInner() {
           .catch(() => {});
       }
     }
-  }, [activeHook.isStreaming, activeHook.sessionId, activeHook.messages, sessionMap, refreshSidebar]);
+  }, [
+    activeHook.isStreaming,
+    activeHook.sessionId,
+    activeHook.messages,
+    sessionMap,
+    refreshSidebar,
+  ]);
 
   return (
     <>

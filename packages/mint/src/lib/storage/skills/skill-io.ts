@@ -156,8 +156,14 @@ export async function toggleSkill(name: string): Promise<boolean> {
   const activePath = path.join(USER_SKILLS_DIR(), name);
   const inactivePath = path.join(USER_INACTIVE_DIR(), name);
 
-  const activeExists = await fs.access(activePath).then(() => true, () => false);
-  const inactiveExists = await fs.access(inactivePath).then(() => true, () => false);
+  const activeExists = await fs.access(activePath).then(
+    () => true,
+    () => false,
+  );
+  const inactiveExists = await fs.access(inactivePath).then(
+    () => true,
+    () => false,
+  );
 
   if (activeExists) {
     await fs.rename(activePath, inactivePath);
@@ -174,8 +180,14 @@ export async function deleteSkill(name: string): Promise<void> {
   const activePath = path.join(USER_SKILLS_DIR(), name);
   const inactivePath = path.join(USER_INACTIVE_DIR(), name);
 
-  const activeExists = await fs.access(activePath).then(() => true, () => false);
-  const inactiveExists = await fs.access(inactivePath).then(() => true, () => false);
+  const activeExists = await fs.access(activePath).then(
+    () => true,
+    () => false,
+  );
+  const inactiveExists = await fs.access(inactivePath).then(
+    () => true,
+    () => false,
+  );
 
   if (activeExists) {
     await fs.rm(activePath, { recursive: true });
@@ -192,10 +204,16 @@ export async function createSkill(
   content: string,
 ): Promise<SkillMeta> {
   const userDir = USER_SKILLS_DIR();
-  const safeName = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+  const safeName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-');
   const skillDir = path.join(userDir, safeName);
 
-  const exists = await fs.access(skillDir).then(() => true, () => false);
+  const exists = await fs.access(skillDir).then(
+    () => true,
+    () => false,
+  );
   if (exists) {
     throw new Error(`Skill "${safeName}" already exists`);
   }
@@ -222,7 +240,10 @@ export async function getSkillContent(
   // Check user skills first
   for (const base of [USER_SKILLS_DIR(), USER_INACTIVE_DIR()]) {
     const skillFile = path.join(base, name, 'SKILL.md');
-    const exists = await fs.access(skillFile).then(() => true, () => false);
+    const exists = await fs.access(skillFile).then(
+      () => true,
+      () => false,
+    );
     if (exists) {
       return { content: await fs.readFile(skillFile, 'utf-8'), level: 'user' };
     }
@@ -230,7 +251,10 @@ export async function getSkillContent(
 
   // Check built-in skills
   const builtinFile = path.join(getBuiltinSkillsDir(), name, 'SKILL.md');
-  const builtinExists = await fs.access(builtinFile).then(() => true, () => false);
+  const builtinExists = await fs.access(builtinFile).then(
+    () => true,
+    () => false,
+  );
   if (builtinExists) {
     return { content: await fs.readFile(builtinFile, 'utf-8'), level: 'builtin' };
   }
@@ -241,7 +265,10 @@ export async function getSkillContent(
 export async function updateSkillContent(name: string, content: string): Promise<void> {
   for (const base of [USER_SKILLS_DIR(), USER_INACTIVE_DIR()]) {
     const skillFile = path.join(base, name, 'SKILL.md');
-    const exists = await fs.access(skillFile).then(() => true, () => false);
+    const exists = await fs.access(skillFile).then(
+      () => true,
+      () => false,
+    );
     if (exists) {
       await fs.writeFile(skillFile, content);
       return;

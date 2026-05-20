@@ -59,7 +59,9 @@ export function SkillActivity({ skill }: SkillActivityProps) {
           {isLoaded && (
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="h-3 w-3 text-success" />
-              <span className="text-[11px] text-text-tertiary">Skill loaded into agent context</span>
+              <span className="text-[11px] text-text-tertiary">
+                Skill loaded into agent context
+              </span>
             </div>
           )}
         </div>

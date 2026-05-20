@@ -24,12 +24,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning className={`${plusJakartaSans.variable} ${outfit.variable}`}>
+    <html
+      lang="zh-CN"
+      suppressHydrationWarning
+      className={`${plusJakartaSans.variable} ${outfit.variable}`}
+    >
       <body className="font-sans antialiased bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <JotaiProvider>
-            {children}
-          </JotaiProvider>
+          <JotaiProvider>{children}</JotaiProvider>
           <Toaster position="top-center" richColors closeButton />
         </ThemeProvider>
       </body>

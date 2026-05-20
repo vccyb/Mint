@@ -131,7 +131,12 @@ function ToolRow({ tool }: { tool: ToolCallInfo }) {
         )}
       </div>
       {expanded && (
-        <div className={cn('ml-5 mr-2 mb-1 space-y-1.5 border-l pl-3', isError ? 'border-l-destructive/30' : 'border-l-border')}>
+        <div
+          className={cn(
+            'ml-5 mr-2 mb-1 space-y-1.5 border-l pl-3',
+            isError ? 'border-l-destructive/30' : 'border-l-border',
+          )}
+        >
           {tool.result && (
             <pre className="bg-bg-warm rounded p-1.5 overflow-x-auto text-[10px] font-mono leading-relaxed max-h-48 whitespace-pre-wrap break-all">
               {tool.result.length > 3000

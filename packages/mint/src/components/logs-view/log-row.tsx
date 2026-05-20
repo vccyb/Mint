@@ -55,7 +55,9 @@ export function LogRow({
         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
 
         {/* Time */}
-        <span className="text-[10px] font-mono text-text-tertiary w-[72px] shrink-0 ml-2">{time}</span>
+        <span className="text-[10px] font-mono text-text-tertiary w-[72px] shrink-0 ml-2">
+          {time}
+        </span>
 
         {/* Level badge */}
         <span className={`text-[9px] font-semibold uppercase w-[36px] shrink-0 ${cfg.text}`}>

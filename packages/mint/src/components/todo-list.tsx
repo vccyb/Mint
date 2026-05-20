@@ -50,12 +50,7 @@ export function TodoList({ todos, pinned = false, toolInfo, onDismiss, teamCount
 
   if (pinned) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border border-border shadow-sm bg-card',
-          'overflow-hidden',
-        )}
-      >
+      <div className={cn('rounded-xl border border-border shadow-sm bg-card', 'overflow-hidden')}>
         {/* Header */}
         <div className="flex items-center gap-2 px-3.5 py-2 border-b border-border bg-bg-warm">
           <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-primary-light">

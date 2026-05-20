@@ -19,7 +19,11 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-export function SessionFilesSection({ sessionId, onFileClick, refreshKey }: SessionFilesSectionProps) {
+export function SessionFilesSection({
+  sessionId,
+  onFileClick,
+  refreshKey,
+}: SessionFilesSectionProps) {
   const [files, setFiles] = useState<SessionFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -127,7 +131,10 @@ export function SessionFilesSection({ sessionId, onFileClick, refreshKey }: Sess
                         className="group flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-bg-warm cursor-pointer transition-colors"
                       >
                         <icon.Icon className={`h-3.5 w-3.5 shrink-0 ${icon.color}`} />
-                        <span className="text-xs text-text truncate flex-1 min-w-0" title={file.name}>
+                        <span
+                          className="text-xs text-text truncate flex-1 min-w-0"
+                          title={file.name}
+                        >
                           {file.name}
                         </span>
                         <span className="text-[10px] text-text-tertiary shrink-0">

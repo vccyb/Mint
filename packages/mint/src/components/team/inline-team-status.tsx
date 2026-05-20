@@ -74,7 +74,9 @@ export function InlineTeamStatus({
               </div>
             );
           })}
-          {overflow > 0 && <span className="text-[9px] text-muted-foreground ml-2">+{overflow}</span>}
+          {overflow > 0 && (
+            <span className="text-[9px] text-muted-foreground ml-2">+{overflow}</span>
+          )}
         </div>
 
         {/* Status text */}

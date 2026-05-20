@@ -182,9 +182,7 @@ export function AgentView({
               }
             >
               <Zap className="h-3 w-3" />
-              {isCompacting
-                ? 'Compressing...'
-                : `${Math.round((tokenUsage / tokenBudget) * 100)}%`}
+              {isCompacting ? 'Compressing...' : `${Math.round((tokenUsage / tokenBudget) * 100)}%`}
             </button>
           )}
           {/* Teams button */}

@@ -60,11 +60,18 @@ export function useMessageInput(props: MessageInputProps) {
     [isAgentMode],
   );
 
-  const { state: voiceState, isListening, isProcessing, voiceError, interimText, recorderAvailable, toggleRecording } =
-    useVoiceInput({
-      onTranscript: handleVoiceTranscript,
-      getBaseText: () => input,
-    });
+  const {
+    state: voiceState,
+    isListening,
+    isProcessing,
+    voiceError,
+    interimText,
+    recorderAvailable,
+    toggleRecording,
+  } = useVoiceInput({
+    onTranscript: handleVoiceTranscript,
+    getBaseText: () => input,
+  });
   const { handleChatSend, handleAgentSend } = useSendHandlers({
     input,
     attachments,

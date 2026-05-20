@@ -86,9 +86,7 @@ export async function autoResume(
             const text = event.delta.thinking ?? '';
             state.thinkingContent += text;
             enqueue(
-              enc.encode(
-                encodeSSE({ type: 'thinking', data: '', sessionId, thinkingDelta: text }),
-              ),
+              enc.encode(encodeSSE({ type: 'thinking', data: '', sessionId, thinkingDelta: text })),
             );
           }
         } else if (resumeMsg.type === 'result') {

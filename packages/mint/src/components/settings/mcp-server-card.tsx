@@ -43,11 +43,7 @@ export function McpServerCard({
           onClick={() => onToggleExpand(config.id)}
           className="flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:bg-bg-hover"
         >
-          {isExpanded ? (
-            <ChevronDown className="h-3 w-3" />
-          ) : (
-            <ChevronRight className="h-3 w-3" />
-          )}
+          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         </button>
 
         {/* Status indicator */}
@@ -100,11 +96,7 @@ export function McpServerCard({
           disabled={isTesting}
           className="flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-text-secondary hover:bg-bg-hover disabled:opacity-50"
         >
-          {isTesting ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Zap className="h-3 w-3" />
-          )}
+          {isTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
           Test
         </button>
 
@@ -124,26 +116,17 @@ export function McpServerCard({
       {/* Expanded content */}
       {isExpanded && (
         <div className="border-t border-border px-3 py-2 bg-bg-warm/50">
-          {testResult?.error && (
-            <p className="text-xs text-error mb-2">{testResult.error}</p>
-          )}
+          {testResult?.error && <p className="text-xs text-error mb-2">{testResult.error}</p>}
           {testResult && testResult.tools.length > 0 ? (
             <div className="space-y-1">
               <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wide">
                 Available Tools
               </p>
               {testResult.tools.map((tool) => (
-                <div
-                  key={tool.name}
-                  className="rounded border border-border bg-bg px-2 py-1.5"
-                >
-                  <span className="text-xs font-mono font-semibold text-text">
-                    {tool.name}
-                  </span>
+                <div key={tool.name} className="rounded border border-border bg-bg px-2 py-1.5">
+                  <span className="text-xs font-mono font-semibold text-text">{tool.name}</span>
                   {tool.description && (
-                    <p className="text-[10px] text-text-secondary mt-0.5">
-                      {tool.description}
-                    </p>
+                    <p className="text-[10px] text-text-secondary mt-0.5">{tool.description}</p>
                   )}
                 </div>
               ))}
@@ -151,9 +134,7 @@ export function McpServerCard({
           ) : testResult?.status === 'connected' ? (
             <p className="text-xs text-text-tertiary">No tools exposed by this server.</p>
           ) : !testResult ? (
-            <p className="text-xs text-text-tertiary">
-              Click &quot;Test&quot; to discover tools.
-            </p>
+            <p className="text-xs text-text-tertiary">Click &quot;Test&quot; to discover tools.</p>
           ) : null}
         </div>
       )}

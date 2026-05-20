@@ -22,11 +22,7 @@ export class SessionFileStorage {
     }
   }
 
-  async addFile(
-    sessionId: string,
-    file: SessionFile,
-    content: string | Buffer,
-  ): Promise<void> {
+  async addFile(sessionId: string, file: SessionFile, content: string | Buffer): Promise<void> {
     const dir = this.getFileDir(sessionId);
     await fs.mkdir(dir, { recursive: true });
 

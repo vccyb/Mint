@@ -9,10 +9,7 @@ import type { PermissionMode } from './use-session-state';
 interface SSEStreamDeps {
   mode: Mode;
   registry: StreamingRegistry;
-  updateMessagesForSession: (
-    sid: string,
-    updater: (prev: ChatMessage[]) => ChatMessage[],
-  ) => void;
+  updateMessagesForSession: (sid: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
   abortControllersRef: React.MutableRefObject<Map<string, AbortController>>;
   setPendingPermissions: React.Dispatch<
     React.SetStateAction<Map<string, import('@/types').PermissionRequestData>>
@@ -82,7 +79,19 @@ export function useSSEStream(deps: SSEStreamDeps): SSEStreamReturn {
       setContextWindow: setContextWindowMap,
       setCompacting: setCompactingMap,
     }),
-    [updateMessagesForSession, registry, setPendingPermissions, setTeammatesMap, setWaitingResumeMap, setLocalStreamingSessionIds, setStreamStartTimes, abortControllersRef, setInputTokensMap, setContextWindowMap, setCompactingMap],
+    [
+      updateMessagesForSession,
+      registry,
+      setPendingPermissions,
+      setTeammatesMap,
+      setWaitingResumeMap,
+      setLocalStreamingSessionIds,
+      setStreamStartTimes,
+      abortControllersRef,
+      setInputTokensMap,
+      setContextWindowMap,
+      setCompactingMap,
+    ],
   );
 
   /** Cleanup helpers for error/abort paths. */
@@ -106,7 +115,14 @@ export function useSSEStream(deps: SSEStreamDeps): SSEStreamReturn {
         return n;
       });
     },
-    [mode, registry, abortControllersRef, setLocalStreamingSessionIds, setStreamStartTimes, setWaitingResumeMap],
+    [
+      mode,
+      registry,
+      abortControllersRef,
+      setLocalStreamingSessionIds,
+      setStreamStartTimes,
+      setWaitingResumeMap,
+    ],
   );
 
   /** Shared SSE stream processing loop. */

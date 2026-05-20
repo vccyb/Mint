@@ -65,11 +65,7 @@ interface DeleteConfirmDialogProps {
   onCancel: () => void;
 }
 
-export function DeleteConfirmDialog({
-  skillName,
-  onConfirm,
-  onCancel,
-}: DeleteConfirmDialogProps) {
+export function DeleteConfirmDialog({ skillName, onConfirm, onCancel }: DeleteConfirmDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-sm mx-4 rounded-lg border border-border bg-bg shadow-xl p-4">

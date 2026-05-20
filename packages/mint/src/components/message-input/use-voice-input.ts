@@ -30,8 +30,7 @@ export function useVoiceInput(options: VoiceInputOptions) {
   optionsRef.current = options;
 
   const recorderAvailable =
-    typeof window !== 'undefined' &&
-    typeof navigator?.mediaDevices?.getUserMedia === 'function';
+    typeof window !== 'undefined' && typeof navigator?.mediaDevices?.getUserMedia === 'function';
 
   const cleanup = useCallback(() => {
     if (connectAbortRef.current) {
@@ -224,9 +223,10 @@ export function useVoiceInput(options: VoiceInputOptions) {
       }, 300);
     } catch (err) {
       cleanup();
-      const msg = (err as Error).name === 'NotAllowedError'
-        ? '麦克风权限被拒绝，请在浏览器设置中允许麦克风访问'
-        : `无法启动录音: ${(err as Error).message}`;
+      const msg =
+        (err as Error).name === 'NotAllowedError'
+          ? '麦克风权限被拒绝，请在浏览器设置中允许麦克风访问'
+          : `无法启动录音: ${(err as Error).message}`;
       setVoiceError(msg);
       setState('error');
 

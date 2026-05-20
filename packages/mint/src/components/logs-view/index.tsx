@@ -135,7 +135,9 @@ export function LogsView({ onBack, initialSessionId, sessionTitle }: LogsViewPro
         <div className="flex items-center gap-2">
           <div className="pill bg-primary-light text-primary">Logs</div>
           {initialSessionId && sessionTitle ? (
-            <span className="text-xs text-muted-foreground truncate max-w-[200px]">{sessionTitle}</span>
+            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+              {sessionTitle}
+            </span>
           ) : null}
           <span className="text-xs text-text-tertiary">{total} entries</span>
         </div>

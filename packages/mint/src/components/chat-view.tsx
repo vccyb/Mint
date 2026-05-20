@@ -39,7 +39,12 @@ export function ChatView({
     inputRef.current?.focus();
   }, [messages.length]);
 
-  const handleSend: typeof onSend = async (message, attachments, mentionedTools, enableThinking) => {
+  const handleSend: typeof onSend = async (
+    message,
+    attachments,
+    mentionedTools,
+    enableThinking,
+  ) => {
     if (editingMessageId && onForkMessage) {
       await onForkMessage(editingMessageId);
       setEditingMessageId(null);

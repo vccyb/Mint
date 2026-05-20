@@ -1,23 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  FolderOpen,
-  RefreshCw,
-  Search,
-  X,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderOpen, RefreshCw, Search, X } from 'lucide-react';
 import { getFileIcon } from '@/lib/file-icons';
 import { ChangedFilesView } from './changed-files-view';
 import type { ChangedFile } from './changed-files-view';
-import {
-  AllFilesView,
-  SearchResultsView,
-  type FilesData,
-  type FileNode,
-} from './file-tree-views';
+import { AllFilesView, SearchResultsView, type FilesData, type FileNode } from './file-tree-views';
 import { SessionFilesSection } from './session-files-section';
 import type { SessionFile } from '@/types';
 

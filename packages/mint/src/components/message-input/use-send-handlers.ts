@@ -93,7 +93,17 @@ export function useSendHandlers({
     sessionDraftsRef.current.set(key, { input: '', attachments: [] });
     setInput('');
     clearAttachments();
-  }, [input, attachments, disabled, onSend, sessionKey, thinkingEnabled, clearAttachments, sessionDraftsRef, setInput]);
+  }, [
+    input,
+    attachments,
+    disabled,
+    onSend,
+    sessionKey,
+    thinkingEnabled,
+    clearAttachments,
+    sessionDraftsRef,
+    setInput,
+  ]);
 
   const handleAgentSend = useCallback(
     async (text: string) => {
@@ -113,7 +123,16 @@ export function useSendHandlers({
       setInput('');
       clearAttachments();
     },
-    [attachments, disabled, onSend, sessionKey, thinkingEnabled, clearAttachments, sessionDraftsRef, setInput],
+    [
+      attachments,
+      disabled,
+      onSend,
+      sessionKey,
+      thinkingEnabled,
+      clearAttachments,
+      sessionDraftsRef,
+      setInput,
+    ],
   );
 
   return { handleChatSend, handleAgentSend };

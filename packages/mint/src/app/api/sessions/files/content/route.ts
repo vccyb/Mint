@@ -7,10 +7,10 @@ export const GET = withLogging('api.sessions.files.content', async (request) => 
   const sessionId = searchParams.get('sessionId');
   const fileId = searchParams.get('fileId');
   if (!sessionId || !fileId) {
-    return new Response(
-      JSON.stringify({ error: 'sessionId and fileId are required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ error: 'sessionId and fileId are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const storage = getStorage();

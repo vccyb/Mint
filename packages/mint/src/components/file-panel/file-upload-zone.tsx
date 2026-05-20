@@ -71,9 +71,7 @@ export function FileUploadZone({
       />
       <div className="flex flex-col items-center gap-1 text-center">
         <Upload className={`text-text-tertiary ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
-        <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-text-tertiary`}>
-          {label}
-        </span>
+        <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-text-tertiary`}>{label}</span>
         {secondaryText && (
           <span className="text-[10px] text-text-tertiary/70">{secondaryText}</span>
         )}

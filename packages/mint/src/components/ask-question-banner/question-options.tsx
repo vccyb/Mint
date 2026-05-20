@@ -27,9 +27,7 @@ export function QuestionOptions({
             className={cn(
               'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition-colors cursor-pointer',
               focusedOption === oi && 'ring-1 ring-primary/50',
-              selected
-                ? 'border-primary bg-primary-light'
-                : 'border-border hover:bg-bg-warm',
+              selected ? 'border-primary bg-primary-light' : 'border-border hover:bg-bg-warm',
             )}
           >
             {question.multiSelect ? (
@@ -67,9 +65,7 @@ export function QuestionOptions({
                 {opt.label}
               </span>
               {opt.description && (
-                <p className="text-[10px] text-text-tertiary mt-0.5 truncate">
-                  {opt.description}
-                </p>
+                <p className="text-[10px] text-text-tertiary mt-0.5 truncate">{opt.description}</p>
               )}
             </div>
           </button>

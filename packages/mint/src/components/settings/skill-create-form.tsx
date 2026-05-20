@@ -27,9 +27,7 @@ export function SkillCreateForm({ onSubmit, onCancel }: SkillCreateFormProps) {
   return (
     <div className="rounded border border-border bg-bg p-3 mb-3 space-y-2.5">
       <div>
-        <label className="text-[11px] font-medium text-text-secondary block mb-1">
-          Name
-        </label>
+        <label className="text-[11px] font-medium text-text-secondary block mb-1">Name</label>
         <input
           type="text"
           value={name}
@@ -68,11 +66,7 @@ export function SkillCreateForm({ onSubmit, onCancel }: SkillCreateFormProps) {
           disabled={loading || !name.trim() || !instructions.trim()}
           className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {loading ? (
-            <Loader2 className="h-3 w-3 spinner" />
-          ) : (
-            <Plus className="h-3 w-3" />
-          )}
+          {loading ? <Loader2 className="h-3 w-3 spinner" /> : <Plus className="h-3 w-3" />}
           Create
         </button>
         <button

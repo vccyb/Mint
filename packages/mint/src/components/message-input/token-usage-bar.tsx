@@ -26,11 +26,7 @@ export function TokenUsageBar({ tokenUsage, tokenBudget }: TokenUsageBarProps) {
         <span
           className={cn(
             'text-[9px] font-mono',
-            tokenPct > 80
-              ? 'text-destructive'
-              : tokenPct > 50
-                ? 'text-warning'
-                : 'text-success',
+            tokenPct > 80 ? 'text-destructive' : tokenPct > 50 ? 'text-warning' : 'text-success',
           )}
         >
           {tokenPct.toFixed(1)}%

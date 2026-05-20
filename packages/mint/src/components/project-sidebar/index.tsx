@@ -106,13 +106,9 @@ export function ProjectSidebar({
                   showMenu={showProjectMenu === project.id}
                   sessionCount={projectSessions.length}
                   onSelect={() => handleSelectProject(project.id)}
-                  onHoverChange={(hovered) =>
-                    setHoveredProjectId(hovered ? project.id : null)
-                  }
+                  onHoverChange={(hovered) => setHoveredProjectId(hovered ? project.id : null)}
                   onToggleMenu={() =>
-                    setShowProjectMenu(
-                      showProjectMenu === project.id ? null : project.id,
-                    )
+                    setShowProjectMenu(showProjectMenu === project.id ? null : project.id)
                   }
                   onRename={() => {
                     setShowProjectMenu(null);

@@ -13,7 +13,9 @@ interface SessionOperationsDeps {
   messagesMapRef: React.MutableRefObject<Map<string, ChatMessage[]>>;
   abortControllersRef: React.MutableRefObject<Map<string, AbortController>>;
   setMessagesMap: React.Dispatch<React.SetStateAction<Map<string, ChatMessage[]>>>;
-  setTeammatesMap: React.Dispatch<React.SetStateAction<Map<string, import('@/types').TeammateState[]>>>;
+  setTeammatesMap: React.Dispatch<
+    React.SetStateAction<Map<string, import('@/types').TeammateState[]>>
+  >;
   setWaitingResumeMap: React.Dispatch<React.SetStateAction<Map<string, boolean>>>;
   setLocalStreamingSessionIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   setStreamStartTimes: React.Dispatch<React.SetStateAction<Map<string, number>>>;
@@ -24,10 +26,7 @@ interface SessionOperationsDeps {
     React.SetStateAction<Map<string, import('@/types').PermissionRequestData>>
   >;
   setActiveSessionKey: React.Dispatch<React.SetStateAction<string>>;
-  updateMessagesForSession: (
-    sid: string,
-    updater: (prev: ChatMessage[]) => ChatMessage[],
-  ) => void;
+  updateMessagesForSession: (sid: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
 }
 
 export function useSessionOperations(deps: SessionOperationsDeps) {

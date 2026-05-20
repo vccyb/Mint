@@ -174,7 +174,10 @@ function ToolGroup({
       <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">{title}</h3>
       <div className="space-y-2">
         {tools.map((tool) => (
-          <div key={tool.name} className="rounded-lg border border-border bg-bg px-3 py-2.5 hover:border-border-hover transition-colors">
+          <div
+            key={tool.name}
+            className="rounded-lg border border-border bg-bg px-3 py-2.5 hover:border-border-hover transition-colors"
+          >
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-sm font-mono font-semibold text-text">{tool.name}</span>
               <span className={`pill text-[10px] font-semibold ${badgeClass}`}>

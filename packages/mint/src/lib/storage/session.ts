@@ -107,7 +107,12 @@ export class SessionStorage {
     }
     const kept = messages.slice(0, index);
     const filePath = this.getFilePath(sessionId);
-    const lines: string[] = [JSON.stringify({ type: 'metadata', metadata: { ...metadata, messageCount: kept.length, updatedAt: Date.now() } })];
+    const lines: string[] = [
+      JSON.stringify({
+        type: 'metadata',
+        metadata: { ...metadata, messageCount: kept.length, updatedAt: Date.now() },
+      }),
+    ];
     for (const msg of kept) {
       lines.push(JSON.stringify({ type: 'message', message: msg }));
     }

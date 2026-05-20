@@ -125,7 +125,9 @@ const markdownComponents: Partial<Components> = {
       {children}
     </th>
   ),
-  td: ({ children }) => <td className="border border-border px-3 py-1.5 text-sm even:bg-bg-warm/50">{children}</td>,
+  td: ({ children }) => (
+    <td className="border border-border px-3 py-1.5 text-sm even:bg-bg-warm/50">{children}</td>
+  ),
   ul: ({ children }) => <ul className="my-2 ml-5 list-disc space-y-0.5">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 ml-5 list-decimal space-y-0.5">{children}</ol>,
   blockquote: ({ children }) => (

@@ -10,7 +10,9 @@ export function McpTab() {
   const [configs, setConfigs] = useState<McpServerConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [testResults, setTestResults] = useState<Record<string, import('@/types/mcp').McpConnectionTestResult>>({});
+  const [testResults, setTestResults] = useState<
+    Record<string, import('@/types/mcp').McpConnectionTestResult>
+  >({});
   const [expandedServer, setExpandedServer] = useState<string | null>(null);
   const [testing, setTesting] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState<string | null>(null);

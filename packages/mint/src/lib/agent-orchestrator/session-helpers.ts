@@ -25,7 +25,9 @@ export async function buildPrompt(params: PromptParams): Promise<string> {
   if (params.sessionFiles && params.sessionFiles.length > 0) {
     const parts: string[] = [];
     parts.push('[Session Context Files]');
-    parts.push('The following files have been uploaded to this session and are available as reference:');
+    parts.push(
+      'The following files have been uploaded to this session and are available as reference:',
+    );
     for (const sf of params.sessionFiles) {
       const content = params.sessionFileContents?.get(sf.id);
       if (content) {

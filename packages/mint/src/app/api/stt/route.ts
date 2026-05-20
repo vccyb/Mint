@@ -16,7 +16,8 @@ export const POST = withLogging('api.stt', async (request) => {
   // Resolve STT config
   const config: Partial<AppConfig> = (await getStorage().readConfig()) ?? {};
   const apiKey = config.sttApiKey ?? process.env.STT_API_KEY;
-  const resourceId = config.sttResourceId ?? process.env.STT_RESOURCE_ID ?? 'volc.bigasr.sauc.duration';
+  const resourceId =
+    config.sttResourceId ?? process.env.STT_RESOURCE_ID ?? 'volc.bigasr.sauc.duration';
 
   if (!apiKey) {
     return NextResponse.json(
@@ -45,9 +46,7 @@ export const POST = withLogging('api.stt', async (request) => {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
     }
 
-    const audioBuffer = audio
-      ? Buffer.from(audio, 'base64')
-      : Buffer.alloc(0);
+    const audioBuffer = audio ? Buffer.from(audio, 'base64') : Buffer.alloc(0);
 
     const result = sendAudioChunk(sessionId, audioBuffer, isLast ?? false);
     return NextResponse.json(result);

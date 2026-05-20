@@ -1,12 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import type {
-  ChatMessage,
-  Mode,
-  PermissionRequestData,
-  TeammateState,
-} from '@/types';
+import type { ChatMessage, Mode, PermissionRequestData, TeammateState } from '@/types';
 import {
   createDraftSessionKey,
   createInitialDraftSessionKey,
@@ -73,10 +68,7 @@ export interface SessionStateReturn {
   isCompacting: boolean;
 
   // Methods
-  updateMessagesForSession: (
-    sid: string,
-    updater: (prev: ChatMessage[]) => ChatMessage[],
-  ) => void;
+  updateMessagesForSession: (sid: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
   migrateSessionState: (fromKey: string, toKey: string) => void;
   setPermissionMode: (nextMode: PermissionMode) => void;
   togglePlanMode: () => void;

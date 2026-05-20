@@ -96,9 +96,7 @@ export const POST = withLogging('api.agent', async (request) => {
   // --- Save image attachments to disk for agent Read tool ---
   const savedFilePaths = new Map<string, string>();
   if (attachments && attachments.length > 0) {
-    const imageAttachments = attachments.filter(
-      (a) => a.type.startsWith('image/') && a.content,
-    );
+    const imageAttachments = attachments.filter((a) => a.type.startsWith('image/') && a.content);
     if (imageAttachments.length > 0) {
       const uploadDir = path.join(cwd, '.mint-uploads', sid);
       await fs.mkdir(uploadDir, { recursive: true });

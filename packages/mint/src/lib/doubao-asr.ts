@@ -103,23 +103,17 @@ const sessions = new Map<string, AsrSession>();
 /**
  * Create a new ASR session by opening a WebSocket to Doubao.
  */
-export async function createSession(
-  apiKey: string,
-  resourceId: string,
-): Promise<string> {
+export async function createSession(apiKey: string, resourceId: string): Promise<string> {
   const sessionId = crypto.randomUUID();
 
-  const ws = new WebSocket(
-    'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async',
-    {
-      headers: {
-        'X-Api-Key': apiKey,
-        'X-Api-Resource-Id': resourceId,
-        'X-Api-Connect-Id': sessionId,
-        'X-Api-Sequence': '-1',
-      },
+  const ws = new WebSocket('wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async', {
+    headers: {
+      'X-Api-Key': apiKey,
+      'X-Api-Resource-Id': resourceId,
+      'X-Api-Connect-Id': sessionId,
+      'X-Api-Sequence': '-1',
     },
-  );
+  });
 
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {

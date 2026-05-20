@@ -11,11 +11,7 @@ interface VoiceMicButtonProps {
   onClick: () => void;
 }
 
-export function VoiceMicButton({
-  state,
-  disabled,
-  onClick,
-}: VoiceMicButtonProps) {
+export function VoiceMicButton({ state, disabled, onClick }: VoiceMicButtonProps) {
   const { audioLevel } = useAudioLevel(state === 'recording');
 
   if (typeof window === 'undefined') return null;
@@ -39,11 +35,7 @@ export function VoiceMicButton({
               : 'text-text-tertiary hover:text-text',
       )}
       aria-label={
-        isRecording
-          ? 'Stop recording'
-          : isProcessing
-            ? 'Processing...'
-            : 'Start voice input'
+        isRecording ? 'Stop recording' : isProcessing ? 'Processing...' : 'Start voice input'
       }
       disabled={disabled || isConnecting || isProcessing}
     >

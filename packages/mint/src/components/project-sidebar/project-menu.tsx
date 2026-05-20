@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  ChevronDown,
-  ChevronRight,
-  FolderOpen,
-  Plus,
-  MoreHorizontal,
-  Edit,
-  X,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderOpen, Plus, MoreHorizontal, Edit, X } from 'lucide-react';
 import type { Project } from '@/types';
 
 interface ProjectRowProps {
@@ -56,9 +48,7 @@ export function ProjectRow({
       {/* 占位元素，防止抖动 */}
       <div className="w-[60px] h-[20px] shrink-0 flex items-center justify-end gap-0.5">
         {sessionCount > 0 && !isHovered && (
-          <span className="text-[10px] text-text-tertiary">
-            {sessionCount}
-          </span>
+          <span className="text-[10px] text-text-tertiary">{sessionCount}</span>
         )}
 
         {/* Hover 时显示的操作按钮 */}
