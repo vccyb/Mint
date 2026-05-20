@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800">
+  <rect width="1280" height="800" fill="#faf8f3"/>
+  <!-- Three permission mode cards -->
+  <!-- Card 1: bypass -->
+  <rect x="80" y="120" width="340" height="520" rx="12" fill="#eef7f3" stroke="#183a4a" stroke-width="1.5"/>
+  <circle cx="250" cy="200" r="40" fill="#183a4a" opacity="0.1" stroke="#183a4a" stroke-width="1.5"/>
+  <path d="M230 200 L245 215 L270 185" stroke="#183a4a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="120" y="270" width="260" height="30" rx="4" fill="#183a4a" opacity="0.35"/>
+  <rect x="120" y="320" width="260" height="30" rx="4" fill="#183a4a" opacity="0.25"/>
+  <rect x="120" y="370" width="260" height="30" rx="4" fill="#183a4a" opacity="0.2"/>
+  <!-- Green checkmarks on all -->
+  <circle cx="395" cy="285" r="10" fill="#4ade80" opacity="0.6"/>
+  <circle cx="395" cy="335" r="10" fill="#4ade80" opacity="0.6"/>
+  <circle cx="395" cy="385" r="10" fill="#4ade80" opacity="0.6"/>
+  <!-- Card 2: default -->
+  <rect x="470" y="120" width="340" height="520" rx="12" fill="#eef7f3" stroke="#183a4a" stroke-width="1.5"/>
+  <circle cx="640" cy="200" r="40" fill="#d8894f" opacity="0.1" stroke="#d8894f" stroke-width="1.5"/>
+  <rect x="622" y="188" width="36" height="24" rx="4" fill="#d8894f" opacity="0.4"/>
+  <rect x="120" y="270" width="260" height="30" rx="4" fill="#183a4a" opacity="0.35" transform="translate(390,0)"/>
+  <rect x="510" y="320" width="260" height="30" rx="4" fill="#d8894f" opacity="0.3"/>
+  <rect x="510" y="370" width="260" height="30" rx="4" fill="#d8894f" opacity="0.25"/>
+  <!-- Mixed icons -->
+  <circle cx="785" cy="285" r="10" fill="#4ade80" opacity="0.6"/>
+  <circle cx="785" cy="335" r="10" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="785" cy="385" r="10" fill="#fbbf24" opacity="0.6"/>
+  <!-- Card 3: plan -->
+  <rect x="860" y="120" width="340" height="520" rx="12" fill="#d8894f" fill-opacity="0.06" stroke="#d8894f" stroke-width="1.5"/>
+  <circle cx="1030" cy="200" r="40" fill="#d8894f" opacity="0.1" stroke="#d8894f" stroke-width="1.5"/>
+  <rect x="1010" y="188" width="40" height="24" rx="4" fill="#d8894f" opacity="0.4"/>
+  <rect x="1018" y="194" width="24" height="12" rx="2" fill="#d8894f" opacity="0.3"/>
+  <rect x="900" y="270" width="260" height="30" rx="4" fill="#d8894f" opacity="0.3"/>
+  <rect x="900" y="320" width="260" height="30" rx="4" fill="#d8894f" opacity="0.25"/>
+  <rect x="900" y="370" width="260" height="30" rx="4" fill="#d8894f" opacity="0.2"/>
+  <!-- Review step indicator -->
+  <rect x="900" y="440" width="260" height="50" rx="8" fill="#183a4a" opacity="0.1" stroke="#183a4a" stroke-width="1"/>
+  <line x1="1030" y1="420" x2="1030" y2="440" stroke="#183a4a" stroke-width="1.5" opacity="0.4"/>
+  <!-- Arrow down then execute -->
+  <line x1="1030" y1="490" x2="1030" y2="530" stroke="#183a4a" stroke-width="1.5" opacity="0.4" marker-end="url(#arr)"/>
+  <rect x="960" y="530" width="140" height="40" rx="6" fill="#4ade80" opacity="0.15" stroke="#4ade80" stroke-width="1"/>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#183a4a"/>
+    </marker>
+  </defs>
+</svg>

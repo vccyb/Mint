@@ -1,0 +1,374 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+@import 'highlight.js/styles/github.css';
+
+/*
+ * Mint Theme System — shadcn standard + Tailwind v4
+ * 参考 Proma 的主题架构，适配 Tailwind v4 的 @theme inline 模式
+ *
+ * 层次：
+ *   :root   — 亮色变量（默认）
+ *   .dark   — 暗色变量
+ *   @theme inline — Tailwind v4 颜色 token 映射
+ *   @layer base — 基础样式
+ */
+
+/* ─── Light Theme ──────────────────────────────────────────── */
+:root {
+  /* shadcn 标准 */
+  --background: #fcfaf5;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #007aff;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f7;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f5f5f7;
+  --muted-foreground: #6e6e73;
+  --accent: #e8f2ff;
+  --accent-foreground: #0055b3;
+  --destructive: #ff3b30;
+  --destructive-foreground: #ffffff;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #007aff;
+  --chart-1: #007aff;
+  --chart-2: #34c759;
+  --chart-3: #ff9500;
+  --chart-4: #ff3b30;
+  --chart-5: #6e6e73;
+  --sidebar: #f8f8f8;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-primary: #007aff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f2ff;
+  --sidebar-accent-foreground: #0055b3;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #007aff;
+
+  /* Mint 扩展 */
+  --success: #34c759;
+  --success-foreground: #ffffff;
+  --warning: #ff9500;
+  --warning-foreground: #ffffff;
+  --primary-hover: #0062cc;
+  --primary-light: #e8f2ff;
+  --bg-warm: #f5f5f7;
+  --bg-hover: #ededf0;
+  --text-tertiary: #aeaeb2;
+  --border-hover: #d4d4d4;
+  --code-bg: #1e1e2e;
+  --tooltip: #1d1d1f;
+  --tooltip-foreground: #ffffff;
+
+  /* 环境变量 */
+  --radius: 0.5rem;
+  --sidebar-width: 240px;
+  --transition-fast: 120ms;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.22);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --gradient-start: rgba(12, 110, 206, 0.08);
+  --gradient-end: #fffdf8;
+}
+
+/* ─── Dark Theme ───────────────────────────────────────────── */
+.dark {
+  --background: #0a0a0c;
+  --foreground: #fafafa;
+  --card: #12121a;
+  --card-foreground: #fafafa;
+  --popover: #12121a;
+  --popover-foreground: #fafafa;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1c1e;
+  --secondary-foreground: #fafafa;
+  --muted: #1c1c1e;
+  --muted-foreground: #b4b4be;
+  --accent: #1e3a5f;
+  --accent-foreground: #93c5fd;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #1f1f28;
+  --input: #1f1f28;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #a1a1aa;
+  --sidebar: #0e0e14;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e3a5f;
+  --sidebar-accent-foreground: #93c5fd;
+  --sidebar-border: #1f1f28;
+  --sidebar-ring: #3b82f6;
+
+  /* Mint 扩展 */
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+  --primary-hover: #2563eb;
+  --primary-light: #1e3a5f;
+  --bg-warm: #1c1c1e;
+  --bg-hover: #2a2a2d;
+  --text-tertiary: #8888a0;
+  --border-hover: #2e2e3a;
+  --code-bg: #0d0d14;
+  --tooltip: #fafafa;
+  --tooltip-foreground: #09090b;
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+  --glass-bg: rgba(9, 9, 11, 0.85);
+  --gradient-start: rgba(59, 130, 246, 0.06);
+  --gradient-end: #09090b;
+}
+
+/* ─── Tailwind v4 Token Mapping ────────────────────────────── */
+@theme inline {
+  /* shadcn 标准 — 直接映射到 CSS 变量 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Mint 扩展 token */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-bg: var(--background);
+  --color-bg-warm: var(--bg-warm);
+  --color-bg-hover: var(--bg-hover);
+  --color-text: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-border-hover: var(--border-hover);
+  --color-primary-text: var(--accent-foreground);
+  --color-code-bg: var(--code-bg);
+  --color-tooltip: var(--tooltip);
+  --color-tooltip-foreground: var(--tooltip-foreground);
+
+  /* Typography */
+  --font-sans: var(--font-inter), 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+
+  /* Radius — shadcn 标准 derived from --radius */
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius));
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Base Styles ──────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, var(--gradient-start), transparent 28%),
+      linear-gradient(180deg, var(--gradient-end) 0%, var(--background) 100%);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'lnum', 'locl';
+  }
+
+  /* Scrollbar — minimal, Notion-style */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  /* Selection & focus */
+  ::selection {
+    background: var(--primary);
+    color: white;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+    border-radius: var(--radius-sm);
+  }
+}
+
+/* ─── Custom Utilities ─────────────────────────────────────── */
+
+/* Whisper shadow — 4-layer stacking per DESIGN.md */
+@utility shadow-whisper {
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.04),
+    0 2.025px 7.85px rgba(0, 0, 0, 0.027),
+    0 0.8px 2.93px rgba(0, 0, 0, 0.02),
+    0 0.175px 1.04px rgba(0, 0, 0, 0.01);
+}
+
+@utility shadow-whisper-sm {
+  box-shadow:
+    0 0.175px 1.04px rgba(0, 0, 0, 0.01),
+    0 0.8px 2.93px rgba(0, 0, 0, 0.02);
+}
+
+/* Streaming cursor */
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@utility streaming-cursor {
+  &::after {
+    content: '▎';
+    animation: blink 1s infinite;
+    color: var(--primary);
+    margin-left: 1px;
+    font-size: 0.9em;
+  }
+}
+
+/* Notion pill badge — 12px weight 600, letter-spacing 0.125px */
+@utility pill {
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.33;
+  letter-spacing: 0.125px;
+}
+
+/* Spinner for running tool calls */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Glass header — backdrop blur for top bar */
+@utility glass-header {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+/* Interactive elements inside drag regions must opt out */
+@utility no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Small spinner dot for streaming session rows */
+@utility spinner-dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Elevation shadows */
+@utility shadow-elevation-1 {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+@utility shadow-elevation-2 {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+@utility shadow-elevation-3 {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Transition speeds */
+@utility transition-fast {
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease);
+}
+/* Skeleton shimmer loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@utility skeleton {
+  background: linear-gradient(90deg, var(--muted) 25%, var(--bg-hover) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Dialog entry animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

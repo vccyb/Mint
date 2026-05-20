@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800">
+  <rect width="1280" height="800" fill="#faf8f3"/>
+  <!-- Chat mode card (left) -->
+  <rect x="80" y="120" width="480" height="560" rx="12" fill="#eef7f3" stroke="#183a4a" stroke-width="1.5"/>
+  <!-- Agent mode card (right) -->
+  <rect x="720" y="120" width="480" height="560" rx="12" fill="#d8894f" fill-opacity="0.08" stroke="#d8894f" stroke-width="1.5"/>
+  <!-- Chat mode icon area -->
+  <circle cx="320" cy="220" r="60" fill="#183a4a" opacity="0.1" stroke="#183a4a" stroke-width="1.5"/>
+  <!-- Chat bubble shapes inside circle -->
+  <rect x="275" y="200" width="70" height="30" rx="10" fill="#183a4a" opacity="0.4"/>
+  <rect x="290" y="240" width="50" height="25" rx="8" fill="#183a4a" opacity="0.3"/>
+  <!-- Chat feature blocks -->
+  <rect x="120" y="310" width="400" height="40" rx="6" fill="#183a4a" opacity="0.5"/>
+  <rect x="120" y="370" width="400" height="40" rx="6" fill="#183a4a" opacity="0.4"/>
+  <rect x="120" y="430" width="400" height="40" rx="6" fill="#183a4a" opacity="0.3"/>
+  <rect x="120" y="490" width="400" height="40" rx="6" fill="#183a4a" opacity="0.25"/>
+  <!-- Agent mode icon area -->
+  <circle cx="960" cy="220" r="60" fill="#d8894f" opacity="0.1" stroke="#d8894f" stroke-width="1.5"/>
+  <!-- Gear/robot shape -->
+  <rect x="925" y="195" width="40" height="40" rx="6" fill="#d8894f" opacity="0.4"/>
+  <rect x="945" y="210" width="50" height="30" rx="6" fill="#d8894f" opacity="0.3"/>
+  <!-- Agent feature blocks -->
+  <rect x="760" y="310" width="400" height="40" rx="6" fill="#d8894f" opacity="0.5"/>
+  <rect x="760" y="370" width="400" height="40" rx="6" fill="#d8894f" opacity="0.4"/>
+  <rect x="760" y="430" width="400" height="40" rx="6" fill="#d8894f" opacity="0.3"/>
+  <rect x="760" y="490" width="400" height="40" rx="6" fill="#d8894f" opacity="0.25"/>
+  <!-- VS divider -->
+  <line x1="640" y1="160" x2="640" y2="640" stroke="#183a4a" stroke-width="1" stroke-dasharray="8,8" opacity="0.3"/>
+</svg>

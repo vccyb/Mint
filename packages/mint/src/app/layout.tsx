@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
+import { JotaiProvider } from '@/store';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -26,7 +27,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN" suppressHydrationWarning className={`${plusJakartaSans.variable} ${outfit.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
+          <JotaiProvider>
+            {children}
+          </JotaiProvider>
           <Toaster position="top-center" richColors closeButton />
         </ThemeProvider>
       </body>
