@@ -2,7 +2,7 @@ import { ipcMain, BrowserWindow, shell } from 'electron';
 import { getStorage } from './lib/storage';
 import { DEFAULT_MODEL } from './lib/constants';
 import { createLogger } from './lib/logger';
-import { sendChat, abortChat, type ChatInput } from './lib/chat-service';
+import { sendChat, abortChat, generateSuggestions, type ChatInput } from './lib/chat-service';
 import { sendAgent, abortAgent, answerPermission, type AgentInput } from './lib/agent-service';
 import { listSkills, toggleSkill, createSkill as createSkillIo, getSkillContent } from './lib/storage/skills';
 import { loadMcpConfig, saveMcpConfig, addMcpServer, removeMcpServer, toggleMcpServer } from './lib/storage/mcp-config';
@@ -23,12 +23,20 @@ import {
   FILES_IPC,
   STT_IPC,
   SYSTEM_IPC,
+  SUGGESTIONS_IPC,
   NOTIFICATION_IPC,
   UPDATE_IPC,
+  TERMINAL_IPC,
 } from '../types/ipc-channels';
 import type { Mode } from '../../types';
 import { onStreamStarted, onStreamEnded } from './stream-notifier';
 import { checkForUpdates, downloadAndInstallUpdate, onUpdateStatus } from './updater';
+import {
+  createTerminal,
+  killTerminal,
+  writeToTerminal,
+  resizeTerminal,
+} from './lib/terminal-service';
 
 const log = createLogger('ipc');
 
@@ -277,6 +285,11 @@ export function registerIpcHandlers() {
   ipcMain.handle(CHAT_IPC.ABORT, async (_, sessionId: string) => {
     abortChat(sessionId);
     return { ok: true };
+  });
+
+  // ─── Suggestions ───
+  ipcMain.handle(SUGGESTIONS_IPC.GENERATE, async (_, content: string) => {
+    return generateSuggestions(content);
   });
 
   // ─── Agent 流式 ───
@@ -538,6 +551,26 @@ export function registerIpcHandlers() {
     if (win) {
       win.webContents.send(UPDATE_IPC.ON_STATUS, status);
     }
+  });
+
+  // ─── Terminal ───
+  ipcMain.handle(TERMINAL_IPC.CREATE, async (_, opts?: { id?: string; cwd?: string }) => {
+    const id = opts?.id ?? `term_${Date.now().toString(36)}`;
+    createTerminal(id, opts?.cwd);
+    return { ok: true, id };
+  });
+
+  ipcMain.handle(TERMINAL_IPC.KILL, async (_, id: string) => {
+    killTerminal(id);
+    return { ok: true };
+  });
+
+  ipcMain.on(TERMINAL_IPC.INPUT, (_, id: string, data: string) => {
+    writeToTerminal(id, data);
+  });
+
+  ipcMain.on(TERMINAL_IPC.RESIZE, (_, id: string, cols: number, rows: number) => {
+    resizeTerminal(id, cols, rows);
   });
 
   log.info('IPC handlers registered');

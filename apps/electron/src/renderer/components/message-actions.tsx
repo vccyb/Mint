@@ -35,7 +35,6 @@ export function MessageActions({ content, isUser, onEdit }: MessageActionsProps)
           title="编辑并重新发送"
         >
           <Pencil className="h-3 w-3" />
-          <span className="hidden sm:inline">编辑重发</span>
         </button>
       )}
     </div>

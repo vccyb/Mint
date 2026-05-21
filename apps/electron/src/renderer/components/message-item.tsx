@@ -13,6 +13,7 @@ import { ActivityPanel } from './activity-panel';
 import { PlanCard } from './plan-card';
 import { TodoList } from './todo-list';
 import { MessageActions } from './message-actions';
+import { SuggestionChips } from './suggestion-chips';
 import { AgentMessageItem } from './team/agent-message-item';
 import { formatMessageTime } from '@/lib/format-time';
 import type { ChatMessage } from '@/types';
@@ -26,6 +27,8 @@ interface MessageItemProps {
   hideTodoAndPlan?: boolean;
   onFileClick?: (path: string) => void;
   onOpenSettings?: () => void;
+  onSuggestionSelect?: (text: string) => void;
+  suggestions?: string[];
 }
 
 export function MessageItem({
@@ -37,6 +40,8 @@ export function MessageItem({
   hideTodoAndPlan,
   onFileClick,
   onOpenSettings,
+  onSuggestionSelect,
+  suggestions,
 }: MessageItemProps) {
   if (message.role === 'question') {
     return (
@@ -231,6 +236,21 @@ export function MessageItem({
               isUser && onEditMessage ? () => onEditMessage(message.id, message.content) : undefined
             }
           />
+
+          {/* Follow-up suggestions — only on last non-streaming assistant message without errors */}
+          {!isUser &&
+            isLastMessage &&
+            !message.isStreaming &&
+            !message.errorInfo &&
+            !message.isPlanMode &&
+            onSuggestionSelect &&
+            suggestions &&
+            suggestions.length > 0 && (
+              <SuggestionChips
+                suggestions={suggestions}
+                onSelect={onSuggestionSelect}
+              />
+            )}
         </div>
       </div>
     </div>

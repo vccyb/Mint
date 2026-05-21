@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { ChatMessage, Mode, Attachment } from '@/types';
 import { isDraftSessionKey } from '@/lib/session-key';
 import { generateId } from '@/lib/utils';
@@ -16,6 +16,12 @@ interface ChatActionsDeps {
 
 export function useChatActions(deps: ChatActionsDeps) {
   const { mode, registry, state, sseStream } = deps;
+
+  // Track the current IPC stream listener so we can unsubscribe before
+  // creating a new one. Without this, old listeners pile up and receive
+  // events meant for newer streams, causing content to leak into stale
+  // assistant messages.
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const sendMessage = useCallback(
     async (
@@ -75,6 +81,12 @@ export function useChatActions(deps: ChatActionsDeps) {
         registry.register(resolvedSessionId, mode, abortController);
       }
 
+      // Unsubscribe the previous IPC listener before creating a new one
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
       // Subscribe to IPC stream events before sending
       const unsubscribe = sseStream.subscribeToStreamEvents(
         targetSessionKey,
@@ -96,6 +108,7 @@ export function useChatActions(deps: ChatActionsDeps) {
           }
         },
       );
+      unsubscribeRef.current = unsubscribe;
 
       try {
         const input: Record<string, unknown> = {
@@ -116,6 +129,7 @@ export function useChatActions(deps: ChatActionsDeps) {
 
         if (!result.ok) {
           unsubscribe();
+          unsubscribeRef.current = null;
           const sid = resolvedSessionId ?? targetSessionKey;
           state.updateMessagesForSession(sid, (prev) =>
             prev.map((m) =>
@@ -135,13 +149,13 @@ export function useChatActions(deps: ChatActionsDeps) {
           return;
         }
 
-        // Fire-and-forget: the IPC listener (subscribeToStreamEvents) handles
-        // all subsequent events. When the stream ends (result/error event),
-        // the listener's handleStreamEvent calls cleanupSession via callbacks.
-        // We just need to ensure the unsubscribe runs when the stream is done.
-        // The cleanup happens inside handleStreamEvent on result/error events.
+        // Fire-and-forget: the IPC listener handles all subsequent events.
+        // The listener is cleaned up when the next sendMessage call unsubscribes it,
+        // or when the stream ends (result/error) the handleStreamEvent will mark
+        // the message as complete so stale events are ignored.
       } catch (error) {
         unsubscribe();
+        unsubscribeRef.current = null;
         const sid = resolvedSessionId ?? targetSessionKey;
         state.updateMessagesForSession(sid, (prev) =>
           prev.map((m) =>
@@ -191,12 +205,19 @@ export function useChatActions(deps: ChatActionsDeps) {
       state.setLocalStreamingSessionIds((prev) => new Set(prev).add(activeId));
       registry.register(activeId, mode, abortController);
 
+      // Unsubscribe the previous IPC listener before creating a new one
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
       // Subscribe to IPC stream events before sending
       const unsubscribe = sseStream.subscribeToStreamEvents(
         activeId,
         newAssistantId,
         'agent',
       );
+      unsubscribeRef.current = unsubscribe;
 
       try {
         const result = await window.electronAPI.agentSend({
@@ -208,6 +229,7 @@ export function useChatActions(deps: ChatActionsDeps) {
 
         if (!result.ok) {
           unsubscribe();
+          unsubscribeRef.current = null;
           state.updateMessagesForSession(activeId, (prev) =>
             prev.map((m) =>
               m.id === newAssistantId
@@ -229,6 +251,7 @@ export function useChatActions(deps: ChatActionsDeps) {
         // Fire-and-forget: IPC listener handles stream events
       } catch (error) {
         unsubscribe();
+        unsubscribeRef.current = null;
         state.updateMessagesForSession(activeId, (prev) =>
           prev.map((m) =>
             m.id === newAssistantId

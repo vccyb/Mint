@@ -1,34 +1,50 @@
-import { useState } from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
-import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@/lib/constants';
+import { useState, useEffect, useCallback } from 'react';
+import { Sparkles, CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react';
 
-interface WelcomeScreenProps {
-  onSave: (config: { model: string; apiKey: string; baseUrl: string }) => Promise<void>;
+interface DepStatus {
+  installed: boolean;
+  version?: string;
 }
 
-export function WelcomeScreen({ onSave }: WelcomeScreenProps) {
-  const [apiKey, setApiKey] = useState('');
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
-  const [model, setModel] = useState(DEFAULT_MODEL);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+interface WelcomeScreenProps {
+  onContinue: () => void;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apiKey.trim()) {
-      setError('请输入 API Key');
-      return;
-    }
-    setSaving(true);
-    setError('');
+const INSTALL_GUIDE: Record<string, { label: string; hint: string; commands: string[] }> = {
+  node: {
+    label: 'Node.js',
+    hint: '运行 Agent 模式所需',
+    commands: ['brew install node', '或访问 https://nodejs.org 下载安装'],
+  },
+  git: {
+    label: 'Git',
+    hint: '版本控制与代码管理',
+    commands: ['brew install git', '或访问 https://git-scm.com 下载安装'],
+  },
+};
+
+export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
+  const [deps, setDeps] = useState<Record<string, DepStatus> | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  const checkDeps = useCallback(async () => {
+    setChecking(true);
     try {
-      await onSave({ model, apiKey: apiKey.trim(), baseUrl: baseUrl.trim() || DEFAULT_BASE_URL });
+      const api = (window as any).electronAPI;
+      const result = await api.checkSystemDeps();
+      setDeps(result);
     } catch {
-      setError('保存失败，请重试');
+      setDeps({});
     } finally {
-      setSaving(false);
+      setChecking(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkDeps();
+  }, [checkDeps]);
+
+  const allInstalled = deps && Object.values(deps).every((d) => d.installed);
 
   return (
     <div className="flex h-screen items-center justify-center bg-bg">
@@ -40,84 +56,77 @@ export function WelcomeScreen({ onSave }: WelcomeScreenProps) {
           </div>
           <h1 className="text-2xl font-bold text-text">欢迎使用 Mint</h1>
           <p className="mt-2 text-sm text-text-secondary">
-            配置你的 API 以开始使用
+            AI Chat + Autonomous Coding Agent
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-text mb-1.5">
-              API Key <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="输入你的 API Key"
-              autoFocus
-              className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(0,122,255,0.08)]"
-            />
-            <p className="text-[10px] text-text-tertiary mt-1">
-              支持 Anthropic 兼容 API（智谱 GLM、OpenRouter 等）
-            </p>
-          </div>
-
-          <details className="group">
-            <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text transition-colors">
-              高级设置
-            </summary>
-            <div className="mt-3 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-text mb-1.5">Base URL</label>
-                <input
-                  type="text"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder={DEFAULT_BASE_URL}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
-                />
-                <p className="text-[10px] text-text-tertiary mt-1">
-                  API 端点地址
-                </p>
+        {/* Dep checks */}
+        <div className="space-y-3 mb-6">
+          {['node', 'git'].map((cmd) => {
+            const guide = INSTALL_GUIDE[cmd];
+            const status = deps?.[cmd];
+            return (
+              <div
+                key={cmd}
+                className="rounded-lg border border-border bg-card px-4 py-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-text">{guide.label}</span>
+                    <span className="ml-2 text-[10px] text-text-tertiary">{guide.hint}</span>
+                  </div>
+                  {checking ? (
+                    <Loader2 className="h-4 w-4 text-text-tertiary spinner" />
+                  ) : status?.installed ? (
+                    <div className="flex items-center gap-1.5 text-success">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="text-[11px] font-mono">{status.version}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-destructive">
+                      <XCircle className="h-4 w-4" />
+                      <span className="text-[11px]">未安装</span>
+                    </div>
+                  )}
+                </div>
+                {status && !status.installed && (
+                  <div className="mt-2 space-y-1">
+                    {guide.commands.map((c, i) => (
+                      <div key={i} className="rounded bg-bg-warm px-2.5 py-1.5 font-mono text-[11px] text-text-secondary">
+                        {c}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            );
+          })}
+        </div>
 
-              <div>
-                <label className="block text-xs font-medium text-text mb-1.5">模型</label>
-                <input
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={DEFAULT_MODEL}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
-                />
-                <p className="text-[10px] text-text-tertiary mt-1">
-                  模型标识（如 glm-5.1、claude-sonnet-4-20250514）
-                </p>
-              </div>
-            </div>
-          </details>
-
-          {error && (
-            <p className="text-xs text-destructive">{error}</p>
-          )}
-
+        {/* Actions */}
+        <div className="flex gap-3">
           <button
-            type="submit"
-            disabled={saving || !apiKey.trim()}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors disabled:opacity-50 cursor-pointer"
+            onClick={checkDeps}
+            disabled={checking}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-hover transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {saving ? (
-              <Loader2 className="h-4 w-4 spinner" />
-            ) : (
-              '开始使用'
-            )}
+            <RefreshCw className={`h-3.5 w-3.5 ${checking ? 'spinner' : ''}`} />
+            重新检测
           </button>
-        </form>
+          <button
+            onClick={onContinue}
+            disabled={!allInstalled}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            开始使用
+          </button>
+        </div>
 
-        <p className="mt-6 text-center text-[10px] text-text-tertiary">
-          配置存储在本地 ~/.mint/config.json，随时可在设置中修改
-        </p>
+        {!allInstalled && deps && (
+          <p className="mt-4 text-center text-[10px] text-text-tertiary">
+            请先安装缺少的依赖，然后点击"重新检测"
+          </p>
+        )}
       </div>
     </div>
   );

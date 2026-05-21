@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage, Mode, Attachment } from '@/types';
 import { generateId } from '@/lib/utils';
 import type { StreamingRegistry } from '@/lib/streaming-registry';
@@ -39,6 +39,7 @@ interface UseChatStreamReturn {
   contextWindow: number;
   isCompacting: boolean;
   forkFromMessage: (messageId: string) => Promise<void>;
+  suggestions: string[];
 }
 
 export function useChatStream(
@@ -47,6 +48,8 @@ export function useChatStream(
   initialProjectId: string | null = null,
 ): UseChatStreamReturn {
   const state = useSessionState(mode, registry, initialProjectId);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const prevStreamingRef = useRef(false);
 
   const sseStream = useSSEStream({
     mode,
@@ -64,6 +67,35 @@ export function useChatStream(
   });
 
   const actions = useChatActions({ mode, registry, state, sseStream });
+
+  // Generate AI-powered suggestions after streaming ends
+  useEffect(() => {
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = state.isStreaming;
+
+    if (wasStreaming && !state.isStreaming) {
+      // Streaming just ended — find the last assistant message
+      const msgs = state.messages;
+      const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant' && !m.isStreaming && !m.errorInfo && !m.isPlanMode && m.content);
+      if (lastAssistant?.content) {
+        window.electronAPI.generateSuggestions(lastAssistant.content)
+          .then((result: unknown) => {
+            const arr = Array.isArray(result) ? result.map(String) : [];
+            setSuggestions(arr);
+          })
+          .catch(() => setSuggestions([]));
+      } else {
+        setSuggestions([]);
+      }
+    }
+  }, [state.isStreaming, state.messages]);
+
+  // Clear suggestions when a new message is sent (streaming starts)
+  useEffect(() => {
+    if (state.isStreaming) {
+      setSuggestions([]);
+    }
+  }, [state.isStreaming]);
 
   // ─── submitPermissionDecision ───
 
@@ -125,5 +157,6 @@ export function useChatStream(
     contextWindow: state.contextWindow,
     isCompacting: state.isCompacting,
     forkFromMessage: state.forkFromMessage,
+    suggestions,
   };
 }

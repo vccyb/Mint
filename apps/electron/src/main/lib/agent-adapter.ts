@@ -4,6 +4,7 @@ import { addPending, resolvePending } from './permission-store';
 import { createLogger } from './logger';
 import { READ_ONLY_TOOLS } from './constants';
 import type { SubAgentDefinition, StreamEventData } from '../../types';
+import type { SandboxMode } from './storage/config';
 
 const log = createLogger('lib.agent-adapter');
 
@@ -16,6 +17,7 @@ export interface AgentAdapterOptions {
   agents: Record<string, SubAgentDefinition>;
   env: Record<string, string>;
   cwd: string;
+  sandboxMode?: SandboxMode;
 }
 
 /**
@@ -41,8 +43,9 @@ export class AgentAdapter {
       sessionId,
       model: this.options.model,
       permissionMode: this.options.permissionMode,
+      sandboxMode: this.options.sandboxMode,
     });
-    const { model, permissionMode, systemPrompt, env, cwd, agents } = this.options;
+    const { model, permissionMode, systemPrompt, env, cwd, agents, sandboxMode } = this.options;
     const encoder = new TextEncoder();
     const permMode = permissionMode;
 
@@ -67,6 +70,18 @@ export class AgentAdapter {
       cwd,
       agents: agentEntries,
       ...(systemPrompt ? { systemPrompt } : {}),
+      // Sandbox: restrict filesystem/network for command execution
+      ...(sandboxMode && sandboxMode !== 'off'
+        ? {
+            sandbox: {
+              enabled: true as const,
+              autoAllowBashIfSandboxed: true,
+              ...(sandboxMode === 'strict' && {
+                network: { allowLocalBinding: false },
+              }),
+            },
+          }
+        : {}),
       canUseTool: (async (
         toolName: string,
         input: Record<string, unknown>,

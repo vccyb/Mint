@@ -4,6 +4,7 @@ import { registerIpcHandlers } from './ipc';
 import { buildApplicationMenu } from './menu';
 import { setupAutoUpdater } from './updater';
 import { setMainWindow } from './stream-notifier';
+import { killAllTerminals } from './lib/terminal-service';
 import { createLogger } from './lib/logger';
 
 const log = createLogger('main');
@@ -55,6 +56,7 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
     setMainWindow(null);
+    killAllTerminals();
   });
 
   // Build application menu

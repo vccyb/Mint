@@ -224,6 +224,7 @@ export async function sendAgent(
     | 'default'
     | 'plan';
   const isPlanMode = permMode === 'plan';
+  const sandboxMode = config?.sandboxMode ?? 'workspace';
 
   // SDK env
   const nodeDir = path.dirname(process.execPath);
@@ -250,6 +251,7 @@ export async function sendAgent(
     agents: subAgents,
     env: sdkEnv,
     cwd,
+    sandboxMode,
   });
 
   // Abort controller

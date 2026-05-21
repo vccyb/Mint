@@ -18,6 +18,7 @@ interface ChatViewProps {
   onStop?: () => void;
   onForkMessage?: (messageId: string) => Promise<void>;
   onOpenSettings?: () => void;
+  suggestions?: string[];
 }
 
 export function ChatView({
@@ -29,6 +30,7 @@ export function ChatView({
   onStop,
   onForkMessage,
   onOpenSettings,
+  suggestions,
 }: ChatViewProps) {
   const inputRef = useRef<MessageInputHandle>(null);
   const [editingContent, setEditingContent] = useState<string>('');
@@ -60,6 +62,8 @@ export function ChatView({
           setEditingContent(content);
           setEditingMessageId(id);
         }}
+        onSuggestionSelect={(text) => onSend(text)}
+        suggestions={suggestions}
       />
       <MessageInput
         ref={inputRef}

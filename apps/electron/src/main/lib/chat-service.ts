@@ -257,6 +257,60 @@ export async function sendChat(webContents: Electron.WebContents, input: ChatInp
 }
 
 /**
+ * Generate 3 follow-up suggestions based on the last assistant reply.
+ * Uses a lightweight non-streaming LLM call.
+ */
+export async function generateSuggestions(content: string): Promise<string[]> {
+  const storage = getStorage();
+  await storage.initialize();
+  const config = await storage.readConfig();
+  const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_AUTH_TOKEN;
+  const baseUrl = config?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? DEFAULT_BASE_URL;
+  const model = config?.model ?? DEFAULT_MODEL;
+
+  if (!apiKey || !content) return [];
+
+  try {
+    const response = await fetch(`${baseUrl}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 256,
+        messages: [
+          {
+            role: 'user',
+            content: `Based on the assistant reply below, generate 3 short follow-up questions a user might naturally ask next. Return ONLY a JSON array of 3 strings, nothing else. Each suggestion should be concise (under 15 characters). Respond in the same language as the reply.\n\nAssistant reply:\n${content.slice(0, 3000)}`,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const text: string = data?.content?.[0]?.text ?? '';
+
+    // Try to extract JSON array from the response
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) return [];
+
+    const parsed = JSON.parse(match[0]);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.slice(0, 3).map((s: unknown) => String(s));
+    }
+    return [];
+  } catch (err) {
+    log.warn('Failed to generate suggestions', { error: err instanceof Error ? err.message : String(err) });
+    return [];
+  }
+}
+
+/**
  * Abort an active chat stream for a session.
  */
 export function abortChat(sessionId: string): void {

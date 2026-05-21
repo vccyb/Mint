@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Wrench, Loader2, AlertCircle, Settings2, Sparkles, Plug } from 'lucide-react';
+import { ArrowLeft, Wrench, Loader2, AlertCircle, Settings2, Sparkles, Plug, Shield } from 'lucide-react';
 import { ProviderTab } from './settings/provider-tab';
+import { SandboxTab } from './settings/sandbox-tab';
 import { SkillsTab } from './settings/skills-tab';
 import { McpTab } from './settings/mcp-tab';
 
@@ -13,10 +14,12 @@ interface ToolInfo {
 
 interface SettingsViewProps {
   onBack: () => void;
+  onResetConfig?: () => void;
 }
 
 const TABS = [
   { id: 'provider', label: 'Provider', icon: Settings2 },
+  { id: 'sandbox', label: '沙箱', icon: Shield },
   { id: 'tools', label: 'Tools', icon: Wrench },
   { id: 'skills', label: 'Skills', icon: Sparkles },
   { id: 'mcp', label: 'MCP', icon: Plug },
@@ -24,7 +27,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
-export function SettingsView({ onBack }: SettingsViewProps) {
+export function SettingsView({ onBack, onResetConfig }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<TabId>('provider');
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,7 +98,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
 
         {/* Content */}
         <div className="flex-1 p-6 overflow-y-auto max-w-2xl">
-          {activeTab === 'provider' && <ProviderTab />}
+          {activeTab === 'provider' && <ProviderTab onResetConfig={onResetConfig} />}
+
+          {activeTab === 'sandbox' && <SandboxTab />}
 
           {activeTab === 'tools' && (
             <div>

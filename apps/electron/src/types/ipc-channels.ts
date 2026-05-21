@@ -101,6 +101,10 @@ export const SYSTEM_IPC = {
   CHECK_DEPS: 'system:checkDeps',
 } as const;
 
+export const SUGGESTIONS_IPC = {
+  GENERATE: 'suggestions:generate',
+} as const;
+
 export const NOTIFICATION_IPC = {
   STREAM_STARTED: 'notification:streamStarted',
   STREAM_ENDED: 'notification:streamEnded',
@@ -114,4 +118,13 @@ export const UPDATE_IPC = {
 
 export const MENU_IPC = {
   ON_ACTION: 'menu:onAction',
+} as const;
+
+export const TERMINAL_IPC = {
+  CREATE: 'terminal:create',
+  KILL: 'terminal:kill',
+  INPUT: 'terminal:input',
+  RESIZE: 'terminal:resize',
+  DATA: 'terminal:data',
+  EXIT: 'terminal:exit',
 } as const;

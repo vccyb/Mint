@@ -88,6 +88,9 @@ const api = {
     return () => ipcRenderer.removeListener('chat:stream', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
   },
 
+  // Suggestions
+  generateSuggestions: (content: string) => ipcRenderer.invoke('suggestions:generate', content),
+
   // Agent 流式
   agentSend: (input: Record<string, unknown>) => ipcRenderer.invoke('agent:send', input),
   agentAnswer: (requestId: string, behavior: string, updatedInput?: Record<string, unknown>) =>
@@ -117,6 +120,26 @@ const api = {
     const handler = (_: unknown, action: string) => callback(action);
     ipcRenderer.on('menu:onAction', handler);
     return () => ipcRenderer.removeListener('menu:onAction', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
+  },
+
+  // Terminal
+  terminalCreate: (opts?: { id?: string; cwd?: string }) =>
+    ipcRenderer.invoke('terminal:create', opts),
+  terminalKill: (id: string) =>
+    ipcRenderer.invoke('terminal:kill', id),
+  terminalWrite: (id: string, data: string) =>
+    ipcRenderer.send('terminal:input', id, data),
+  terminalResize: (id: string, cols: number, rows: number) =>
+    ipcRenderer.send('terminal:resize', id, cols, rows),
+  onTerminalData: (callback: (id: string, data: string) => void) => {
+    const handler = (_: unknown, id: string, data: string) => callback(id, data);
+    ipcRenderer.on('terminal:data', handler);
+    return () => ipcRenderer.removeListener('terminal:data', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
+  },
+  onTerminalExit: (callback: (id: string, code: number) => void) => {
+    const handler = (_: unknown, id: string, code: number) => callback(id, code);
+    ipcRenderer.on('terminal:exit', handler);
+    return () => ipcRenderer.removeListener('terminal:exit', handler as Parameters<typeof ipcRenderer.removeListener>[1]);
   },
 };
 

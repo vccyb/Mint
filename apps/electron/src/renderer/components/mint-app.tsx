@@ -350,6 +350,7 @@ function MintAppInner() {
               onStop={chatHook.stopStreaming}
               onForkMessage={chatHook.forkFromMessage}
               onOpenSettings={() => setShowSettings(true)}
+              suggestions={chatHook.suggestions}
             />
           ) : (
             <AgentView
@@ -375,6 +376,7 @@ function MintAppInner() {
               tokenBudget={agentHook.contextWindow}
               isCompacting={agentHook.isCompacting}
               onOpenSettings={() => setShowSettings(true)}
+              suggestions={agentHook.suggestions}
             />
           )}
         </div>

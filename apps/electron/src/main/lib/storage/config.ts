@@ -5,6 +5,8 @@ import { createLogger } from '../logger';
 
 const log = createLogger('storage.config');
 
+export type SandboxMode = 'off' | 'workspace' | 'strict';
+
 export interface AppConfig {
   model: string;
   systemPrompt?: string;
@@ -12,6 +14,7 @@ export interface AppConfig {
   baseUrl?: string;
   skillsEnabled?: boolean;
   permissionMode?: 'bypassPermissions' | 'default' | 'plan';
+  sandboxMode?: SandboxMode;
   sttApiKey?: string;
   sttResourceId?: string;
 }

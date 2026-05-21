@@ -19,6 +19,8 @@ interface MessageListProps {
   onViewTeam?: () => void;
   onFileClick?: (path: string) => void;
   onOpenSettings?: () => void;
+  onSuggestionSelect?: (text: string) => void;
+  suggestions?: string[];
 }
 
 function StreamingIndicator({ startTime }: { startTime: number | null }) {
@@ -114,6 +116,8 @@ export function MessageList({
   onViewTeam,
   onFileClick,
   onOpenSettings,
+  onSuggestionSelect,
+  suggestions,
 }: MessageListProps) {
   if (messages.length === 0) {
     return <EmptyState />;
@@ -134,6 +138,12 @@ export function MessageList({
               hideTodoAndPlan={hideLastTodoAndPlan && index === messages.length - 1}
               onFileClick={onFileClick}
               onOpenSettings={onOpenSettings}
+              onSuggestionSelect={
+                index === messages.length - 1 ? onSuggestionSelect : undefined
+              }
+              suggestions={
+                index === messages.length - 1 ? suggestions : undefined
+              }
             />
           ))}
           {teammates && teammates.length > 0 && !hideLastTodoAndPlan && (

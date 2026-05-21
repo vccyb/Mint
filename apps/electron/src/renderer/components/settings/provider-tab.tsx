@@ -12,7 +12,11 @@ interface ProviderConfig {
   systemPrompt?: string;
 }
 
-export function ProviderTab() {
+interface ProviderTabProps {
+  onResetConfig?: () => void;
+}
+
+export function ProviderTab({ onResetConfig }: ProviderTabProps) {
   const [config, setConfig] = useState<ProviderConfig>({ model: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -202,6 +206,18 @@ export function ProviderTab() {
               <AlertCircle className="h-4 w-4 shrink-0" />
             )}
             {message.text}
+          </div>
+        )}
+
+        {onResetConfig && (
+          <div className="pt-6 mt-6 border-t border-border">
+            <p className="text-xs text-text-tertiary mb-2">开发调试：重新进入欢迎引导页</p>
+            <button
+              onClick={onResetConfig}
+              className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-bg-hover transition-colors cursor-pointer"
+            >
+              显示引导页
+            </button>
           </div>
         )}
       </div>
