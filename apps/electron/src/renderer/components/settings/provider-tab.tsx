@@ -10,6 +10,8 @@ interface ProviderConfig {
   baseUrl?: string;
   permissionMode?: 'bypassPermissions' | 'default' | 'plan';
   systemPrompt?: string;
+  sttApiKey?: string;
+  sttResourceId?: string;
 }
 
 interface ProviderTabProps {
@@ -38,6 +40,8 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
         baseUrl: data.baseUrl ?? '',
         permissionMode: data.permissionMode ?? 'bypassPermissions',
         systemPrompt: data.systemPrompt ?? '',
+        sttApiKey: data.sttApiKey ?? '',
+        sttResourceId: data.sttResourceId ?? '',
       });
     } catch {
       setMessage({ type: 'error', text: 'Failed to load config' });
@@ -61,6 +65,8 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
         baseUrl: config.baseUrl || undefined,
         permissionMode: config.permissionMode || 'bypassPermissions',
         systemPrompt: config.systemPrompt || undefined,
+        sttApiKey: config.sttApiKey || undefined,
+        sttResourceId: config.sttResourceId || undefined,
       });
       setMessage({ type: 'success', text: 'Settings saved successfully' });
       toast.success('设置已保存');
@@ -85,20 +91,18 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
     <div>
       <h2 className="text-sm font-semibold text-text">API Provider</h2>
       <p className="text-xs text-text-tertiary mt-0.5 mb-4">
-        Configure an Anthropic-compatible API provider
+        配置兼容 Anthropic API 的服务提供方
       </p>
 
       {/* Info box */}
       <div className="rounded border border-border bg-bg-warm px-3 py-2.5 mb-4 max-w-lg">
         <p className="text-xs text-text-secondary leading-relaxed">
-          Mint uses the{' '}
-          <span className="font-mono font-medium text-text">Anthropic Messages API</span> format.
-          Any provider with an Anthropic-compatible endpoint can be used here (e.g. Zhipu GLM,
-          OpenRouter, or direct Anthropic API).
+          Mint 使用{' '}
+          <span className="font-mono font-medium text-text">Anthropic Messages API</span> 格式。
+          任何兼容 Anthropic 接口的 Provider 都可以在此使用（如智谱 GLM、OpenRouter、或 Anthropic 官方 API）。
         </p>
         <p className="text-[10px] text-text-tertiary mt-1.5">
-          Configured values take priority over environment variables (ANTHROPIC_API_KEY,
-          ANTHROPIC_BASE_URL).
+          在此设置的值优先级高于环境变量（ANTHROPIC_API_KEY、ANTHROPIC_BASE_URL）。
         </p>
       </div>
 
@@ -113,7 +117,7 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
             className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary"
           />
           <p className="text-[10px] text-text-tertiary mt-1">
-            Model identifier used by the provider (e.g. glm-5.1, claude-sonnet-4-20250514)
+            模型标识符，由 Provider 定义（如 glm-5.1、claude-sonnet-4-20250514）
           </p>
         </div>
 
@@ -127,7 +131,7 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
             className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary"
           />
           <p className="text-[10px] text-text-tertiary mt-1">
-            Your provider&apos;s API key. Overrides ANTHROPIC_API_KEY env var.
+            你的 Provider API 密钥。填写后会覆盖 ANTHROPIC_API_KEY 环境变量。
           </p>
         </div>
 
@@ -141,7 +145,7 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
             className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary"
           />
           <p className="text-[10px] text-text-tertiary mt-1">
-            Anthropic-compatible API endpoint. Overrides ANTHROPIC_BASE_URL env var.
+            兼容 Anthropic 的 API 地址。填写后会覆盖 ANTHROPIC_BASE_URL 环境变量。
           </p>
         </div>
 
@@ -162,10 +166,46 @@ export function ProviderTab({ onResetConfig }: ProviderTabProps) {
             <option value="plan">Plan mode (read-only, no edits)</option>
           </select>
           <p className="text-[10px] text-text-tertiary mt-1">
-            Controls how the agent requests permission to use tools. &quot;Bypass&quot;
-            auto-approves everything.
+            控制 Agent 使用工具时的权限策略。"Bypass" 自动批准所有操作；"Default" 对危险操作需确认；"Plan" 仅允许读取。
           </p>
         </div>
+
+        <details className="group">
+          <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text transition-colors">
+            语音识别（STT API Key）
+          </summary>
+          <div className="mt-2 space-y-3">
+            <p className="text-[10px] text-text-tertiary">
+              用于语音输入功能。在火山引擎豆包语音平台获取 API Key，填入下方即可启用麦克风语音识别。
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-text mb-1">STT API Key</label>
+              <input
+                type="password"
+                value={config.sttApiKey ?? ''}
+                onChange={(e) => setConfig((c) => ({ ...c, sttApiKey: e.target.value }))}
+                placeholder="豆包语音识别 API Key"
+                className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+              />
+              <p className="text-[10px] text-text-tertiary mt-1">
+                在火山引擎控制台「豆包语音 → 系统管理 → API Key管理」中创建
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text mb-1">STT Resource ID</label>
+              <input
+                type="text"
+                value={config.sttResourceId ?? ''}
+                onChange={(e) => setConfig((c) => ({ ...c, sttResourceId: e.target.value }))}
+                placeholder="volc.bigasr.sauc.duration"
+                className="w-full rounded border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+              />
+              <p className="text-[10px] text-text-tertiary mt-1">
+                默认 volc.bigasr.sauc.duration，一般无需修改
+              </p>
+            </div>
+          </div>
+        </details>
 
         <details className="group">
           <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text transition-colors">

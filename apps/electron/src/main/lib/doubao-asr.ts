@@ -1,12 +1,8 @@
 import { gzipSync, gunzipSync } from 'zlib';
 import WebSocket from 'ws';
+import { createLogger } from './logger';
 
-const log = {
-  debug: (...args: unknown[]) => console.debug('[doubao-asr]', ...args),
-  info: (...args: unknown[]) => console.info('[doubao-asr]', ...args),
-  warn: (...args: unknown[]) => console.warn('[doubao-asr]', ...args),
-  error: (...args: unknown[]) => console.error('[doubao-asr]', ...args),
-};
+const log = createLogger('doubao-asr');
 
 // ── Binary Protocol Helpers ───────────────────────────────────────────
 
@@ -24,25 +20,18 @@ function buildHeader(
   ]);
 }
 
-/**
- * Build a "full client request" packet (JSON config with Gzip compression).
- */
 function buildFullClientRequest(config: object): Buffer {
-  const header = buildHeader(0x01, 0x00, 0x01, 0x01); // type=full, flags=0, JSON, gzip
+  const header = buildHeader(0x01, 0x00, 0x01, 0x01);
   const payload = gzipSync(Buffer.from(JSON.stringify(config)));
   const size = Buffer.alloc(4);
   size.writeUInt32BE(payload.length);
   return Buffer.concat([header, size, payload]);
 }
 
-/**
- * Build an "audio only request" packet.
- * sequence > 0 for normal packets, < 0 for the last packet.
- */
 function buildAudioPacket(audio: Buffer, sequence: number): Buffer {
   const isLast = sequence < 0;
-  const flags = isLast ? 0x03 : 0x01; // 0x01=positive seq, 0x03=negative seq (last)
-  const header = buildHeader(0x02, flags, 0x00, 0x01); // type=audio, raw, gzip
+  const flags = isLast ? 0x03 : 0x01;
+  const header = buildHeader(0x02, flags, 0x00, 0x01);
   const seqBuf = Buffer.alloc(4);
   seqBuf.writeInt32BE(sequence);
   const compressed = gzipSync(audio);
@@ -58,9 +47,6 @@ interface ParsedResponse {
   payload: Record<string, unknown>;
 }
 
-/**
- * Parse a binary response from the Doubao ASR server.
- */
 function parseResponse(data: Buffer): ParsedResponse {
   const msgType = (data[1] >> 4) & 0x0f;
   const flags = data[1] & 0x0f;
@@ -104,9 +90,6 @@ interface AsrSession {
 
 const sessions = new Map<string, AsrSession>();
 
-/**
- * Create a new ASR session by opening a WebSocket to Doubao.
- */
 export async function createSession(
   apiKey: string,
   resourceId: string,
@@ -140,7 +123,7 @@ export async function createSession(
       clearTimeout(timeout);
 
       const config = {
-        user: { uid: 'mint-app', platform: 'Web' },
+        user: { uid: 'mint-app', platform: 'Electron' },
         audio: {
           format: 'pcm',
           rate: 16000,
@@ -207,10 +190,6 @@ export async function createSession(
   });
 }
 
-/**
- * Send an audio chunk to an existing ASR session.
- * Returns the latest transcribed text.
- */
 export function sendAudioChunk(
   sessionId: string,
   audio: Buffer,
@@ -239,7 +218,6 @@ export function sendAudioChunk(
   }
 
   if (isLast) {
-    // Give a brief moment for the last response to arrive
     session.isDone = true;
     setTimeout(() => {
       session.ws.close();
@@ -250,9 +228,6 @@ export function sendAudioChunk(
   return { text: session.latestText, error: null, done: session.isDone };
 }
 
-/**
- * Force-close an ASR session.
- */
 export function closeSession(sessionId: string): void {
   const session = sessions.get(sessionId);
   if (session) {

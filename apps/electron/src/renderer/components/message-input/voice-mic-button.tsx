@@ -22,7 +22,6 @@ export function VoiceMicButton({
   const isRecording = state === 'recording';
   const isConnecting = state === 'connecting';
   const isProcessing = state === 'processing';
-  const isActive = isRecording || isConnecting;
 
   return (
     <button
@@ -39,10 +38,12 @@ export function VoiceMicButton({
       )}
       aria-label={
         isRecording
-          ? 'Stop recording'
-          : isProcessing
-            ? 'Processing...'
-            : 'Start voice input'
+          ? '停止录音'
+          : isConnecting
+            ? '正在连接...'
+            : isProcessing
+              ? '正在识别...'
+              : '语音输入'
       }
       disabled={disabled || isConnecting || isProcessing}
     >

@@ -338,8 +338,6 @@ function MintAppInner() {
               initialSessionId={activeHook.sessionId}
               sessionTitle={sessionTitle}
             />
-          ) : showSettings ? (
-            <SettingsView onBack={() => setShowSettings(false)} onResetConfig={() => setDepsReady(false)} />
           ) : mode === 'chat' ? (
             <ChatView
               messages={chatHook.messages}
@@ -381,6 +379,11 @@ function MintAppInner() {
           )}
         </div>
       </div>
+
+      {/* Settings modal overlay */}
+      {showSettings && (
+        <SettingsView onBack={() => setShowSettings(false)} onResetConfig={() => setDepsReady(false)} />
+      )}
     </>
   );
 }

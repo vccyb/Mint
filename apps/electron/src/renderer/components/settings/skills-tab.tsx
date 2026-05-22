@@ -127,7 +127,16 @@ export function SkillsTab() {
   return (
     <div>
       <h2 className="text-sm font-semibold text-text">Skills</h2>
-      <p className="text-xs text-text-tertiary mt-0.5 mb-4">Manage agent skills and capabilities</p>
+      <p className="text-xs text-text-tertiary mt-0.5 mb-4">管理 Agent 可使用的技能插件</p>
+
+      {/* Tips */}
+      <div className="rounded border border-border bg-bg-warm px-3 py-2.5 mb-4 max-w-md">
+        <p className="text-xs text-text-secondary leading-relaxed">
+          技能（Skill）是预定义的提示词模板，可以帮助 Agent 更好地完成特定任务。
+          <strong> Built-in</strong> 为内置技能，<strong>My Skills</strong> 为你创建的自定义技能。
+          你也可以在编辑器中打开技能文件进行修改。
+        </p>
+      </div>
 
       {/* Global toggle */}
       <div className="flex items-center justify-between rounded border border-border bg-bg px-3 py-2.5 mb-4 max-w-md">

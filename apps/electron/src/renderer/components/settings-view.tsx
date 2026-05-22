@@ -58,105 +58,117 @@ export function SettingsView({ onBack, onResetConfig }: SettingsViewProps) {
   const mcpTools = tools.filter((t) => t.category === 'mcp');
 
   return (
-    <div className="flex flex-1 flex-col min-h-0">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-6 py-2">
-        <button
-          onClick={onBack}
-          className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary hover:bg-bg-warm hover:text-text transition-colors cursor-pointer"
-          aria-label="Go back"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-semibold text-text">Settings</span>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/30" onClick={onBack} />
 
-      {/* Body: sidebar + content */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left menu */}
-        <div className="w-48 border-r border-border p-4">
-          <nav className="space-y-1">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'bg-primary/6 text-primary font-semibold'
-                      : 'text-text-tertiary hover:bg-bg-hover hover:text-text-secondary'
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+      {/* Modal card */}
+      <div className="relative flex w-full max-w-3xl min-h-[520px] max-h-[85vh] rounded-xl shadow-xl border border-border bg-card overflow-hidden">
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 flex items-center gap-2 border-b border-border px-6 py-2 bg-card z-10">
+          <button
+            onClick={onBack}
+            className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary hover:bg-bg-warm hover:text-text transition-colors cursor-pointer"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-semibold text-text">Settings</span>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 p-6 overflow-y-auto max-w-2xl">
-          {activeTab === 'provider' && <ProviderTab onResetConfig={onResetConfig} />}
+        {/* Body: sidebar + content */}
+        <div className="flex flex-1 min-h-0 pt-11">
+          {/* Left menu */}
+          <div className="w-48 border-r border-border p-4">
+            <nav className="space-y-1">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 cursor-pointer ${
+                      activeTab === tab.id
+                        ? 'bg-primary/6 text-primary font-semibold'
+                        : 'text-text-tertiary hover:bg-bg-hover hover:text-text-secondary'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
-          {activeTab === 'sandbox' && <SandboxTab />}
+          {/* Content */}
+          <div className="flex-1 p-6 overflow-y-auto max-w-2xl">
+            {activeTab === 'provider' && <ProviderTab onResetConfig={onResetConfig} />}
 
-          {activeTab === 'tools' && (
-            <div>
-              <h2 className="text-sm font-semibold text-text">Available Tools</h2>
-              <p className="text-xs text-text-tertiary mt-0.5 mb-4">Tools available to the agent</p>
+            {activeTab === 'sandbox' && <SandboxTab />}
 
-              {loading && (
-                <div className="flex items-center gap-2 text-text-tertiary py-8 justify-center">
-                  <Loader2 className="h-4 w-4 spinner" />
-                  <span className="text-sm">Loading tools...</span>
+            {activeTab === 'tools' && (
+              <div>
+                <h2 className="text-sm font-semibold text-text">可用工具</h2>
+                <p className="text-xs text-text-tertiary mt-0.5 mb-2">Agent 当前可使用的工具列表</p>
+                <div className="rounded border border-border bg-bg-warm px-3 py-2 mb-4">
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    工具分为三类：<strong>Model-Native</strong>（模型原生能力）、<strong>SDK Built-in</strong>（SDK 内置工具）和 <strong>MCP Tools</strong>（通过 MCP 协议接入的外部工具）。
+                    在 MCP 标签页中配置 MCP Server 可添加更多工具。
+                  </p>
                 </div>
-              )}
 
-              {error && (
-                <div className="flex items-center gap-2 text-error py-4">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span className="text-sm">{error}</span>
-                </div>
-              )}
+                {loading && (
+                  <div className="flex items-center gap-2 text-text-tertiary py-8 justify-center">
+                    <Loader2 className="h-4 w-4 spinner" />
+                    <span className="text-sm">Loading tools...</span>
+                  </div>
+                )}
 
-              {!loading && !error && (
-                <div className="space-y-6">
-                  {nativeTools.length > 0 && (
-                    <ToolGroup
-                      title="Model-Native"
-                      tools={nativeTools}
-                      badgeClass="text-success bg-success/10"
-                    />
-                  )}
-                  {sdkTools.length > 0 && (
-                    <ToolGroup
-                      title="SDK Built-in Tools"
-                      tools={sdkTools}
-                      badgeClass="text-primary bg-primary/10"
-                    />
-                  )}
-                  {mcpTools.length > 0 && (
-                    <ToolGroup
-                      title="MCP Tools"
-                      tools={mcpTools}
-                      badgeClass="text-warning bg-warning/10"
-                    />
-                  )}
-                  {mcpTools.length === 0 && (
-                    <p className="text-xs text-text-tertiary italic">
-                      No MCP tools connected. Configure MCP servers to add tools.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                {error && (
+                  <div className="flex items-center gap-2 text-error py-4">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span className="text-sm">{error}</span>
+                  </div>
+                )}
 
-          {activeTab === 'skills' && <SkillsTab />}
+                {!loading && !error && (
+                  <div className="space-y-6">
+                    {nativeTools.length > 0 && (
+                      <ToolGroup
+                        title="Model-Native"
+                        tools={nativeTools}
+                        badgeClass="text-success bg-success/10"
+                      />
+                    )}
+                    {sdkTools.length > 0 && (
+                      <ToolGroup
+                        title="SDK Built-in Tools"
+                        tools={sdkTools}
+                        badgeClass="text-primary bg-primary/10"
+                      />
+                    )}
+                    {mcpTools.length > 0 && (
+                      <ToolGroup
+                        title="MCP Tools"
+                        tools={mcpTools}
+                        badgeClass="text-warning bg-warning/10"
+                      />
+                    )}
+                    {mcpTools.length === 0 && (
+                      <p className="text-xs text-text-tertiary italic">
+                        No MCP tools connected. Configure MCP servers to add tools.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-          {activeTab === 'mcp' && <McpTab />}
+            {activeTab === 'skills' && <SkillsTab />}
+
+            {activeTab === 'mcp' && <McpTab />}
+          </div>
         </div>
       </div>
     </div>

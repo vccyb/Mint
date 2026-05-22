@@ -126,7 +126,7 @@ export function McpTab() {
         <div>
           <h2 className="text-sm font-semibold text-text">MCP Servers</h2>
           <p className="text-xs text-text-tertiary mt-0.5">
-            Configure Model Context Protocol servers
+            配置 Model Context Protocol 服务器，接入外部工具和数据源
           </p>
         </div>
         <button
@@ -134,8 +134,17 @@ export function McpTab() {
           className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-hover transition-colors"
         >
           <Plus className="h-3 w-3" />
-          Add Server
+          添加 Server
         </button>
+      </div>
+
+      {/* Tips */}
+      <div className="rounded border border-border bg-bg-warm px-3 py-2.5 mb-4">
+        <p className="text-xs text-text-secondary leading-relaxed">
+          MCP（Model Context Protocol）允许 Agent 连接外部工具服务。每个 Server 是一个独立进程，
+          通过 stdio 与 Agent 通信。点击 <strong>Test</strong> 可验证 Server 是否正常运行。
+          配置完成后，Server 提供的工具会出现在 Tools 标签页中。
+        </p>
       </div>
 
       {/* Add form */}
@@ -143,27 +152,27 @@ export function McpTab() {
         <div className="rounded-lg border border-border bg-bg-warm p-3 mb-4 space-y-2.5">
           <input
             type="text"
-            placeholder="Server name (e.g. my-mcp-server)"
+            placeholder="Server 名称（如 my-mcp-server）"
             value={addName}
             onChange={(e) => setAddName(e.target.value)}
             className="w-full rounded-md border border-border bg-bg px-2.5 py-1.5 text-xs text-text placeholder:text-text-tertiary focus:border-primary focus:outline-none"
           />
           <input
             type="text"
-            placeholder="Command (e.g. npx, python, node)"
+            placeholder="启动命令（如 npx、python、node）"
             value={addCommand}
             onChange={(e) => setAddCommand(e.target.value)}
             className="w-full rounded-md border border-border bg-bg px-2.5 py-1.5 text-xs text-text placeholder:text-text-tertiary focus:border-primary focus:outline-none"
           />
           <input
             type="text"
-            placeholder="Arguments (space-separated, e.g. -y @anthropic/mcp-server)"
+            placeholder="命令参数（空格分隔，如 -y @anthropic/mcp-server）"
             value={addArgs}
             onChange={(e) => setAddArgs(e.target.value)}
             className="w-full rounded-md border border-border bg-bg px-2.5 py-1.5 text-xs text-text placeholder:text-text-tertiary focus:border-primary focus:outline-none"
           />
           <textarea
-            placeholder="Environment variables (one per line, KEY=VALUE)"
+            placeholder="环境变量（每行一个，格式 KEY=VALUE）"
             value={addEnv}
             onChange={(e) => setAddEnv(e.target.value)}
             rows={2}

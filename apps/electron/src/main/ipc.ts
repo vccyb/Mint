@@ -6,6 +6,7 @@ import { sendChat, abortChat, generateSuggestions, type ChatInput } from './lib/
 import { sendAgent, abortAgent, answerPermission, type AgentInput } from './lib/agent-service';
 import { listSkills, toggleSkill, createSkill as createSkillIo, getSkillContent } from './lib/storage/skills';
 import { loadMcpConfig, saveMcpConfig, addMcpServer, removeMcpServer, toggleMcpServer } from './lib/storage/mcp-config';
+import { createSession as createAsrSession, sendAudioChunk as sendAsrChunk, closeSession as closeAsrSession } from './lib/doubao-asr';
 import {
   SESSION_IPC,
   CONFIG_IPC,
@@ -494,19 +495,41 @@ export function registerIpcHandlers() {
     return { results };
   });
 
-  // ─── STT (语音输入) ───
+  // ─── STT (语音输入 — 豆包 ASR) ───
   ipcMain.handle(STT_IPC.START, async () => {
-    // TODO: Integrate with Doubao ASR WebSocket in main process
-    return { sessionId: `stt_${Date.now().toString(36)}`, error: undefined };
+    const storage = getStorage();
+    await storage.initialize();
+    const config = await storage.readConfig();
+
+    const apiKey = config?.sttApiKey || process.env.STT_API_KEY;
+    const resourceId = config?.sttResourceId || process.env.STT_RESOURCE_ID || 'volc.bigasr.sauc.duration';
+
+    if (!apiKey) {
+      return { sessionId: undefined, error: '请先在设置中配置 STT API Key（豆包语音识别密钥）' };
+    }
+
+    try {
+      const sessionId = await createAsrSession(apiKey, resourceId);
+      return { sessionId, error: undefined };
+    } catch (err) {
+      return { sessionId: undefined, error: `连接豆包 ASR 失败: ${(err as Error).message}` };
+    }
   });
 
-  ipcMain.handle(STT_IPC.CHUNK, async (_, _input: { sessionId?: string; audio?: string; isLast?: boolean }) => {
-    // TODO: Forward audio chunk to Doubao ASR and return transcribed text
-    return { text: '', error: undefined };
+  ipcMain.handle(STT_IPC.CHUNK, async (_, input: { sessionId?: string; audio?: string; isLast?: boolean }) => {
+    const { sessionId, audio, isLast } = input;
+    if (!sessionId) {
+      return { text: '', error: 'Missing sessionId' };
+    }
+
+    const audioBuffer = audio ? Buffer.from(audio, 'base64') : Buffer.alloc(0);
+    return sendAsrChunk(sessionId, audioBuffer, isLast ?? false);
   });
 
-  ipcMain.handle(STT_IPC.CLOSE, async (_, _sessionId?: string) => {
-    // TODO: Close STT session
+  ipcMain.handle(STT_IPC.CLOSE, async (_, sessionId?: string) => {
+    if (sessionId) {
+      closeAsrSession(sessionId);
+    }
     return { ok: true };
   });
 

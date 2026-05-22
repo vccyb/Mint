@@ -22,7 +22,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
   const chunksRef = useRef<Int16Array[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   const sendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const connectAbortRef = useRef<AbortController | null>(null);
   const baseTextRef = useRef('');
   const accumulatedTextRef = useRef('');
   const optionsRef = useRef(options);
@@ -33,10 +32,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
     typeof navigator?.mediaDevices?.getUserMedia === 'function';
 
   const cleanup = useCallback(() => {
-    if (connectAbortRef.current) {
-      connectAbortRef.current.abort();
-      connectAbortRef.current = null;
-    }
     if (sendTimerRef.current) {
       clearInterval(sendTimerRef.current);
       sendTimerRef.current = null;
@@ -60,7 +55,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
     chunksRef.current = [];
   }, []);
 
-  // Convert Int16Array PCM to base64 string
   const pcmToBase64 = useCallback((pcm: Int16Array): string => {
     const bytes = new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength);
     let binary = '';
@@ -70,7 +64,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
     return btoa(binary);
   }, []);
 
-  // Combine accumulated Int16Array chunks into one
   const combineChunks = useCallback((): Int16Array | null => {
     const chunks = chunksRef.current;
     if (chunks.length === 0) return null;
@@ -85,7 +78,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
     return combined;
   }, []);
 
-  // Send accumulated PCM to server and get latest text
   const sendChunk = useCallback(
     async (isLast: boolean) => {
       const api = (window as any).electronAPI;
@@ -135,7 +127,7 @@ export function useVoiceInput(options: VoiceInputOptions) {
     baseTextRef.current = optionsRef.current.getBaseText();
 
     try {
-      // 1. Connect to STT server
+      // 1. Connect to ASR server
       setState('connecting');
 
       let startData: { sessionId?: string; error?: string };
@@ -202,12 +194,11 @@ export function useVoiceInput(options: VoiceInputOptions) {
     } catch (err) {
       cleanup();
       const msg = (err as Error).name === 'NotAllowedError'
-        ? '麦克风权限被拒绝，请在浏览器设置中允许麦克风访问'
+        ? '麦克风权限被拒绝，请在系统设置中允许麦克风访问'
         : `无法启动录音: ${(err as Error).message}`;
       setVoiceError(msg);
       setState('error');
 
-      // Clean up session if started
       if (sessionIdRef.current) {
         const api = (window as any).electronAPI;
         api.sttClose(sessionIdRef.current).catch(() => {});
@@ -217,19 +208,16 @@ export function useVoiceInput(options: VoiceInputOptions) {
   }, [cleanup, sendChunk]);
 
   const stopRecording = useCallback(async () => {
-    // Stop the timer first
     if (sendTimerRef.current) {
       clearInterval(sendTimerRef.current);
       sendTimerRef.current = null;
     }
 
-    // Send remaining chunks as last packet
     setState('processing');
     setInterimText('正在识别...');
 
     await sendChunk(true);
 
-    // Clean up audio resources
     cleanup();
     sessionIdRef.current = null;
 
@@ -241,7 +229,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
     if (state === 'recording') {
       stopRecording();
     } else if (state === 'connecting') {
-      // Cancel in-flight connection
       cleanup();
       sessionIdRef.current = null;
       setState('idle');
@@ -251,7 +238,6 @@ export function useVoiceInput(options: VoiceInputOptions) {
     }
   }, [state, startRecording, stopRecording, cleanup]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanup();

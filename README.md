@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.7.0-blue" alt="version" />
+  <img src="https://img.shields.io/badge/version-v0.10.0-blue" alt="version" />
   <img src="https://img.shields.io/badge/Electron-35-blue" alt="Electron" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license" />
 </p>
@@ -73,7 +73,11 @@ Agent 模式使用 TipTap 富文本编辑器：
 
 ### 语音输入
 
-集成豆包 ASR，支持实时语音转文字输入。
+集成豆包 ASR，通过 WebSocket 流式识别实现实时语音转文字。在设置中配置火山引擎 STT API Key 即可使用。
+
+### 设置 Modal
+
+设置面板以弹出窗口形式展示，不中断当前对话。各配置项均有中文提示说明。
 
 ### 主题切换
 
@@ -119,6 +123,7 @@ cd packages/mint && pnpm dev
 1. **API Key** — Anthropic 兼容 API 密钥
 2. **Base URL** — API 端点（默认 `https://open.bigmodel.cn/api/anthropic`）
 3. **Model** — 模型名称（默认 `glm-5.1`）
+4. **STT API Key**（可选）— 火山引擎豆包语音识别密钥，用于语音输入功能
 
 配置存储在 `~/.mint/config.json`。
 
@@ -214,6 +219,7 @@ git push origin v0.x.0
 
 | 版本 | 主要变更 |
 |------|---------|
+| v0.10.0 | 设置 Modal 弹窗化、中文 Tips、语音输入修复（豆包 ASR 接入）、STT 配置 UI |
 | v0.7.0 | Electron 桌面客户端、IPC 全面审计修复、主题动画、CI/CD 自动发布 |
 | v0.6.0 | 语音输入（豆包 ASR）、模块化重构、UX 改进 |
 | v0.5.0 | AOP 日志重构、附件修复、Rich Input、多模态 Chat |
